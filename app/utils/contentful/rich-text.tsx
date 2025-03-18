@@ -3,6 +3,17 @@ import { Asset, BlogPostBodyLinks, Entry } from "@/app/graphql/graphql";
 import type { Options } from "@contentful/rich-text-react-renderer";
 import { BLOCKS } from "@contentful/rich-text-types";
 import { isDemo } from "./predicates";
+import Image from "next/image";
+
+const NEXT_KNOWN_IMAGE_EXTENSIONS = [
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "avif",
+  "gif",
+  "tiff",
+];
 
 export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
   renderNode: {},
@@ -43,6 +54,23 @@ export const getBlogPostOptions = (links: BlogPostBodyLinks): Options => {
           } else {
             return <Demo />;
           }
+        }
+      },
+      [BLOCKS.EMBEDDED_ASSET]: node => {
+        const asset = assetMap.get(node.data.target.sys.id);
+
+        if (asset) {
+          if (asset.url) {
+            if (asset.url.endsWith(".webm")) {
+              return <video src={asset.url} autoPlay playsInline muted loop />;
+            } else if (NEXT_KNOWN_IMAGE_EXTENSIONS.some(ext => asset.url?.endsWith(ext))) {
+              return <Image src={asset.url} alt={asset.title!} />;
+            } else {
+              return <p>unknown asset type: {asset.url}</p>;
+            }
+          }
+        } else {
+          return <p>Unknown asset: {node.data.target.sys.id}</p>;
         }
       }
     }

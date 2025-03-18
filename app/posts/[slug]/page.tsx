@@ -28,7 +28,7 @@ export default async function Post({
     notFound();
   } else {
     return (
-      <div>
+      <div className="max-w-2xl mx-auto">
         <h1 className="text-xl font-bold">{post.title}</h1>
         <section>
           {documentToReactComponents(post.body.json, getBlogPostOptions(post.body.links))}

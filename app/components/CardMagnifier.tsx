@@ -10,7 +10,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState
@@ -19,6 +18,7 @@ import clsx from "clsx";
 import { clamp } from "lodash/fp";
 
 import { useEaseUpDown, EasingDirection } from "@/app/hooks/useEaseUpDown";
+import { AnimatedVariablesContext } from "./AnimatedVariables";
 
 // min scale is how small the card can possibly be as a factor of `basis`
 const MIN_SCALE = 1;
@@ -54,9 +54,6 @@ export const Card: FC<PropsWithChildren> = ({ children }) => {
   )
 }
 
-// FIXME:
-// - inaccuracy occurs when falloff is any non-whole number
-// - inaccuracy happens at the center of a card
 const clampPosToFalloffBounds = (
   pos: number,
   mousePos: number,
@@ -83,7 +80,7 @@ const SCALE_STRATEGY: Record<ScaleStrategy, (
 // Necessary aspects of the scaling algorithm:
 // - at full expansion, the total size of the scaled carousel should be stable
 // - ^ this is currently only satisfied by linear and cosEaseInOut
-type CardMagnifierProps = {
+export type CardMagnifierProps = {
   children?: ReactNode;
   direction?: 'horizontal' | 'vertical';
   // The size of each element when unscaled
@@ -92,6 +89,7 @@ type CardMagnifierProps = {
   scaleStrategy?: ScaleStrategy;
   className?: string;
   // falloff is how many slice lengths it takes for a card to reach MIN_SCALE
+  // NOTE: falloff needs to be a whole number to maintain size stability
   falloff?: number;
   // scale is how large the card will be with the cursor at the center
   scale?: number;
@@ -107,6 +105,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   falloff: _falloff = 3,
   scale = 3,
 }) => {
+  const animatedVariables = useContext(AnimatedVariablesContext);
   const isVertical = direction === 'vertical';
 
   const containerElement = useRef<HTMLUListElement>(null);
@@ -122,8 +121,11 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   const {
     falloff,
     totalCards,
+    totalGaps,
     unscaledLength,
     sliceLength,
+    normCardLength,
+    normGapLength,
     halfSizeDiff,
     maxTotalSize,
     cardPositions,
@@ -149,13 +151,12 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     const sliceLength = normCardLength + normGapLength;
     const halfSliceLength = sliceLength / 2;
 
-    const totalSizeBasis = totalCards * basis + totalGaps * gap;
     const sizeDiff = falloff * (basis + gap) * (scale - 1);
-    const maxTotalSize = totalSizeBasis + sizeDiff;
+    const maxTotalSize = unscaledLength + sizeDiff;
     const halfSizeDiff = sizeDiff / 2;
 
-    __animatedVariables["halfSizeDiff"] = halfSizeDiff.toFixed(2);
-    __animatedVariables["maxTotalSize"] = maxTotalSize.toFixed(2);
+    animatedVariables.set("halfSizeDiff", halfSizeDiff.toFixed(2))
+    animatedVariables.set("maxTotalSize", maxTotalSize.toFixed(2))
 
     const cardPositions: number[] = [];
     const gapPositions: number[] = [];
@@ -185,15 +186,18 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     return {
       falloff,
       totalCards,
+      totalGaps,
       unscaledLength,
       sliceLength,
+      normCardLength,
+      normGapLength,
       halfSizeDiff,
       maxTotalSize,
       cardPositions,
       gapPositions,
       focusHandlers,
     }
-  }, [basis, gap, children, _falloff, scale]);
+  }, [children, _falloff, basis, gap, scale, animatedVariables]);
 
   const handleMouseMove: MouseEventHandler = useCallback(event => {
     if (containerElement.current) {
@@ -223,7 +227,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     : scale;
   const scaleFactor = maxAvailableScale - MIN_SCALE;
 
-  const cardSizes = cardPositions.map(normCardPosition => {
+  const cardScales = cardPositions.map(normCardPosition => {
     // 1 at mouse position, decreasing linearly to 0 at or beyond distance FALLOFF * sliceLength
     const scale = SCALE_STRATEGY[scaleStrategy](
       clampPosToFalloffBounds(normCardPosition, normMousePosition, sliceLength, falloff)
@@ -233,7 +237,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     return 1 + scaleFactor * scale;
   });
 
-  const gapSizes = gapPositions.map(normGapPosition => {
+  const gapScales = gapPositions.map(normGapPosition => {
     // 1 at mouse position, decreasing linearly to 0 at or beyond distance FALLOFF * sliceLength
     const scale = SCALE_STRATEGY[scaleStrategy](
       clampPosToFalloffBounds(normGapPosition, normMousePosition, sliceLength, falloff)
@@ -242,8 +246,8 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     return 1 + scaleFactor * scale;
   });
 
-  const totalCardSize = cardSizes.reduce((totalCardSize, size) => totalCardSize + size * basis, 0);
-  const totalGapSize = gapSizes.reduce((totalGapSize, size) => totalGapSize + size * gap, 0)
+  const totalCardSize = cardScales.reduce((totalCardSize, size) => totalCardSize + size * basis, 0);
+  const totalGapSize = gapScales.reduce((totalGapSize, size) => totalGapSize + size * gap, 0)
   const totalSize = totalCardSize + totalGapSize;
 
   const getShift = () => {
@@ -252,30 +256,45 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     // (i.e. max size) and then stay at halfSizeDiff for higher values of normMousePosition,
     // and the size increase from 0 to FALLOFF * sliceLength is not linear for easy easing
     return halfSizeDiff - (maxTotalSize - totalSize) * Number(normMousePosition < 0.5);
+
+    //const unscaledSizeAtMousePos = unscaledLength * normMousePosition;
+    //const mousePosInSliceLengths = normMousePosition / sliceLength;
+    //// FIXME: boundary behavior perfectly between cards where gap is completed but sliceRemainder is wrong
+    //const sliceRemainder = normMousePosition % sliceLength;
+    //const isInCard = sliceRemainder < normCardLength;
+    //const completeSlices = Math.floor(mousePosInSliceLengths);
+    //const completeCards = Math.min(completeSlices + Number(!isInCard), totalCards);
+    //const completeGaps = Math.min(completeSlices, totalGaps);
+    //
+    //const completedCardSize = cardScales.slice(0, completeCards).reduce(
+    //  (total, scale) => total + scale * basis,
+    //  0
+    //);
+    //const completedGapSize = gapScales.slice(0, completeGaps).reduce(
+    //  (total, scale) => total + scale * gap,
+    //  0
+    //);
+    //const remainderSize = isInCard
+    //  ? sliceRemainder / normCardLength * cardScales[completeCards] * basis
+    //  : sliceRemainder % normCardLength / normGapLength * gapScales[Math.min(completeGaps, totalGaps - 1)] * gap;
+    //const scaledSizeAtMousePos = completedCardSize + completedGapSize + remainderSize;
+    //
+    //return scaledSizeAtMousePos - unscaledSizeAtMousePos;
   }
 
   const shift = easingFactor * getShift();
-  __animatedVariables["shift"] = shift.toFixed(0);
-  __animatedVariables["totalSize"] = totalSize.toFixed(0);
-  __animatedVariables["totalCardSize"] = totalCardSize.toFixed(0);
-  __animatedVariables["totalGapSize"] = totalGapSize.toFixed(0);
-  __animatedVariables["mousePosInSliceLengths"] = (normMousePosition / sliceLength).toFixed(2);
-  __animatedVariables["normMousePosition"] = normMousePosition.toFixed(2);
-  __animatedVariables["easingFactor"] = easingFactor.toFixed(2);
-  __animatedVariables["scale"] = scale.toFixed(2);
-  __animatedVariables["falloff"] = falloff.toFixed(2);
+
+  animatedVariables.set("easingFactor", easingFactor);
+  animatedVariables.set("normMousePosition", normMousePosition);
+  animatedVariables.set("normShift", shift / halfSizeDiff);
 
   // when scaling, set cross axis to the maximum scale to minimize reflow
   const crossAxisLength = (1 + easingFactor * (maxAvailableScale - 1)) * basis;
 
   // TODO:
-  // - bar representing unscaled length / normMousePosition at the bottom (totalSizeBasis width)
-  // - bars for easingFactor, shift? w/range on either side for shift, potentially
   // - sliders for basis, gap, scale, falloff, >>>>>>>>> and EASING_MS
   // - line tracing the easing/size function behind the cards?
-  // - pin the max value of falloff to the number of cards / 2
-  // FIXME:
-  // - ensure that the component can handle having too few items in it for especially the branching shift logic to work
+  // - add a warning when falloff is overridden b/c/o number of children
   return (
     <ul
       ref={containerElement}
@@ -299,10 +318,10 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
         }}
       >
         {Children.map(children, (child, index) => {
-          const gapSize = `${((1 + easingFactor * (gapSizes[index] - 1)) * gap).toFixed(2)}px`;
+          const gapSize = `${((1 + easingFactor * (gapScales[index] - 1)) * gap).toFixed(2)}px`;
 
           return (
-            <CardSize.Provider value={(1 + easingFactor * (cardSizes[index] - 1)) * basis}>
+            <CardSize.Provider value={(1 + easingFactor * (cardScales[index] - 1)) * basis}>
               <CardFocus.Provider value={focusHandlers[index]}>
                 {/* TODO: get rid of provider flow if I stick with forcibly wrapping in Card */}
                 <Card>
@@ -324,107 +343,3 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   )
 }
 
-// I put a __ so it's safe and smart to do
-const __animatedVariables: Record<string, string | number> = {};
-const AnimatedVariable: FC<{ varName: string; displayName?: string }> = ({ varName, displayName }) => {
-  const [value, setValue] = useState<string | number>(__animatedVariables[varName]);
-
-  useEffect(() => {
-    const displayNextValue = () => {
-      setValue(__animatedVariables[varName]);
-
-      frame = requestAnimationFrame(displayNextValue);
-    }
-
-    let frame = requestAnimationFrame(displayNextValue);
-
-    return () => cancelAnimationFrame(frame);
-  });
-
-  return (
-    <p>{displayName ?? varName}: {value}</p>
-  );
-}
-
-export const MagnificationTester: FC<CardMagnifierProps> = ({
-  children,
-  direction = 'horizontal',
-  scaleStrategy,
-  ...carouselProps
-}) => {
-  // TODO: add LFO to these
-  // if I add an LFO button to every animatable property -
-  //   no controls just ~1/3hz using Date.now() as an input to Math.sin()
-  //   w/random offset so they're not in phase
-  const [scale, setScale] = useState(3);
-  const [falloff, setFalloff] = useState(3);
-  const [gap, setGap] = useState(5);
-
-  return (
-    <div>
-      <div>
-        <input
-          type="range"
-          id="scale"
-          name="scale"
-          min={1}
-          // FIXME: scale values above 5 show an apparent discontinuity in the level of shift
-          // through the easing animation, seems to just grow in noticeability w/large shifts
-          // or gaps
-          max={5}
-          value={scale}
-          step={0.1}
-          onChange={e => setScale(e.target.valueAsNumber)}
-        />
-        <label htmlFor="scale">Scale</label>
-      </div>
-      <div>
-        <input
-          type="range"
-          id="falloff"
-          name="falloff"
-          min={1}
-          max={10}
-          value={falloff}
-          step={1.0}
-          onChange={e => setFalloff(e.target.valueAsNumber)}
-        />
-        <label htmlFor="falloff">Falloff</label>
-      </div>
-      <div>
-        <input
-          type="range"
-          id="gap"
-          name="gap"
-          min={0}
-          max={25}
-          value={gap}
-          step={1.0}
-          onChange={e => setGap(e.target.valueAsNumber)}
-        />
-        <label htmlFor="gap">Gap</label>
-      </div>
-      <AnimatedVariable varName="scale" />
-      <AnimatedVariable varName="falloff" />
-      <AnimatedVariable varName="shift" />
-      <AnimatedVariable varName="maxTotalSize" />
-      <AnimatedVariable varName="totalSize" />
-      <AnimatedVariable varName="totalCardSize" />
-      <AnimatedVariable varName="totalGapSize" />
-      <AnimatedVariable varName="normMousePosition" />
-      <AnimatedVariable varName="mousePosInSliceLengths" />
-      <AnimatedVariable varName="easingFactor" />
-      <AnimatedVariable varName="halfSizeDiff" />
-      <CardMagnifier
-        direction={direction}
-        scaleStrategy={scaleStrategy}
-        {...carouselProps}
-        scale={scale}
-        falloff={falloff}
-        gap={gap}
-      >
-        {children}
-      </CardMagnifier>
-    </div>
-  )
-}

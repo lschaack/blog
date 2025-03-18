@@ -6,6 +6,8 @@ import {
 import {
   easeOutSine as _easeOutSine,
   inverseEaseOutSine as _inverseEaseOutSine,
+  easeInOut as _easeInOut,
+  inverseEaseInOut as _inverseEaseInOut,
 } from '@/app/utils/easingFunctions';
 
 export enum EasingDirection {
@@ -15,23 +17,42 @@ export enum EasingDirection {
 
 // kind of vague, but lower results in a tighter elbow - higher differential
 // between the fastest and the slowest phases of the animation
-const EASING_ELBOW = 0.5;
+const EASING_ELBOW_SIN = 0.5;
+const EASING_ELBOW_ROBJOHN = 2;
+const easeOutSine = _easeOutSine(EASING_ELBOW_SIN);
+const inverseEaseOutSine = _inverseEaseOutSine(EASING_ELBOW_SIN);
+const easeInOut = _easeInOut(EASING_ELBOW_ROBJOHN);
+const inverseEaseInOut = _inverseEaseInOut(EASING_ELBOW_ROBJOHN);
 
-const easeOutSine = _easeOutSine(EASING_ELBOW);
-const inverseEaseOutSine = _inverseEaseOutSine(EASING_ELBOW);
+const EASING_STRATEGY = {
+  easeOut: {
+    ease: easeOutSine,
+    inverse: inverseEaseOutSine,
+  },
+  // I guess there are already inverses of each other, so why not just swap them
+  easeIn: {
+    ease: inverseEaseOutSine,
+    inverse: easeOutSine,
+  },
+  easeInOut: {
+    ease: easeInOut,
+    inverse: inverseEaseInOut,
+  }
+} as const;
 
 const requestEasingFrames = (
   startingFactor: number,
   totalDuration: number,
   direction: EasingDirection,
-  callback: (easingFactor: number) => void
+  callback: (easingFactor: number) => void,
+  strategy: keyof typeof EASING_STRATEGY = 'easeInOut'
 ) => {
   // using the current easing factor, find the time we're at in the easing
   // curve indicated by direction, then finish the animation from that point
   const isUp = direction === EasingDirection.UP;
   let normTime = isUp
-    ? inverseEaseOutSine(startingFactor)
-    : inverseEaseOutSine(1 - startingFactor);
+    ? EASING_STRATEGY[strategy].inverse(startingFactor)
+    : EASING_STRATEGY[strategy].inverse(1 - startingFactor);
   let prevTime = Date.now();
   let currentFrameId: number;
 
@@ -49,8 +70,8 @@ const requestEasingFrames = (
     normTime = Math.min(normTime + normMsPassed, 1);
 
     const easingFactor = isUp
-      ? easeOutSine(normTime)
-      : 1 - easeOutSine(normTime);
+      ? EASING_STRATEGY[strategy].ease(normTime)
+      : 1 - EASING_STRATEGY[strategy].ease(normTime);
 
     const limitReached = isUp
       ? easingFactor === 1

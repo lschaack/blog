@@ -19,6 +19,15 @@ export const getBlogPostWithSlug = gql`
                 }
               }
             }
+            assets {
+              block {
+                sys {
+                  id
+                }
+                url
+                title
+              }
+            }
           }
         }
         author {
