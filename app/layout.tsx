@@ -47,7 +47,7 @@ export default function RootLayout({
       noto_sans_mono.variable,
       'transition-colors'
     )}>
-      <body className="font-sans bg-cream">
+      <body className="font-sans bg-zinc-50">
         <div className={clsx(
           'max-w-[100vw]',
           'grid sm:p-6',

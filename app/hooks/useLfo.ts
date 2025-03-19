@@ -6,21 +6,23 @@ const getLfoValue = (hz: number, phase: number) => {
 
 // NOTE: To simplify and speed up computation, phase is in seconds
 // and the actual relative phase will depend on the value of hz
-export const useLfo = (hz: number, phase = 0) => {
+export const useLfo = (hz: number, phase = 0, on: boolean = true) => {
   const [value, setValue] = useState(getLfoValue(hz, phase));
 
   useEffect(() => {
-    let frame: number;
+    if (on) {
+      let frame: number;
 
-    const animate = () => {
-      setValue(getLfoValue(hz, phase));
+      const animate = () => {
+        setValue(getLfoValue(hz, phase));
+        frame = requestAnimationFrame(animate);
+      };
+
       frame = requestAnimationFrame(animate);
-    };
 
-    frame = requestAnimationFrame(animate);
-
-    return () => cancelAnimationFrame(frame);
-  })
+      return () => cancelAnimationFrame(frame);
+    }
+  }, [hz, phase, on]);
 
   return value;
 }

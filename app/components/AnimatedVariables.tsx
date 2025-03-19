@@ -1,4 +1,7 @@
 import { createContext, FC, useContext, useEffect, useState } from "react";
+import { inputColorClasses } from "../utils/colors";
+import { throttle } from "lodash";
+import { LabelledValue } from "./LabelledValue";
 
 export const AnimatedVariablesContext = createContext(new Map<string, string | number | boolean>());
 
@@ -8,7 +11,7 @@ const useAnimatedVariable = (varName: string) => {
 
   useEffect(() => {
     const displayNextValue = () => {
-      setValue(animatedVariables.get(varName)?.toString());
+      setValue(animatedVariables.get(varName));
 
       frame = requestAnimationFrame(displayNextValue);
     }
@@ -32,17 +35,37 @@ export const AnimatedVariableValue: FC<AnimatedVariableProps> = ({ varName, disp
   return <p>{displayName ?? varName}: {value}</p>;
 }
 
-export const AnimatedVariableMeter: FC<AnimatedVariableProps> = ({ varName, displayName }) => {
+type AnimatedVariableMeterProps = AnimatedVariableProps & {
+  color: keyof typeof inputColorClasses;
+};
+
+const logMeterTypeError = throttle((varName: string, value: unknown) => {
+  console.error(`Cannot represent non-numeric value \`${varName} = ${value}\` with type "${typeof value}" as a meter`);
+}, 1000);
+
+export const AnimatedVariableMeter: FC<AnimatedVariableMeterProps> = ({ varName, displayName, color }) => {
   const value = useAnimatedVariable(varName);
 
+  if (value && typeof value !== 'number') logMeterTypeError(varName, value);
+
   return (
-    <meter
-      className="block"
-      value={value as number}
-      min={0}
-      max={1}
+    <LabelledValue id={varName}
+      label={displayName ?? varName}
+      value={Number(value)?.toFixed(2) ?? ''}
     >
-      {displayName ?? varName}
-    </meter>
+      <div
+        id={varName}
+        role="meter"
+        className={`w-full h-4 ${inputColorClasses[color].track}`}
+        aria-valuenow={value as number}
+        aria-valuemin={0}
+        aria-valuemax={1}
+      >
+        <div
+          className={`h-full ${inputColorClasses[color].filled}`}
+          style={{ width: `${(value as number) * 100}%` }}
+        />
+      </div>
+    </LabelledValue>
   );
 }

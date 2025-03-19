@@ -19,6 +19,7 @@ import { clamp } from "lodash/fp";
 
 import { useEaseUpDown, EasingDirection } from "@/app/hooks/useEaseUpDown";
 import { AnimatedVariablesContext } from "./AnimatedVariables";
+import { throttle } from "lodash";
 
 // min scale is how small the card can possibly be as a factor of `basis`
 const MIN_SCALE = 1;
@@ -95,6 +96,11 @@ export type CardMagnifierProps = {
   scale?: number;
 }
 
+const logFalloffWarning = throttle(
+  () => console.warn('Carousel must contain at least `falloff * 2` children'),
+  5000,
+)
+
 export const CardMagnifier: FC<CardMagnifierProps> = ({
   children,
   direction = 'horizontal',
@@ -118,6 +124,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     isMouseOver ? EasingDirection.UP : EasingDirection.DOWN
   );
 
+  // FIXME: this is now being recomputed on every render
   const {
     falloff,
     totalCards,
@@ -136,7 +143,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     const falloff = totalCards >= 2 * _falloff
       ? _falloff
       : Math.floor(totalCards / 2);
-    if (falloff !== _falloff) console.warn('Carousel must contain at least `falloff * 2` children');
+    if (falloff !== _falloff) logFalloffWarning();
     const totalGaps = totalCards - 1;
     const unscaledLength = totalCards * (basis + gap) - gap;
     // percentage of total length taken up by cards
@@ -197,7 +204,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
       gapPositions,
       focusHandlers,
     }
-  }, [children, _falloff, basis, gap, scale, animatedVariables]);
+  }, [children, _falloff, basis, gap, scale]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleMouseMove: MouseEventHandler = useCallback(event => {
     if (containerElement.current) {
@@ -205,12 +212,12 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
         const relativeY = event.pageY - containerElement.current.offsetTop;
         const normY = relativeY / unscaledLength;
 
-        setNormMousePosition(normY);
+        setNormMousePosition(clamp(0, 1, normY));
       } else {
         const relativeX = event.pageX - containerElement.current.offsetLeft;
         const normX = relativeX / unscaledLength;
 
-        setNormMousePosition(normX);
+        setNormMousePosition(clamp(0, 1, normX));
       }
     }
   }, [isVertical, unscaledLength]);
@@ -314,7 +321,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
           [isVertical ? 'top' : 'left']: -shift,
           [isVertical ? 'width' : 'height']: crossAxisLength,
           flexDirection: isVertical ? 'column' : 'row',
-          alignItems: 'flex-end',
+          alignItems: isVertical ? 'center' : 'flex-end',
         }}
       >
         {Children.map(children, (child, index) => {
