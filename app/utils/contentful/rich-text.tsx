@@ -1,7 +1,7 @@
 import { DEMOS } from "@/app/demos";
 import { Asset, BlogPostBodyLinks, Entry } from "@/app/graphql/graphql";
 import type { Options } from "@contentful/rich-text-react-renderer";
-import { BLOCKS } from "@contentful/rich-text-types";
+import { BLOCKS, INLINES } from "@contentful/rich-text-types";
 import { isDemo } from "./predicates";
 import Image from "next/image";
 
@@ -16,7 +16,33 @@ const NEXT_KNOWN_IMAGE_EXTENSIONS = [
 ];
 
 export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
-  renderNode: {},
+  renderNode: {
+    [BLOCKS.PARAGRAPH]: (_, children) => (
+      <p className="my-4">{children}</p>
+    ),
+    [BLOCKS.HEADING_1]: (_, children) => (
+      <h1 className="text-3xl font-bold mt-9 mb-3">{children}</h1>
+    ),
+    [BLOCKS.HEADING_2]: (_, children) => (
+      <h2 className="text-2xl font-bold mt-6 mb-1">{children}</h2>
+    ),
+    [BLOCKS.HEADING_3]: (_, children) => (
+      <h3 className="text-xl font-bold mt-4 mb-1">{children}</h3>
+    ),
+    [BLOCKS.HEADING_4]: (_, children) => (
+      <h4 className="text-lg font-bold mt-2">{children}</h4>
+    ),
+    [INLINES.HYPERLINK]: (node, children) => (
+      <a
+        href={node.data.uri}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline decoration-wavy"
+      >
+        {children}
+      </a>
+    )
+  },
 };
 
 export const getBlogPostOptions = (links: BlogPostBodyLinks): Options => {

@@ -1,5 +1,6 @@
 import { lazy } from "react";
 
 export const DEMOS = {
-  dockMagnification: lazy(() => import('./dock-magnification')),
+  'dock-magnification': lazy(() => import('./dock-magnification/full')),
+  'dock-magnification-no-shift': lazy(() => import('./dock-magnification/no-shift')),
 }

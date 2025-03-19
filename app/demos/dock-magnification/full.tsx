@@ -1,13 +1,12 @@
 'use client';
 
 import Image from "next/image";
-
-import { useResizeValue } from "@/app/hooks/useResizeValue";
 import { useState } from "react";
+
 import { CardMagnifier } from "@/app/components/CardMagnifier";
 import { InputRange } from "@/app/components/InputRange";
-import { AnimatedVariableMeter, AnimatedVariablesContext } from "../components/AnimatedVariables";
-import { useLfo } from "../hooks/useLfo";
+import { AnimatedVariableMeter, AnimatedVariablesContext } from "@/app/components/AnimatedVariables";
+import { useLfo } from "@/app/hooks/useLfo";
 
 const ANIMATED_VARIABLES = new Map<string, string | number | boolean>();
 
@@ -17,7 +16,8 @@ const SCALE_MIN = 1;
 const SCALE_MAX = 5;
 
 export default function Demo() {
-  const canFitFourCards = useResizeValue(() => window?.matchMedia('(min-width: 1024px)').matches, true);
+  // TODO: Update this query or get rid of horizontal/vertical switching
+  //const canFitFourCards = useResizeValue(() => window?.matchMedia('(min-width: 1024px)').matches, true);
   const [scale, setScale] = useState(3);
   const [falloff, setFalloff] = useState(3);
   const [gap, setGap] = useState(5);
@@ -83,21 +83,23 @@ export default function Demo() {
           <div className="w-full flex flex-col gap-2">
             <AnimatedVariableMeter
               varName="easingFactor"
+              displayName="Easing"
               color="teal"
             />
             <AnimatedVariableMeter
               varName="normMousePosition"
+              displayName="Position"
               color="indigo"
             />
             <AnimatedVariableMeter
               varName="normShift"
+              displayName="Shift"
               color="rose"
             />
           </div>
         </div>
         <CardMagnifier
           className="self-center sm:self-start"
-          direction={canFitFourCards ? 'horizontal' : 'vertical'}
           scaleStrategy="cosEaseInOut"
           basis={80}
           scale={runLfo ? scaleLfoValue : scale}

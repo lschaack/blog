@@ -5,9 +5,7 @@ import {
   FC,
   FocusEventHandler,
   MouseEventHandler,
-  PropsWithChildren,
   ReactNode,
-  createContext,
   useCallback,
   useContext,
   useMemo,
@@ -21,30 +19,22 @@ import { useEaseUpDown, EasingDirection } from "@/app/hooks/useEaseUpDown";
 import { AnimatedVariablesContext } from "./AnimatedVariables";
 import { throttle } from "lodash";
 
-// min scale is how small the card can possibly be as a factor of `basis`
-const MIN_SCALE = 1;
 const EASING_MS = 300;
 
-const CardSize = createContext(0);
-type CardFocusContext = {
-  focus: FocusEventHandler;
-  blur: FocusEventHandler;
+type CardProps = {
+  size: number;
+  onFocus: FocusEventHandler;
+  onBlur: FocusEventHandler;
+  children: ReactNode;
 }
-const CardFocus = createContext<CardFocusContext>({
-  focus: () => undefined,
-  blur: () => undefined,
-});
 
-export const Card: FC<PropsWithChildren> = ({ children }) => {
-  const size = useContext(CardSize);
-  const { focus, blur } = useContext(CardFocus);
-
+export const Card: FC<CardProps> = ({ size, onFocus, onBlur, children }) => {
   return (
     <li
       tabIndex={0}
       className="outline-none focus:shadow-outline flex-shrink-0"
-      onFocus={focus}
-      onBlur={blur}
+      onFocus={onFocus}
+      onBlur={onBlur}
       style={{
         height: size,
         width: size,
@@ -78,9 +68,6 @@ const SCALE_STRATEGY: Record<ScaleStrategy, (
   linear: distance => 1 - Math.abs(distance),
 };
 
-// Necessary aspects of the scaling algorithm:
-// - at full expansion, the total size of the scaled carousel should be stable
-// - ^ this is currently only satisfied by linear and cosEaseInOut
 export type CardMagnifierProps = {
   children?: ReactNode;
   direction?: 'horizontal' | 'vertical';
@@ -88,8 +75,9 @@ export type CardMagnifierProps = {
   basis: number;
   gap: number;
   scaleStrategy?: ScaleStrategy;
+  shiftStrategy?: 'stableEdge' | 'accurate' | 'disabled';
   className?: string;
-  // falloff is how many slice lengths it takes for a card to reach MIN_SCALE
+  // falloff is how many slice lengths it takes for a card to reach scale 1
   // NOTE: falloff needs to be a whole number to maintain size stability
   falloff?: number;
   // scale is how large the card will be with the cursor at the center
@@ -108,6 +96,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   gap,
   className,
   scaleStrategy = 'linear',
+  shiftStrategy = 'stableEdge',
   falloff: _falloff = 3,
   scale = 3,
 }) => {
@@ -167,7 +156,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
 
     const cardPositions: number[] = [];
     const gapPositions: number[] = [];
-    const focusHandlers: CardFocusContext[] = [];
+    const focusHandlers: Array<{ focus: FocusEventHandler; blur: FocusEventHandler }> = [];
     for (let i = 0; i < totalCards; i++) {
       cardPositions.push(halfNormCardLength + i * sliceLength);
       if (i < (totalCards - 1)) gapPositions.push(cardPositions[i] + halfSliceLength);
@@ -232,7 +221,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   const maxAvailableScale = parentCrossAxisLength
     ? Math.min(scale, parentCrossAxisLength / basis)
     : scale;
-  const scaleFactor = maxAvailableScale - MIN_SCALE;
+  const scaleFactor = maxAvailableScale - 1;
 
   const cardScales = cardPositions.map(normCardPosition => {
     // 1 at mouse position, decreasing linearly to 0 at or beyond distance FALLOFF * sliceLength
@@ -240,7 +229,6 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
       clampPosToFalloffBounds(normCardPosition, normMousePosition, sliceLength, falloff)
     );
 
-    //TODO: get rid of MIN_SCALE or use it consistently
     return 1 + scaleFactor * scale;
   });
 
@@ -258,35 +246,38 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   const totalSize = totalCardSize + totalGapSize;
 
   const getShift = () => {
-    // TODO: don't love this branching logic, feels like I'm missing something
-    // but shift needs to increase from 0 to halfSizeDiff from up to FALLOFF * sliceLength
-    // (i.e. max size) and then stay at halfSizeDiff for higher values of normMousePosition,
-    // and the size increase from 0 to FALLOFF * sliceLength is not linear for easy easing
-    return halfSizeDiff - (maxTotalSize - totalSize) * Number(normMousePosition < 0.5);
+    if (shiftStrategy === 'disabled') return 0;
+    else if (shiftStrategy === 'stableEdge') {
+      // TODO: don't love this branching logic, but shift needs to increase from 0 to
+      // halfSizeDiff from up to FALLOFF * sliceLength (i.e. max size) and then stay
+      // at halfSizeDiff for higher values of normMousePosition, and the size increase
+      // from 0 to FALLOFF * sliceLength is not linear for easy easing
+      return halfSizeDiff - (maxTotalSize - totalSize) * Number(normMousePosition < 0.5);
+    } else {
+      const unscaledSizeAtMousePos = unscaledLength * normMousePosition;
+      const mousePosInSliceLengths = normMousePosition / sliceLength;
+      // FIXME: boundary behavior perfectly between cards where gap is completed but sliceRemainder is wrong
+      const sliceRemainder = normMousePosition % sliceLength;
+      const isInCard = sliceRemainder < normCardLength;
+      const completeSlices = Math.floor(mousePosInSliceLengths);
+      const completeCards = Math.min(completeSlices + Number(!isInCard), totalCards);
+      const completeGaps = Math.min(completeSlices, totalGaps);
 
-    //const unscaledSizeAtMousePos = unscaledLength * normMousePosition;
-    //const mousePosInSliceLengths = normMousePosition / sliceLength;
-    //// FIXME: boundary behavior perfectly between cards where gap is completed but sliceRemainder is wrong
-    //const sliceRemainder = normMousePosition % sliceLength;
-    //const isInCard = sliceRemainder < normCardLength;
-    //const completeSlices = Math.floor(mousePosInSliceLengths);
-    //const completeCards = Math.min(completeSlices + Number(!isInCard), totalCards);
-    //const completeGaps = Math.min(completeSlices, totalGaps);
-    //
-    //const completedCardSize = cardScales.slice(0, completeCards).reduce(
-    //  (total, scale) => total + scale * basis,
-    //  0
-    //);
-    //const completedGapSize = gapScales.slice(0, completeGaps).reduce(
-    //  (total, scale) => total + scale * gap,
-    //  0
-    //);
-    //const remainderSize = isInCard
-    //  ? sliceRemainder / normCardLength * cardScales[completeCards] * basis
-    //  : sliceRemainder % normCardLength / normGapLength * gapScales[Math.min(completeGaps, totalGaps - 1)] * gap;
-    //const scaledSizeAtMousePos = completedCardSize + completedGapSize + remainderSize;
-    //
-    //return scaledSizeAtMousePos - unscaledSizeAtMousePos;
+      const completedCardSize = cardScales.slice(0, completeCards).reduce(
+        (total, scale) => total + scale * basis,
+        0
+      );
+      const completedGapSize = gapScales.slice(0, completeGaps).reduce(
+        (total, scale) => total + scale * gap,
+        0
+      );
+      const remainderSize = isInCard
+        ? sliceRemainder / normCardLength * cardScales[completeCards] * basis
+        : sliceRemainder % normCardLength / normGapLength * gapScales[Math.min(completeGaps, totalGaps - 1)] * gap;
+      const scaledSizeAtMousePos = completedCardSize + completedGapSize + remainderSize;
+
+      return scaledSizeAtMousePos - unscaledSizeAtMousePos;
+    }
   }
 
   const shift = easingFactor * getShift();
@@ -298,10 +289,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   // when scaling, set cross axis to the maximum scale to minimize reflow
   const crossAxisLength = (1 + easingFactor * (maxAvailableScale - 1)) * basis;
 
-  // TODO:
-  // - sliders for basis, gap, scale, falloff, >>>>>>>>> and EASING_MS
-  // - line tracing the easing/size function behind the cards?
-  // - add a warning when falloff is overridden b/c/o number of children
+  // TODO: add a warning when falloff is overridden b/c/o number of children
   return (
     <ul
       ref={containerElement}
@@ -328,21 +316,22 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
           const gapSize = `${((1 + easingFactor * (gapScales[index] - 1)) * gap).toFixed(2)}px`;
 
           return (
-            <CardSize.Provider value={(1 + easingFactor * (cardScales[index] - 1)) * basis}>
-              <CardFocus.Provider value={focusHandlers[index]}>
-                {/* TODO: get rid of provider flow if I stick with forcibly wrapping in Card */}
-                <Card>
-                  {child}
-                </Card>
-                {index < (totalCards - 1) && (
-                  <div style={{
-                    width: gapSize,
-                    height: gapSize,
-                    flexShrink: 0,
-                  }} />
-                )}
-              </CardFocus.Provider>
-            </CardSize.Provider>
+            <>
+              <Card
+                size={(1 + easingFactor * (cardScales[index] - 1)) * basis}
+                onFocus={focusHandlers[index].focus}
+                onBlur={focusHandlers[index].blur}
+              >
+                {child}
+              </Card>
+              {index < (totalCards - 1) && (
+                <div style={{
+                  width: gapSize,
+                  height: gapSize,
+                  flexShrink: 0,
+                }} />
+              )}
+            </>
           )
         })}
       </div>
