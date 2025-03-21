@@ -56,7 +56,9 @@ const clampPosToFalloffBounds = (
 
 type ScaleStrategy =
   | 'linear'
-  | 'cosEaseInOut';
+  | 'cosEaseInOut'
+  | 'cosRidiculous'
+  | 'tanRidiculous';
 // A set of functions where
 //   f(mousePos) = 1
 //   f(Math.abs(mousePos - pos) > FALLOFF * sliceLength) = 0
@@ -66,6 +68,9 @@ const SCALE_STRATEGY: Record<ScaleStrategy, (
 ) => number> = {
   cosEaseInOut: distance => 0.5 + Math.cos(Math.PI * distance) / 2,
   linear: distance => 1 - Math.abs(distance),
+  cosRidiculous: distance => 0.5 + (Math.cos(Math.PI * distance) * Math.cos(2 * Math.PI * distance)) / 2,
+  //cosRidiculous: distance => Math.abs(Math.cos(Math.PI * distance) * Math.cos(2 * Math.PI * distance)),
+  //cosRidiculous: distance => Math.pow(distance, 2),
 };
 
 export type CardMagnifierProps = {
@@ -95,8 +100,8 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   basis,
   gap,
   className,
-  scaleStrategy = 'linear',
-  shiftStrategy = 'stableEdge',
+  scaleStrategy = 'cosRidiculous',
+  shiftStrategy = 'accurate',
   falloff: _falloff = 3,
   scale = 3,
 }) => {
@@ -263,14 +268,12 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
       const completeCards = Math.min(completeSlices + Number(!isInCard), totalCards);
       const completeGaps = Math.min(completeSlices, totalGaps);
 
-      const completedCardSize = cardScales.slice(0, completeCards).reduce(
-        (total, scale) => total + scale * basis,
-        0
-      );
-      const completedGapSize = gapScales.slice(0, completeGaps).reduce(
-        (total, scale) => total + scale * gap,
-        0
-      );
+      const completedCardSize = cardScales
+        .slice(0, completeCards)
+        .reduce((total, scale) => total + scale * basis, 0);
+      const completedGapSize = gapScales
+        .slice(0, completeGaps)
+        .reduce((total, scale) => total + scale * gap, 0);
       const remainderSize = isInCard
         ? sliceRemainder / normCardLength * cardScales[completeCards] * basis
         : sliceRemainder % normCardLength / normGapLength * gapScales[Math.min(completeGaps, totalGaps - 1)] * gap;

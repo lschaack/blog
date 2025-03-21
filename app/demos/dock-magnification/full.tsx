@@ -100,7 +100,7 @@ export default function Demo() {
         </div>
         <CardMagnifier
           className="self-center sm:self-start"
-          scaleStrategy="cosEaseInOut"
+          //scaleStrategy="cosEaseInOut"
           basis={80}
           scale={runLfo ? scaleLfoValue : scale}
           falloff={falloff}

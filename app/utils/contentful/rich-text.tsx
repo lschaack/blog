@@ -1,9 +1,15 @@
+import Image from "next/image";
+import hljs from "highlight.js/lib/core";
+import typescript from "highlight.js/lib/languages/typescript";
+import "highlight.js/styles/github.css";
+
 import { DEMOS } from "@/app/demos";
 import { Asset, BlogPostBodyLinks, Entry } from "@/app/graphql/graphql";
-import type { Options } from "@contentful/rich-text-react-renderer";
-import { BLOCKS, INLINES } from "@contentful/rich-text-types";
-import { isDemo } from "./predicates";
-import Image from "next/image";
+import { documentToReactComponents, type Options } from "@contentful/rich-text-react-renderer";
+import { BLOCKS, Document, INLINES } from "@contentful/rich-text-types";
+import { isCodeBlock, isDemo } from "./predicates";
+
+hljs.registerLanguage("typescript", typescript);
 
 const NEXT_KNOWN_IMAGE_EXTENSIONS = [
   "jpg",
@@ -31,6 +37,22 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
     ),
     [BLOCKS.HEADING_4]: (_, children) => (
       <h4 className="text-lg font-bold mt-2">{children}</h4>
+    ),
+    [BLOCKS.UL_LIST]: (_, children) => (
+      <ul className="list-disc list-inside my-4">{children}</ul>
+    ),
+    [BLOCKS.LIST_ITEM]: (node) => (
+      // avoid wrapping li text children in <p> tags for styling
+      // https://github.com/contentful/rich-text/issues/126
+      <li>
+        {documentToReactComponents(node as Document, {
+          renderNode: {
+            ...DEFAULT_RICH_TEXT_OPTIONS.renderNode,
+            [BLOCKS.PARAGRAPH]: (_, children) => children,
+            [BLOCKS.LIST_ITEM]: (_, children) => children,
+          }
+        })}
+      </li>
     ),
     [INLINES.HYPERLINK]: (node, children) => (
       <a
@@ -80,6 +102,18 @@ export const getBlogPostOptions = (links: BlogPostBodyLinks): Options => {
           } else {
             return <Demo />;
           }
+        } else if (isCodeBlock(entry)) {
+          if (!entry.code || !entry.language) {
+            return <pre>Code block missing code or language</pre>;
+          } else {
+            const highlighted = hljs.highlight(entry.code, { language: entry.language });
+
+            return (
+              <pre className="p-4 bg-stone-100 rounded-lg">
+                <code dangerouslySetInnerHTML={{ __html: highlighted.value }} />
+              </pre>
+            );
+          }
         }
       },
       [BLOCKS.EMBEDDED_ASSET]: node => {
@@ -90,7 +124,15 @@ export const getBlogPostOptions = (links: BlogPostBodyLinks): Options => {
             if (asset.url.endsWith(".webm")) {
               return <video src={asset.url} autoPlay playsInline muted loop />;
             } else if (NEXT_KNOWN_IMAGE_EXTENSIONS.some(ext => asset.url?.endsWith(ext))) {
-              return <Image src={asset.url} alt={asset.title!} />;
+              return (
+                <Image
+                  src={asset.url}
+                  alt={asset.description!}
+                  width={asset.width!}
+                  height={asset.height!}
+                  className="my-8"
+                />
+              );
             } else {
               return <p>unknown asset type: {asset.url}</p>;
             }

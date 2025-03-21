@@ -28,7 +28,7 @@ export default async function Post({
     notFound();
   } else {
     return (
-      <main className="max-w-2xl mx-auto">
+      <main className="max-w-4xl mx-auto">
         {documentToReactComponents(post.body.json, getBlogPostOptions(post.body.links))}
       </main>
     );

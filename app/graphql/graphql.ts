@@ -328,7 +328,7 @@ export enum AuthorOrder {
   SysPublishedVersionDesc = 'sys_publishedVersion_DESC'
 }
 
-/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPost = Entry & _Node & {
   __typename?: 'BlogPost';
   _id: Scalars['ID']['output'];
@@ -342,7 +342,7 @@ export type BlogPost = Entry & _Node & {
 };
 
 
-/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostAuthorArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
   preview?: InputMaybe<Scalars['Boolean']['input']>;
@@ -350,25 +350,25 @@ export type BlogPostAuthorArgs = {
 };
 
 
-/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostBodyArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 
-/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostLinkedFromArgs = {
   allowedLocales?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
 };
 
 
-/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostSlugArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 
-/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostTitleArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
@@ -471,6 +471,106 @@ export type BlogPostLinkingCollectionsEntryCollectionArgs = {
 export enum BlogPostOrder {
   SlugAsc = 'slug_ASC',
   SlugDesc = 'slug_DESC',
+  SysFirstPublishedAtAsc = 'sys_firstPublishedAt_ASC',
+  SysFirstPublishedAtDesc = 'sys_firstPublishedAt_DESC',
+  SysIdAsc = 'sys_id_ASC',
+  SysIdDesc = 'sys_id_DESC',
+  SysPublishedAtAsc = 'sys_publishedAt_ASC',
+  SysPublishedAtDesc = 'sys_publishedAt_DESC',
+  SysPublishedVersionAsc = 'sys_publishedVersion_ASC',
+  SysPublishedVersionDesc = 'sys_publishedVersion_DESC',
+  TitleAsc = 'title_ASC',
+  TitleDesc = 'title_DESC'
+}
+
+/** A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
+export type CodeBlock = Entry & _Node & {
+  __typename?: 'CodeBlock';
+  _id: Scalars['ID']['output'];
+  code?: Maybe<Scalars['String']['output']>;
+  contentfulMetadata: ContentfulMetadata;
+  language?: Maybe<Scalars['String']['output']>;
+  linkedFrom?: Maybe<CodeBlockLinkingCollections>;
+  sys: Sys;
+  title?: Maybe<Scalars['String']['output']>;
+};
+
+
+/** A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
+export type CodeBlockCodeArgs = {
+  locale?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+/** A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
+export type CodeBlockLanguageArgs = {
+  locale?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+/** A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
+export type CodeBlockLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+};
+
+
+/** A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
+export type CodeBlockTitleArgs = {
+  locale?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CodeBlockCollection = {
+  __typename?: 'CodeBlockCollection';
+  items: Array<Maybe<CodeBlock>>;
+  limit: Scalars['Int']['output'];
+  skip: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
+};
+
+export type CodeBlockFilter = {
+  AND?: InputMaybe<Array<InputMaybe<CodeBlockFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<CodeBlockFilter>>>;
+  code?: InputMaybe<Scalars['String']['input']>;
+  code_contains?: InputMaybe<Scalars['String']['input']>;
+  code_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  code_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  code_not?: InputMaybe<Scalars['String']['input']>;
+  code_not_contains?: InputMaybe<Scalars['String']['input']>;
+  code_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  language?: InputMaybe<Scalars['String']['input']>;
+  language_contains?: InputMaybe<Scalars['String']['input']>;
+  language_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  language_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  language_not?: InputMaybe<Scalars['String']['input']>;
+  language_not_contains?: InputMaybe<Scalars['String']['input']>;
+  language_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  title_contains?: InputMaybe<Scalars['String']['input']>;
+  title_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  title_not?: InputMaybe<Scalars['String']['input']>;
+  title_not_contains?: InputMaybe<Scalars['String']['input']>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+};
+
+export type CodeBlockLinkingCollections = {
+  __typename?: 'CodeBlockLinkingCollections';
+  entryCollection?: Maybe<EntryCollection>;
+};
+
+
+export type CodeBlockLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export enum CodeBlockOrder {
+  LanguageAsc = 'language_ASC',
+  LanguageDesc = 'language_DESC',
   SysFirstPublishedAtAsc = 'sys_firstPublishedAt_ASC',
   SysFirstPublishedAtDesc = 'sys_firstPublishedAt_DESC',
   SysIdAsc = 'sys_id_ASC',
@@ -730,6 +830,8 @@ export type Query = {
   authorCollection?: Maybe<AuthorCollection>;
   blogPost?: Maybe<BlogPost>;
   blogPostCollection?: Maybe<BlogPostCollection>;
+  codeBlock?: Maybe<CodeBlock>;
+  codeBlockCollection?: Maybe<CodeBlockCollection>;
   demo?: Maybe<Demo>;
   demoCollection?: Maybe<DemoCollection>;
   entryCollection?: Maybe<EntryCollection>;
@@ -791,6 +893,23 @@ export type QueryBlogPostCollectionArgs = {
   preview?: InputMaybe<Scalars['Boolean']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
   where?: InputMaybe<BlogPostFilter>;
+};
+
+
+export type QueryCodeBlockArgs = {
+  id: Scalars['String']['input'];
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+export type QueryCodeBlockCollectionArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locale?: InputMaybe<Scalars['String']['input']>;
+  order?: InputMaybe<Array<InputMaybe<CodeBlockOrder>>>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  where?: InputMaybe<CodeBlockFilter>;
 };
 
 
@@ -913,7 +1032,7 @@ export type GetBlogPostWithSlugQueryVariables = Exact<{
 }>;
 
 
-export type GetBlogPostWithSlugQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', items: Array<{ __typename?: 'BlogPost', title?: string | null, slug?: string | null, body?: { __typename?: 'BlogPostBody', json: any, links: { __typename?: 'BlogPostBodyLinks', entries: { __typename?: 'BlogPostBodyEntries', block: Array<{ __typename?: 'Author', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'BlogPost', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'Demo', id?: string | null, sys: { __typename?: 'Sys', id: string } } | null> } } } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
+export type GetBlogPostWithSlugQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', items: Array<{ __typename?: 'BlogPost', title?: string | null, slug?: string | null, body?: { __typename?: 'BlogPostBody', json: any, links: { __typename?: 'BlogPostBodyLinks', entries: { __typename?: 'BlogPostBodyEntries', block: Array<{ __typename?: 'Author', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'BlogPost', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CodeBlock', language?: string | null, code?: string | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'Demo', id?: string | null, sys: { __typename?: 'Sys', id: string } } | null> }, assets: { __typename?: 'BlogPostBodyAssets', block: Array<{ __typename?: 'Asset', url?: string | null, title?: string | null, width?: number | null, height?: number | null, description?: string | null, sys: { __typename?: 'Sys', id: string } } | null> } } } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
 
 export class TypedDocumentString<TResult, TVariables>
   extends String
@@ -951,6 +1070,22 @@ export const GetBlogPostWithSlugDocument = new TypedDocumentString(`
               ... on Demo {
                 id
               }
+              ... on CodeBlock {
+                language
+                code
+              }
+            }
+          }
+          assets {
+            block {
+              sys {
+                id
+              }
+              url
+              title
+              width
+              height
+              description
             }
           }
         }

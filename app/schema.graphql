@@ -191,7 +191,7 @@ enum AuthorOrder {
 }
 
 """
-[See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost)
+A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost)
 """
 type BlogPost implements Entry & _Node {
   _id: ID!
@@ -284,6 +284,73 @@ type BlogPostLinkingCollections {
 enum BlogPostOrder {
   slug_ASC
   slug_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+"""
+A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock)
+"""
+type CodeBlock implements Entry & _Node {
+  _id: ID!
+  code(locale: String): String
+  contentfulMetadata: ContentfulMetadata!
+  language(locale: String): String
+  linkedFrom(allowedLocales: [String]): CodeBlockLinkingCollections
+  sys: Sys!
+  title(locale: String): String
+}
+
+type CodeBlockCollection {
+  items: [CodeBlock]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input CodeBlockFilter {
+  AND: [CodeBlockFilter]
+  OR: [CodeBlockFilter]
+  code: String
+  code_contains: String
+  code_exists: Boolean
+  code_in: [String]
+  code_not: String
+  code_not_contains: String
+  code_not_in: [String]
+  contentfulMetadata: ContentfulMetadataFilter
+  language: String
+  language_contains: String
+  language_exists: Boolean
+  language_in: [String]
+  language_not: String
+  language_not_contains: String
+  language_not_in: [String]
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type CodeBlockLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum CodeBlockOrder {
+  language_ASC
+  language_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC
@@ -550,6 +617,8 @@ type Query {
   authorCollection(limit: Int = 100, locale: String, order: [AuthorOrder], preview: Boolean, skip: Int = 0, where: AuthorFilter): AuthorCollection
   blogPost(id: String!, locale: String, preview: Boolean): BlogPost
   blogPostCollection(limit: Int = 100, locale: String, order: [BlogPostOrder], preview: Boolean, skip: Int = 0, where: BlogPostFilter): BlogPostCollection
+  codeBlock(id: String!, locale: String, preview: Boolean): CodeBlock
+  codeBlockCollection(limit: Int = 100, locale: String, order: [CodeBlockOrder], preview: Boolean, skip: Int = 0, where: CodeBlockFilter): CodeBlockCollection
   demo(id: String!, locale: String, preview: Boolean): Demo
   demoCollection(limit: Int = 100, locale: String, order: [DemoOrder], preview: Boolean, skip: Int = 0, where: DemoFilter): DemoCollection
   entryCollection(limit: Int = 100, locale: String, order: [EntryOrder], preview: Boolean, skip: Int = 0, where: EntryFilter): EntryCollection

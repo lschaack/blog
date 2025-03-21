@@ -17,6 +17,10 @@ export const getBlogPostWithSlug = gql`
                 ... on Demo {
                   id
                 }
+                ... on CodeBlock {
+                  language
+                  code
+                }
               }
             }
             assets {
@@ -26,6 +30,9 @@ export const getBlogPostWithSlug = gql`
                 }
                 url
                 title
+                width
+                height
+                description
               }
             }
           }
