@@ -57,8 +57,9 @@ const clampPosToFalloffBounds = (
 type ScaleStrategy =
   | 'linear'
   | 'cosEaseInOut'
-  | 'cosRidiculous'
-  | 'tanRidiculous';
+  | 'marching'
+  | 'square';
+
 // A set of functions where
 //   f(mousePos) = 1
 //   f(Math.abs(mousePos - pos) > FALLOFF * sliceLength) = 0
@@ -68,9 +69,8 @@ const SCALE_STRATEGY: Record<ScaleStrategy, (
 ) => number> = {
   cosEaseInOut: distance => 0.5 + Math.cos(Math.PI * distance) / 2,
   linear: distance => 1 - Math.abs(distance),
-  cosRidiculous: distance => 0.5 + (Math.cos(Math.PI * distance) * Math.cos(2 * Math.PI * distance)) / 2,
-  //cosRidiculous: distance => Math.abs(Math.cos(Math.PI * distance) * Math.cos(2 * Math.PI * distance)),
-  //cosRidiculous: distance => Math.pow(distance, 2),
+  marching: distance => Math.abs(Math.cos(Math.PI * distance) * Math.cos(2 * Math.PI * distance)),
+  square: distance => Math.pow(distance, 2),
 };
 
 export type CardMagnifierProps = {
@@ -80,7 +80,7 @@ export type CardMagnifierProps = {
   basis: number;
   gap: number;
   scaleStrategy?: ScaleStrategy;
-  shiftStrategy?: 'stableEdge' | 'accurate' | 'disabled';
+  shiftStrategy?: 'elegant' | 'accurate' | 'disabled';
   className?: string;
   // falloff is how many slice lengths it takes for a card to reach scale 1
   // NOTE: falloff needs to be a whole number to maintain size stability
@@ -94,13 +94,19 @@ const logFalloffWarning = throttle(
   5000,
 )
 
+const roundToPrecision = (num: number, places = 1) => {
+  const multiplier = 10 ** places;
+
+  return Math.round(num * multiplier) / multiplier;
+}
+
 export const CardMagnifier: FC<CardMagnifierProps> = ({
   children,
   direction = 'horizontal',
   basis,
   gap,
   className,
-  scaleStrategy = 'cosRidiculous',
+  scaleStrategy = 'cosEaseInOut',
   shiftStrategy = 'accurate',
   falloff: _falloff = 3,
   scale = 3,
@@ -149,7 +155,8 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     const halfNormCardLength = normCardLength / 2;
     // normed length of a single gap
     const normGapLength = normTotalGapLength / totalGaps;
-    const sliceLength = normCardLength + normGapLength;
+    // rounding fixes rare but persistent floating point math errors
+    const sliceLength = roundToPrecision(normCardLength + normGapLength, 12);
     const halfSliceLength = sliceLength / 2;
 
     const sizeDiff = falloff * (basis + gap) * (scale - 1);
@@ -252,7 +259,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
 
   const getShift = () => {
     if (shiftStrategy === 'disabled') return 0;
-    else if (shiftStrategy === 'stableEdge') {
+    else if (shiftStrategy === 'elegant') {
       // TODO: don't love this branching logic, but shift needs to increase from 0 to
       // halfSizeDiff from up to FALLOFF * sliceLength (i.e. max size) and then stay
       // at halfSizeDiff for higher values of normMousePosition, and the size increase
@@ -261,7 +268,6 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     } else {
       const unscaledSizeAtMousePos = unscaledLength * normMousePosition;
       const mousePosInSliceLengths = normMousePosition / sliceLength;
-      // FIXME: boundary behavior perfectly between cards where gap is completed but sliceRemainder is wrong
       const sliceRemainder = normMousePosition % sliceLength;
       const isInCard = sliceRemainder < normCardLength;
       const completeSlices = Math.floor(mousePosInSliceLengths);

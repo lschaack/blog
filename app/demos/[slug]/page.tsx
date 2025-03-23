@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { DEMOS } from "@/app/demos";
 
-export default async function Post({
+export default async function Demo({
   params
 }: {
   params: Promise<{ slug: string }>
