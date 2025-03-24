@@ -36,8 +36,11 @@ export const InputRange: FC<InputRangeProps> = ({
 
   // Compress percentage range using proportional thumb width to prevent
   // left and right edge of thumb from going outside of track
-  const thumbWidth = THUMB_WIDTH_PX / (trackRef.current?.clientWidth ?? 1);
-  const percentage = compressRangeSymmetric(((value - min) / (max - min)), -thumbWidth) * 100;
+  // FIXME: this nicely packs the thumb into the track, but looks wrong on
+  // first render, presumably because clientWidth is wrong or undefined on the server
+  //const thumbWidth = THUMB_WIDTH_PX / (trackRef.current?.clientWidth ?? 1);
+  //const percentage = compressRangeSymmetric(((value - min) / (max - min)), -thumbWidth) * 100;
+  const percentage = ((value - min) / (max - min)) * 100;
 
   // Handle slider change
   const handleChange: ChangeEventHandler<HTMLInputElement> = ({ target: { value } }) => {

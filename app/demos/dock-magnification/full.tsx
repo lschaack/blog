@@ -3,12 +3,15 @@
 import Image from "next/image";
 import { useState } from "react";
 
-import { CardMagnifier } from "@/app/components/CardMagnifier";
+import { CardMagnifier, ScaleStrategy, ShiftStrategy } from "@/app/components/CardMagnifier";
 import { InputRange } from "@/app/components/InputRange";
 import { AnimatedVariableMeter, AnimatedVariablesContext } from "@/app/components/AnimatedVariables";
 import { useLfo } from "@/app/hooks/useLfo";
+import { ExclusiveOptions, Option } from "@/app/components/ExclusiveOptions";
+import { Toggle } from "@/app/components/Toggle";
 
 const ANIMATED_VARIABLES = new Map<string, string | number | boolean>();
+const STABLE_SCALE_STRATEGIES = new Set<Partial<ScaleStrategy>>(['cosEaseInOut', 'linear', 'square']);
 
 const GAP_MIN = 0;
 const GAP_MAX = 25;
@@ -22,6 +25,9 @@ export default function Demo() {
   const [falloff, setFalloff] = useState(3);
   const [gap, setGap] = useState(5);
 
+  const [scaleStrategy, setScaleStrategy] = useState<ScaleStrategy>('cosEaseInOut');
+  const [shiftStrategy, setShiftStrategy] = useState<ShiftStrategy>('elegant');
+
   const [runLfo, setRunLfo] = useState(false);
   const scaleLfo = useLfo(1.5, 0, runLfo);
   const gapLfo = useLfo(2, 0.3, runLfo);
@@ -29,23 +35,57 @@ export default function Demo() {
   const gapLfoValue = GAP_MIN + (gap - GAP_MIN) * (gapLfo + 1) / 2;
   const scaleLfoValue = SCALE_MIN + (scale - SCALE_MIN) * (scaleLfo + 1) / 2;
 
+  const elegantShiftDisabled = !STABLE_SCALE_STRATEGIES.has(scaleStrategy);
+
   return (
     <AnimatedVariablesContext.Provider value={ANIMATED_VARIABLES}>
       <div className="flex flex-col gap-4">
-        <div>
-          <input
-            type="checkbox"
-            id="runLfo"
-            name="runLfo"
-            checked={runLfo}
-            onChange={e => setRunLfo(e.target.checked)}
+        <Toggle
+          id="runLfo"
+          label="Run LFO"
+          onChange={value => setRunLfo(value)}
+          color="rose"
+          value={runLfo}
+        />
+        <ExclusiveOptions
+          name="Shift strategy"
+          onChange={e => setShiftStrategy(e.target.value as ShiftStrategy)}
+          color="lime"
+          value={shiftStrategy}
+        >
+          <Option<ShiftStrategy>
+            value="accurate"
+            label="Accurate"
           />
-          <label htmlFor="runLfo">Run LFO</label>
-        </div>
+          <Option<ShiftStrategy>
+            value="elegant"
+            label="Elegant"
+            disabled={elegantShiftDisabled}
+          />
+          <Option<ShiftStrategy>
+            value="disabled"
+            label="Disabled"
+          />
+        </ExclusiveOptions>
+        <ExclusiveOptions
+          name="Scale strategy"
+          onChange={e => {
+            const strategy = e.target.value as ScaleStrategy;
+            setScaleStrategy(strategy);
+
+            if (!STABLE_SCALE_STRATEGIES.has(strategy)) setShiftStrategy('accurate');
+          }}
+          color="indigo"
+          value={scaleStrategy}
+        >
+          <Option<ScaleStrategy> value="cosEaseInOut" label="Ease In/Out" />
+          <Option<ScaleStrategy> value="linear" label="Linear" />
+          <Option<ScaleStrategy> value="square" label="Square" />
+          <Option<ScaleStrategy> value="marching" label="Marching" />
+        </ExclusiveOptions>
         {/* TODO: use grid like I obviously should when it's less late and I'm feeling less lazy */}
         <div className="flex gap-4">
           <div className="w-full flex flex-col gap-2">
-            {/* FIXME: These stopped visually displaying the right values until the first rerender */}
             <InputRange
               label="Scale"
               id="scale"
@@ -100,7 +140,8 @@ export default function Demo() {
         </div>
         <CardMagnifier
           className="self-center sm:self-start"
-          //scaleStrategy="cosEaseInOut"
+          scaleStrategy={scaleStrategy}
+          shiftStrategy={shiftStrategy}
           basis={80}
           scale={runLfo ? scaleLfoValue : scale}
           falloff={falloff}

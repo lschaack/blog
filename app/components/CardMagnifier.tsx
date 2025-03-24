@@ -54,7 +54,7 @@ const clampPosToFalloffBounds = (
   return clamp(-1, 1, (pos - mousePos) / (falloff * sliceLength));
 }
 
-type ScaleStrategy =
+export type ScaleStrategy =
   | 'linear'
   | 'cosEaseInOut'
   | 'marching'
@@ -73,6 +73,8 @@ const SCALE_STRATEGY: Record<ScaleStrategy, (
   square: distance => Math.pow(distance, 2),
 };
 
+export type ShiftStrategy = 'elegant' | 'accurate' | 'disabled';
+
 export type CardMagnifierProps = {
   children?: ReactNode;
   direction?: 'horizontal' | 'vertical';
@@ -80,7 +82,7 @@ export type CardMagnifierProps = {
   basis: number;
   gap: number;
   scaleStrategy?: ScaleStrategy;
-  shiftStrategy?: 'elegant' | 'accurate' | 'disabled';
+  shiftStrategy?: ShiftStrategy;
   className?: string;
   // falloff is how many slice lengths it takes for a card to reach scale 1
   // NOTE: falloff needs to be a whole number to maintain size stability
