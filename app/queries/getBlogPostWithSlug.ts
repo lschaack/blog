@@ -21,6 +21,15 @@ export const getBlogPostWithSlug = gql`
                   language
                   code
                 }
+                ... on CaptionedImage {
+                  image {
+                    url
+                    width
+                    height
+                    description
+                  }
+                  caption
+                }
               }
             }
             assets {

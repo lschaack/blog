@@ -43,6 +43,9 @@ const logMeterTypeError = throttle((varName: string, value: unknown) => {
   console.error(`Cannot represent non-numeric value \`${varName} = ${value}\` with type "${typeof value}" as a meter`);
 }, 1000);
 
+/* TODO:
+ * when the value is beyond the max, add some perlin noise shake
+ */
 export const AnimatedVariableMeter: FC<AnimatedVariableMeterProps> = ({ varName, displayName, color }) => {
   const value = useAnimatedVariable(varName);
 

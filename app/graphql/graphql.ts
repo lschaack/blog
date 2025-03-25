@@ -182,11 +182,20 @@ export type AssetFilter = {
 export type AssetLinkingCollections = {
   __typename?: 'AssetLinkingCollections';
   authorCollection?: Maybe<AuthorCollection>;
+  captionedImageCollection?: Maybe<CaptionedImageCollection>;
   entryCollection?: Maybe<EntryCollection>;
 };
 
 
 export type AssetLinkingCollectionsAuthorCollectionArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type AssetLinkingCollectionsCaptionedImageCollectionArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   locale?: InputMaybe<Scalars['String']['input']>;
   preview?: InputMaybe<Scalars['Boolean']['input']>;
@@ -471,6 +480,99 @@ export type BlogPostLinkingCollectionsEntryCollectionArgs = {
 export enum BlogPostOrder {
   SlugAsc = 'slug_ASC',
   SlugDesc = 'slug_DESC',
+  SysFirstPublishedAtAsc = 'sys_firstPublishedAt_ASC',
+  SysFirstPublishedAtDesc = 'sys_firstPublishedAt_DESC',
+  SysIdAsc = 'sys_id_ASC',
+  SysIdDesc = 'sys_id_DESC',
+  SysPublishedAtAsc = 'sys_publishedAt_ASC',
+  SysPublishedAtDesc = 'sys_publishedAt_DESC',
+  SysPublishedVersionAsc = 'sys_publishedVersion_ASC',
+  SysPublishedVersionDesc = 'sys_publishedVersion_DESC',
+  TitleAsc = 'title_ASC',
+  TitleDesc = 'title_DESC'
+}
+
+/** An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
+export type CaptionedImage = Entry & _Node & {
+  __typename?: 'CaptionedImage';
+  _id: Scalars['ID']['output'];
+  caption?: Maybe<Scalars['String']['output']>;
+  contentfulMetadata: ContentfulMetadata;
+  image?: Maybe<Asset>;
+  linkedFrom?: Maybe<CaptionedImageLinkingCollections>;
+  sys: Sys;
+  title?: Maybe<Scalars['String']['output']>;
+};
+
+
+/** An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
+export type CaptionedImageCaptionArgs = {
+  locale?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+/** An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
+export type CaptionedImageImageArgs = {
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+/** An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
+export type CaptionedImageLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+};
+
+
+/** An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
+export type CaptionedImageTitleArgs = {
+  locale?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CaptionedImageCollection = {
+  __typename?: 'CaptionedImageCollection';
+  items: Array<Maybe<CaptionedImage>>;
+  limit: Scalars['Int']['output'];
+  skip: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
+};
+
+export type CaptionedImageFilter = {
+  AND?: InputMaybe<Array<InputMaybe<CaptionedImageFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<CaptionedImageFilter>>>;
+  caption?: InputMaybe<Scalars['String']['input']>;
+  caption_contains?: InputMaybe<Scalars['String']['input']>;
+  caption_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  caption_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  caption_not?: InputMaybe<Scalars['String']['input']>;
+  caption_not_contains?: InputMaybe<Scalars['String']['input']>;
+  caption_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  image_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  title_contains?: InputMaybe<Scalars['String']['input']>;
+  title_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  title_not?: InputMaybe<Scalars['String']['input']>;
+  title_not_contains?: InputMaybe<Scalars['String']['input']>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+};
+
+export type CaptionedImageLinkingCollections = {
+  __typename?: 'CaptionedImageLinkingCollections';
+  entryCollection?: Maybe<EntryCollection>;
+};
+
+
+export type CaptionedImageLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export enum CaptionedImageOrder {
   SysFirstPublishedAtAsc = 'sys_firstPublishedAt_ASC',
   SysFirstPublishedAtDesc = 'sys_firstPublishedAt_DESC',
   SysIdAsc = 'sys_id_ASC',
@@ -830,6 +932,8 @@ export type Query = {
   authorCollection?: Maybe<AuthorCollection>;
   blogPost?: Maybe<BlogPost>;
   blogPostCollection?: Maybe<BlogPostCollection>;
+  captionedImage?: Maybe<CaptionedImage>;
+  captionedImageCollection?: Maybe<CaptionedImageCollection>;
   codeBlock?: Maybe<CodeBlock>;
   codeBlockCollection?: Maybe<CodeBlockCollection>;
   demo?: Maybe<Demo>;
@@ -893,6 +997,23 @@ export type QueryBlogPostCollectionArgs = {
   preview?: InputMaybe<Scalars['Boolean']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
   where?: InputMaybe<BlogPostFilter>;
+};
+
+
+export type QueryCaptionedImageArgs = {
+  id: Scalars['String']['input'];
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+export type QueryCaptionedImageCollectionArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locale?: InputMaybe<Scalars['String']['input']>;
+  order?: InputMaybe<Array<InputMaybe<CaptionedImageOrder>>>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  where?: InputMaybe<CaptionedImageFilter>;
 };
 
 
@@ -1032,7 +1153,7 @@ export type GetBlogPostWithSlugQueryVariables = Exact<{
 }>;
 
 
-export type GetBlogPostWithSlugQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', items: Array<{ __typename?: 'BlogPost', title?: string | null, slug?: string | null, body?: { __typename?: 'BlogPostBody', json: any, links: { __typename?: 'BlogPostBodyLinks', entries: { __typename?: 'BlogPostBodyEntries', block: Array<{ __typename?: 'Author', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'BlogPost', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CodeBlock', language?: string | null, code?: string | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'Demo', id?: string | null, sys: { __typename?: 'Sys', id: string } } | null> }, assets: { __typename?: 'BlogPostBodyAssets', block: Array<{ __typename?: 'Asset', url?: string | null, title?: string | null, width?: number | null, height?: number | null, description?: string | null, sys: { __typename?: 'Sys', id: string } } | null> } } } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
+export type GetBlogPostWithSlugQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', items: Array<{ __typename?: 'BlogPost', title?: string | null, slug?: string | null, body?: { __typename?: 'BlogPostBody', json: any, links: { __typename?: 'BlogPostBodyLinks', entries: { __typename?: 'BlogPostBodyEntries', block: Array<{ __typename?: 'Author', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'BlogPost', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CaptionedImage', caption?: string | null, image?: { __typename?: 'Asset', url?: string | null, width?: number | null, height?: number | null, description?: string | null } | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CodeBlock', language?: string | null, code?: string | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'Demo', id?: string | null, sys: { __typename?: 'Sys', id: string } } | null> }, assets: { __typename?: 'BlogPostBodyAssets', block: Array<{ __typename?: 'Asset', url?: string | null, title?: string | null, width?: number | null, height?: number | null, description?: string | null, sys: { __typename?: 'Sys', id: string } } | null> } } } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
 
 export class TypedDocumentString<TResult, TVariables>
   extends String
@@ -1073,6 +1194,15 @@ export const GetBlogPostWithSlugDocument = new TypedDocumentString(`
               ... on CodeBlock {
                 language
                 code
+              }
+              ... on CaptionedImage {
+                image {
+                  url
+                  width
+                  height
+                  description
+                }
+                caption
               }
             }
           }

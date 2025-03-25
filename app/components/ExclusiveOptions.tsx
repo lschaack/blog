@@ -52,7 +52,7 @@ export const Option = <T extends OptionValue>({
           inputColorClasses[context.color].track,
           isSelected && inputColorClasses[context.color].filled,
           isSelected && "text-white",
-          disabled && "bg-gray-100! cursor-not-allowed",
+          disabled && "bg-gray-100! cursor-not-allowed!",
         )}
       >
         {label}

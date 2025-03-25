@@ -7,7 +7,8 @@ import { DEMOS } from "@/app/demos";
 import { Asset, BlogPostBodyLinks, Entry } from "@/app/graphql/graphql";
 import { documentToReactComponents, type Options } from "@contentful/rich-text-react-renderer";
 import { BLOCKS, Document, INLINES } from "@contentful/rich-text-types";
-import { isCodeBlock, isDemo } from "./predicates";
+import { isCaptionedImage, isCodeBlock, isDemo } from "./predicates";
+import { CaptionedImage } from "@/app/components/CaptionedImage";
 
 hljs.registerLanguage("typescript", typescript);
 
@@ -114,6 +115,8 @@ export const getBlogPostOptions = (links: BlogPostBodyLinks): Options => {
               </pre>
             );
           }
+        } else if (isCaptionedImage(entry)) {
+          return <CaptionedImage entry={entry} />;
         }
       },
       [BLOCKS.EMBEDDED_ASSET]: node => {

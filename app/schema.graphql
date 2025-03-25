@@ -97,6 +97,7 @@ input AssetFilter {
 
 type AssetLinkingCollections {
   authorCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): AuthorCollection
+  captionedImageCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): CaptionedImageCollection
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
 }
 
@@ -284,6 +285,65 @@ type BlogPostLinkingCollections {
 enum BlogPostOrder {
   slug_ASC
   slug_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
+"""
+An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage)
+"""
+type CaptionedImage implements Entry & _Node {
+  _id: ID!
+  caption(locale: String): String
+  contentfulMetadata: ContentfulMetadata!
+  image(locale: String, preview: Boolean): Asset
+  linkedFrom(allowedLocales: [String]): CaptionedImageLinkingCollections
+  sys: Sys!
+  title(locale: String): String
+}
+
+type CaptionedImageCollection {
+  items: [CaptionedImage]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input CaptionedImageFilter {
+  AND: [CaptionedImageFilter]
+  OR: [CaptionedImageFilter]
+  caption: String
+  caption_contains: String
+  caption_exists: Boolean
+  caption_in: [String]
+  caption_not: String
+  caption_not_contains: String
+  caption_not_in: [String]
+  contentfulMetadata: ContentfulMetadataFilter
+  image_exists: Boolean
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type CaptionedImageLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum CaptionedImageOrder {
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC
@@ -617,6 +677,8 @@ type Query {
   authorCollection(limit: Int = 100, locale: String, order: [AuthorOrder], preview: Boolean, skip: Int = 0, where: AuthorFilter): AuthorCollection
   blogPost(id: String!, locale: String, preview: Boolean): BlogPost
   blogPostCollection(limit: Int = 100, locale: String, order: [BlogPostOrder], preview: Boolean, skip: Int = 0, where: BlogPostFilter): BlogPostCollection
+  captionedImage(id: String!, locale: String, preview: Boolean): CaptionedImage
+  captionedImageCollection(limit: Int = 100, locale: String, order: [CaptionedImageOrder], preview: Boolean, skip: Int = 0, where: CaptionedImageFilter): CaptionedImageCollection
   codeBlock(id: String!, locale: String, preview: Boolean): CodeBlock
   codeBlockCollection(limit: Int = 100, locale: String, order: [CodeBlockOrder], preview: Boolean, skip: Int = 0, where: CodeBlockFilter): CodeBlockCollection
   demo(id: String!, locale: String, preview: Boolean): Demo
