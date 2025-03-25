@@ -48,6 +48,7 @@ export const AnimatedVariableValue: FC<AnimatedVariableProps> = ({ varName, disp
 
 type AnimatedVariableMeterProps = AnimatedVariableProps & {
   color: keyof typeof inputColorClasses;
+  defaultValue: AnimatedVariableValue;
 };
 
 const logMeterTypeError = throttle((varName: string, value: unknown) => {
@@ -63,8 +64,18 @@ const noiseY = createNoise2D();
 const noiseRot = createNoise2D();
 const maxNoiseInput = Math.pow(2, 31);
 
-export const AnimatedVariableMeter: FC<AnimatedVariableMeterProps> = ({ varName, displayName, color }) => {
-  const value = useAnimatedVariable(varName, val => typeof val === 'number' && val > 1);
+export const AnimatedVariableMeter: FC<AnimatedVariableMeterProps> = ({
+  varName,
+  displayName,
+  color,
+  defaultValue
+}) => {
+  // default value avoids hydration error
+  const value = useAnimatedVariable(
+    varName,
+    // avoid unnecessary animation frames when screenshake is 0
+    val => typeof val === 'number' && val > 1
+  ) ?? defaultValue;
 
   if (value && typeof value !== 'number') {
     logMeterTypeError(varName, value);

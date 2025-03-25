@@ -125,16 +125,19 @@ export default function Demo() {
               varName="easingFactor"
               displayName="Easing"
               color="teal"
+              defaultValue={0}
             />
             <AnimatedVariableMeter
               varName="normMousePosition"
               displayName="Position"
               color="indigo"
+              defaultValue={0}
             />
             <AnimatedVariableMeter
               varName="normShift"
               displayName="Shift"
               color="rose"
+              defaultValue={0}
             />
           </div>
         </div>
