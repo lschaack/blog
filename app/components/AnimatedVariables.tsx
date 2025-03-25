@@ -1,17 +1,28 @@
-import { createContext, FC, useContext, useEffect, useState } from "react";
-import { inputColorClasses } from "../utils/colors";
+import { createContext, FC, useContext, useEffect, useReducer, useState } from "react";
 import { throttle } from "lodash";
-import { LabelledValue } from "./LabelledValue";
+import { createNoise2D } from "simplex-noise";
 
-export const AnimatedVariablesContext = createContext(new Map<string, string | number | boolean>());
+import { inputColorClasses } from "@/app/utils/colors";
+import { LabelledValue } from "@/app/components/LabelledValue";
 
-const useAnimatedVariable = (varName: string) => {
+type AnimatedVariableValue = string | number | boolean;
+export const AnimatedVariablesContext = createContext(new Map<string, AnimatedVariableValue>());
+
+const useAnimatedVariable = (
+  varName: string,
+  forceContinuousAnimation?: (value: AnimatedVariableValue | undefined) => boolean
+) => {
   const animatedVariables = useContext(AnimatedVariablesContext);
   const [value, setValue] = useState(animatedVariables.get(varName));
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
 
   useEffect(() => {
     const displayNextValue = () => {
-      setValue(animatedVariables.get(varName));
+      const nextValue = animatedVariables.get(varName);
+
+      setValue(nextValue);
+
+      if (forceContinuousAnimation?.(nextValue)) forceUpdate();
 
       frame = requestAnimationFrame(displayNextValue);
     }
@@ -43,13 +54,28 @@ const logMeterTypeError = throttle((varName: string, value: unknown) => {
   console.error(`Cannot represent non-numeric value \`${varName} = ${value}\` with type "${typeof value}" as a meter`);
 }, 1000);
 
-/* TODO:
- * when the value is beyond the max, add some perlin noise shake
- */
-export const AnimatedVariableMeter: FC<AnimatedVariableMeterProps> = ({ varName, displayName, color }) => {
-  const value = useAnimatedVariable(varName);
+const MAX_OFFSET_X = 5;
+const MAX_OFFSET_Y = 3;
+const MAX_ROT = 1.5;
 
-  if (value && typeof value !== 'number') logMeterTypeError(varName, value);
+const noiseX = createNoise2D();
+const noiseY = createNoise2D();
+const noiseRot = createNoise2D();
+const maxNoiseInput = Math.pow(2, 31);
+
+export const AnimatedVariableMeter: FC<AnimatedVariableMeterProps> = ({ varName, displayName, color }) => {
+  const value = useAnimatedVariable(varName, val => typeof val === 'number' && val > 1);
+
+  if (value && typeof value !== 'number') {
+    logMeterTypeError(varName, value);
+  }
+
+  const _shakeAmount = typeof value === 'number' && value > 1 ? Math.min(value - 1, 2) / 2 : 0;
+  const shakeAmount = Math.pow(_shakeAmount, 1 / 3);
+  const now = Date.now() % maxNoiseInput;
+  const shakeX = noiseX(now, 0) * MAX_OFFSET_X * shakeAmount;
+  const shakeY = noiseY(now, 0) * MAX_OFFSET_Y * shakeAmount;
+  const shakeRot = noiseRot(now, 0) * MAX_ROT * shakeAmount;
 
   return (
     <LabelledValue id={varName}
@@ -63,6 +89,9 @@ export const AnimatedVariableMeter: FC<AnimatedVariableMeterProps> = ({ varName,
         aria-valuenow={value as number}
         aria-valuemin={0}
         aria-valuemax={1}
+        style={{
+          transform: `translate(${shakeX}px, ${shakeY}px) rotate(${shakeRot}deg)`,
+        }}
       >
         <div
           className={`h-full ${inputColorClasses[color].filled}`}

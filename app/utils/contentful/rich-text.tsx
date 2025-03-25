@@ -9,6 +9,7 @@ import { documentToReactComponents, type Options } from "@contentful/rich-text-r
 import { BLOCKS, Document, INLINES } from "@contentful/rich-text-types";
 import { isCaptionedImage, isCodeBlock, isDemo } from "./predicates";
 import { CaptionedImage } from "@/app/components/CaptionedImage";
+import { RichTextError } from "@/app/components/RichTextError";
 
 hljs.registerLanguage("typescript", typescript);
 
@@ -95,7 +96,13 @@ export const getBlogPostOptions = (links: BlogPostBodyLinks): Options => {
       [BLOCKS.EMBEDDED_ENTRY]: node => {
         const entry = entryMap.get(node.data.target.sys.id);
 
-        if (isDemo(entry)) {
+        if (!entry) {
+          return (
+            <RichTextError>
+              Unknown entry: {node.data.target.sys.id}
+            </RichTextError>
+          );
+        } else if (isDemo(entry)) {
           const Demo = DEMOS[entry.id as keyof typeof DEMOS];
 
           if (!Demo) {

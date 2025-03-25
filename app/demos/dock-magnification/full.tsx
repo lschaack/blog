@@ -11,7 +11,7 @@ import { ExclusiveOptions, Option } from "@/app/components/ExclusiveOptions";
 import { Toggle } from "@/app/components/Toggle";
 
 const ANIMATED_VARIABLES = new Map<string, string | number | boolean>();
-const STABLE_SCALE_STRATEGIES = new Set<Partial<ScaleStrategy>>(['cosEaseInOut', 'linear', 'square']);
+const STABLE_SCALE_STRATEGIES = new Set<Partial<ScaleStrategy>>(['cosEaseInOut', 'linear']);
 
 const GAP_MIN = 0;
 const GAP_MAX = 25;
