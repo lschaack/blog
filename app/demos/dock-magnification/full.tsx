@@ -19,8 +19,6 @@ const SCALE_MIN = 1;
 const SCALE_MAX = 5;
 
 export default function Demo() {
-  // TODO: Update this query or get rid of horizontal/vertical switching
-  //const canFitFourCards = useResizeValue(() => window?.matchMedia('(min-width: 1024px)').matches, true);
   const [scale, setScale] = useState(3);
   const [falloff, setFalloff] = useState(3);
   const [gap, setGap] = useState(5);
@@ -83,7 +81,6 @@ export default function Demo() {
           <Option<ScaleStrategy> value="square" label="Square" />
           <Option<ScaleStrategy> value="marching" label="Marching" />
         </ExclusiveOptions>
-        {/* TODO: use grid like I obviously should when it's less late and I'm feeling less lazy */}
         <div className="flex gap-4">
           <div className="w-full flex flex-col gap-2">
             <InputRange
@@ -91,9 +88,6 @@ export default function Demo() {
               id="scale"
               color="amber"
               min={SCALE_MIN}
-              // FIXME: scale values above 5 show an apparent discontinuity in the level of shift
-              // through the easing animation, seems to just grow in noticeability w/large shifts
-              // or gaps
               max={SCALE_MAX}
               defaultValue={scale}
               step={0.1}

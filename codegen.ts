@@ -18,7 +18,6 @@ const config: CodegenConfig = {
       }
     }
   ],
-  // TODO: move all queries to @/app/queries
   documents: ['app/**/*.tsx', 'app/**/*.ts'],
   ignoreNoDocuments: true,
   generates: {

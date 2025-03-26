@@ -126,7 +126,6 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     isMouseOver ? EasingDirection.UP : EasingDirection.DOWN
   );
 
-  // FIXME: this is now being recomputed on every render
   const {
     falloff,
     totalCards,
@@ -262,10 +261,6 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   const getShift = () => {
     if (shiftStrategy === 'disabled') return 0;
     else if (shiftStrategy === 'elegant') {
-      // TODO: don't love this branching logic, but shift needs to increase from 0 to
-      // halfSizeDiff from up to FALLOFF * sliceLength (i.e. max size) and then stay
-      // at halfSizeDiff for higher values of normMousePosition, and the size increase
-      // from 0 to FALLOFF * sliceLength is not linear for easy easing
       return halfSizeDiff - (maxTotalSize - totalSize) * Number(normMousePosition < 0.5);
     } else {
       const unscaledSizeAtMousePos = unscaledLength * normMousePosition;
@@ -300,15 +295,12 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   // when scaling, set cross axis to the maximum scale to minimize reflow
   const crossAxisLength = (1 + easingFactor * (maxAvailableScale - 1)) * basis;
 
-  // TODO: add a warning when falloff is overridden b/c/o number of children
   return (
     <ul
       ref={containerElement}
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsMouseOver(true)}
       onMouseLeave={() => setIsMouseOver(false)}
-      // TODO: Ideally this should work even if the ul has a border,
-      // although I guess you could always add a wrapping border element...
       className={clsx('relative', className)}
       style={{
         [isVertical ? 'maxHeight' : 'maxWidth']: unscaledLength

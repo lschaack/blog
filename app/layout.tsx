@@ -9,7 +9,6 @@ const noto_sans = Noto_Sans({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-noto-sans',
-  // TODO: get rid of unused font weights
   weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
 });
 
@@ -17,7 +16,6 @@ const noto_sans_mono = Noto_Sans_Mono({
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-noto-sans-mono',
-  // TODO: get rid of unused font weights
   weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
 });
 

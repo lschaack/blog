@@ -1,10 +1,7 @@
 import { clsx } from "clsx";
 import { ChangeEventHandler, FC, useRef, useState } from "react";
-import { compressRangeSymmetric } from "@/app/utils/range";
 import { inputColorClasses } from "@/app/utils/colors";
 import { LabelledValue } from "./LabelledValue";
-
-const THUMB_WIDTH_PX = 16;
 
 type InputRangeProps = {
   label: string;
@@ -34,12 +31,6 @@ export const InputRange: FC<InputRangeProps> = ({
   const [isFocused, setIsFocused] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
-  // Compress percentage range using proportional thumb width to prevent
-  // left and right edge of thumb from going outside of track
-  // FIXME: this nicely packs the thumb into the track, but looks wrong on
-  // first render, presumably because clientWidth is wrong or undefined on the server
-  //const thumbWidth = THUMB_WIDTH_PX / (trackRef.current?.clientWidth ?? 1);
-  //const percentage = compressRangeSymmetric(((value - min) / (max - min)), -thumbWidth) * 100;
   const percentage = ((value - min) / (max - min)) * 100;
 
   // Handle slider change
@@ -87,15 +78,12 @@ export const InputRange: FC<InputRangeProps> = ({
         <div
           className={clsx(
             'absolute w-4 h-4',
-            'transform -translate-y-1/2 -translate-x-1/2',
+            'transform -translate-x-1/2',
             'transition-[box-shadow,background-color] duration-200',
             isDragging ? inputColorClasses[color].thumbActive : inputColorClasses[color].thumb,
             isFocused && inputColorClasses[color].focused,
           )}
-          style={{
-            left: `${percentage}%`,
-            top: '50%',
-          }}
+          style={{ left: `${percentage}%` }}
         />
       </div>
     </LabelledValue>
