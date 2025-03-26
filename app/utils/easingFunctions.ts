@@ -22,3 +22,34 @@ export const easeInOut = curry(
 export const inverseEaseInOut = curry(
   (elbow: number, factor: number) => easeInOut(1 / elbow, factor)
 );
+
+export const springInPlace = curry(
+  (bounces: number, time: number) => (1 - time) * Math.sin(bounces * Math.PI * time)
+);
+
+// kind of vague, but lower results in a tighter elbow - higher differential
+// between the fastest and the slowest phases of the animation
+const EASING_ELBOW_SIN = 0.5;
+const EASING_ELBOW_ROBJOHN = 2;
+
+export const EASING_STRATEGY = {
+  easeOut: {
+    ease: easeOutSine(EASING_ELBOW_SIN),
+    inverse: inverseEaseOutSine(EASING_ELBOW_SIN),
+  },
+  // I guess there are already inverses of each other(EASING_ELBOW_SIN), so why not just swap them
+  easeIn: {
+    ease: inverseEaseOutSine(EASING_ELBOW_SIN),
+    inverse: easeOutSine(EASING_ELBOW_SIN),
+  },
+  easeInOut: {
+    ease: easeInOut(EASING_ELBOW_ROBJOHN),
+    inverse: inverseEaseInOut(EASING_ELBOW_ROBJOHN),
+  },
+  springInPlace: {
+    ease: springInPlace(3),
+    inverse: () => 0, // FIXME: not needed in current use, but come on, me
+  }
+} as const;
+
+export type EasingStrategy = keyof typeof EASING_STRATEGY;

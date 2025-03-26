@@ -15,8 +15,9 @@ import {
 import clsx from "clsx";
 import { clamp, throttle } from "lodash";
 
-import { useEaseUpDown, EasingDirection } from "@/app/hooks/useEaseUpDown";
+import { useEaseUpDown } from "@/app/hooks/useEaseUpDown";
 import { AnimatedVariablesContext } from "@/app/components/AnimatedVariables";
+import { EasingDirection } from "@/app/utils/requestEasingFrames";
 
 const EASING_MS = 300;
 

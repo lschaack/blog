@@ -1,7 +1,10 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useRef, useState } from "react";
 import clsx from "clsx";
 
 import { inputColorClasses } from "@/app/utils/colors";
+import { EasingDirection } from "@/app/utils/requestEasingFrames";
+import { useEaseUpDown } from "@/app/hooks/useEaseUpDown";
+import { useEaseTrigger } from "@/app/hooks/useEaseTrigger";
 
 type OptionValue = string | number | readonly string[];
 
@@ -61,6 +64,8 @@ export const Option = <T extends OptionValue>({
   );
 }
 
+const LEGEND_DISPLACEMENT = 5;
+
 type ExclusiveOptionsProps = ExclusiveOptionsContextType & {
   children: ReactNode;
 }
@@ -68,16 +73,51 @@ export const ExclusiveOptions = ({
   children,
   ...context
 }: ExclusiveOptionsProps) => {
+  const optionWrapper = useRef<HTMLDivElement>(null);
+  const [direction, setDirection] = useState(EasingDirection.DOWN);
+  const [firedLegendImpulse, setFiredLegendImpulse] = useState(true);
+  const easingFactor = useEaseUpDown(
+    300,
+    direction,
+    direction === EasingDirection.UP ? 'easeInOut' : 'easeIn'
+  );
+
+  const { easingFactor: springEasingFactor, trigger: triggerSpring } = useEaseTrigger(400, 'springInPlace')
+
+  if (easingFactor === 0 && !firedLegendImpulse) {
+    setFiredLegendImpulse(true);
+    triggerSpring();
+  }
+
+  const wrapperHeight = easingFactor * (optionWrapper.current?.scrollHeight ?? 0);
+  const legendPosition = springEasingFactor * LEGEND_DISPLACEMENT;
+
   return (
     <ExclusiveOptionsContext.Provider value={context}>
       <fieldset className="flex flex-col font-mono">
-        <legend className={clsx(
-          "font-mono font-bold p-1 border-l-4",
-          inputColorClasses[context.color].border,
-        )}>
+        <legend
+          onClick={() => {
+            const nextDirection = direction === EasingDirection.DOWN
+              ? EasingDirection.UP
+              : EasingDirection.DOWN;
+            setDirection(nextDirection);
+
+            if (nextDirection === EasingDirection.DOWN) {
+              setFiredLegendImpulse(false);
+            }
+          }}
+          className={clsx(
+            "cursor-pointer w-full h-full",
+            "font-mono font-bold p-1 border-l-4",
+            inputColorClasses[context.color].border,
+          )}
+          style={{ transform: `translateY(${-legendPosition}px)` }}
+        >
           {context.name}
         </legend>
-        {children}
+        <div ref={optionWrapper} className="overflow-hidden" style={{ height: wrapperHeight }}>
+          {children}
+        </div>
       </fieldset>
     </ExclusiveOptionsContext.Provider>
   )
