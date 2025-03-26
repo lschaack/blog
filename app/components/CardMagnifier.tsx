@@ -13,11 +13,10 @@ import {
   useState
 } from "react";
 import clsx from "clsx";
-import { clamp } from "lodash/fp";
+import { clamp, throttle } from "lodash";
 
 import { useEaseUpDown, EasingDirection } from "@/app/hooks/useEaseUpDown";
-import { AnimatedVariablesContext } from "./AnimatedVariables";
-import { throttle } from "lodash";
+import { AnimatedVariablesContext } from "@/app/components/AnimatedVariables";
 
 const EASING_MS = 300;
 
@@ -51,7 +50,7 @@ const clampPosToFalloffBounds = (
   sliceLength: number,
   falloff: number,
 ) => {
-  return clamp(-1, 1, (pos - mousePos) / (falloff * sliceLength));
+  return clamp((pos - mousePos) / (falloff * sliceLength), -1, 1);
 }
 
 export type ScaleStrategy =
@@ -214,12 +213,12 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
         const relativeY = event.pageY - containerElement.current.offsetTop;
         const normY = relativeY / unscaledLength;
 
-        setNormMousePosition(clamp(0, 1, normY));
+        setNormMousePosition(clamp(normY, 0, 1));
       } else {
         const relativeX = event.pageX - containerElement.current.offsetLeft;
         const normX = relativeX / unscaledLength;
 
-        setNormMousePosition(clamp(0, 1, normX));
+        setNormMousePosition(clamp(normX, 0, 1));
       }
     }
   }, [isVertical, unscaledLength]);

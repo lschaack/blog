@@ -1,7 +1,7 @@
 import { createContext, ReactNode, useContext } from "react";
 import clsx from "clsx";
 
-import { inputColorClasses } from "../utils/colors";
+import { inputColorClasses } from "@/app/utils/colors";
 
 type OptionValue = string | number | readonly string[];
 
@@ -60,7 +60,6 @@ export const Option = <T extends OptionValue>({
     </div>
   );
 }
-
 
 type ExclusiveOptionsProps = ExclusiveOptionsContextType & {
   children: ReactNode;

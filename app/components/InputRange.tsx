@@ -1,7 +1,7 @@
 import { clsx } from "clsx";
 import { ChangeEventHandler, FC, useRef, useState } from "react";
 import { inputColorClasses } from "@/app/utils/colors";
-import { LabelledValue } from "./LabelledValue";
+import { LabelledValue } from "@/app/components/LabelledValue";
 
 type InputRangeProps = {
   label: string;

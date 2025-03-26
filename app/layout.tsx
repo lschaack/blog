@@ -3,7 +3,7 @@ import { Noto_Sans, Noto_Sans_Mono } from "next/font/google";
 import localFont from "next/font/local";
 
 import clsx from "clsx";
-import "./globals.css";
+import "@/app/globals.css";
 
 const noto_sans = Noto_Sans({
   subsets: ['latin'],
