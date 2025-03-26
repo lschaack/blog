@@ -74,17 +74,20 @@ export const InputRange: FC<InputRangeProps> = ({
           style={{ width: `${percentage}%` }}
         />
 
-        {/* Custom thumb */}
-        <div
-          className={clsx(
-            'absolute w-4 h-4',
-            'transform -translate-x-1/2',
-            'transition-[box-shadow,background-color] duration-200',
-            isDragging ? inputColorClasses[color].thumbActive : inputColorClasses[color].thumb,
-            isFocused && inputColorClasses[color].focused,
-          )}
-          style={{ left: `${percentage}%` }}
-        />
+        {/* Smaller track to limit thumb to left/right edges */}
+        <div className="relative w-full h-full px-2">
+          {/* Custom thumb */}
+          <div
+            className={clsx(
+              'relative w-4 h-4',
+              'transform -translate-x-1/2',
+              'transition-[box-shadow,background-color] duration-200',
+              isDragging ? inputColorClasses[color].thumbActive : inputColorClasses[color].thumb,
+              isFocused && inputColorClasses[color].focused,
+            )}
+            style={{ left: `${percentage}%` }}
+          />
+        </div>
       </div>
     </LabelledValue>
   );
