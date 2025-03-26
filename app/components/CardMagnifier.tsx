@@ -290,7 +290,8 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
 
   animatedVariables.set("easingFactor", easingFactor);
   animatedVariables.set("normMousePosition", normMousePosition);
-  animatedVariables.set("normShift", shift / halfSizeDiff);
+  // prevent division by 0
+  animatedVariables.set("normShift", halfSizeDiff ? shift / halfSizeDiff : 0);
 
   // when scaling, set cross axis to the maximum scale to minimize reflow
   const crossAxisLength = (1 + easingFactor * (maxAvailableScale - 1)) * basis;
