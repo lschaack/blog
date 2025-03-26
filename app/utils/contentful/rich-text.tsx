@@ -1,17 +1,13 @@
 import Image from "next/image";
-import hljs from "highlight.js/lib/core";
-import typescript from "highlight.js/lib/languages/typescript";
-import "highlight.js/styles/github.css";
-
-import { DEMOS } from "@/app/demos";
-import { Asset, BlogPostBodyLinks, Entry } from "@/app/graphql/graphql";
 import { documentToReactComponents, type Options } from "@contentful/rich-text-react-renderer";
 import { BLOCKS, Document, INLINES } from "@contentful/rich-text-types";
-import { isCaptionedImage, isCodeBlock, isDemo } from "./predicates";
-import { CaptionedImage } from "@/app/components/CaptionedImage";
-import { RichTextError } from "@/app/components/RichTextError";
 
-hljs.registerLanguage("typescript", typescript);
+import { Asset, BlogPostBodyLinks, Entry } from "@/app/graphql/graphql";
+import { isCaptionedImage, isCodeBlock, isDemo } from "@/app/utils/contentful/predicates";
+import { CaptionedImage } from "@/app/components/CaptionedImage";
+import { CodeBlock } from "@/app/components/CodeBlock";
+import { RichTextError } from "@/app/components/RichTextError";
+import { Demo } from "@/app/demos";
 
 const NEXT_KNOWN_IMAGE_EXTENSIONS = [
   "jpg",
@@ -103,25 +99,9 @@ export const getBlogPostOptions = (links: BlogPostBodyLinks): Options => {
             </RichTextError>
           );
         } else if (isDemo(entry)) {
-          const Demo = DEMOS[entry.id as keyof typeof DEMOS];
-
-          if (!Demo) {
-            return <p>Unknown demo: {entry.id}</p>;
-          } else {
-            return <Demo />;
-          }
+          return <Demo entry={entry} />;
         } else if (isCodeBlock(entry)) {
-          if (!entry.code || !entry.language) {
-            return <pre>Code block missing code or language</pre>;
-          } else {
-            const highlighted = hljs.highlight(entry.code, { language: entry.language });
-
-            return (
-              <pre className="p-4 bg-stone-100 rounded-lg">
-                <code dangerouslySetInnerHTML={{ __html: highlighted.value }} />
-              </pre>
-            );
-          }
+          return <CodeBlock entry={entry} />;
         } else if (isCaptionedImage(entry)) {
           return <CaptionedImage entry={entry} />;
         }
@@ -144,11 +124,19 @@ export const getBlogPostOptions = (links: BlogPostBodyLinks): Options => {
                 />
               );
             } else {
-              return <p>unknown asset type: {asset.url}</p>;
+              return (
+                <RichTextError>
+                  Unknown asset type: {asset.url}
+                </RichTextError>
+              );
             }
           }
         } else {
-          return <p>Unknown asset: {node.data.target.sys.id}</p>;
+          return (
+            <RichTextError>
+              Unknown asset: {node.data.target.sys.id}
+            </RichTextError>
+          )
         }
       }
     }
