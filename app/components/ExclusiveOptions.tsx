@@ -95,7 +95,9 @@ export const ExclusiveOptions = ({
   return (
     <ExclusiveOptionsContext.Provider value={context}>
       <fieldset className="flex flex-col font-mono">
-        <legend
+        <div
+          className="w-full h-full cursor-pointer flex justify-between"
+          style={{ transform: `translateY(${-legendPosition}px)` }}
           onClick={() => {
             const nextDirection = direction === EasingDirection.DOWN
               ? EasingDirection.UP
@@ -106,15 +108,17 @@ export const ExclusiveOptions = ({
               setFiredLegendImpulse(false);
             }
           }}
-          className={clsx(
-            "cursor-pointer w-full h-full",
-            "font-mono font-bold p-1 border-l-4",
-            inputColorClasses[context.color].border,
-          )}
-          style={{ transform: `translateY(${-legendPosition}px)` }}
         >
-          {context.name}
-        </legend>
+          <legend
+            className={clsx(
+              "font-bold p-1 border-l-4",
+              inputColorClasses[context.color].border,
+            )}
+          >
+            {context.name}
+          </legend>
+          <p>{context.value}</p>
+        </div>
         <div ref={optionWrapper} className="overflow-hidden" style={{ height: wrapperHeight }}>
           {children}
         </div>
