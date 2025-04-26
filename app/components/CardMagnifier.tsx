@@ -141,7 +141,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     focusHandlers,
   } = useMemo(() => {
     const totalCards = Children.count(children);
-    const falloff = totalCards >= 2 * _falloff
+    const falloff = totalCards >= 2 * _falloff || shiftStrategy === 'accurate'
       ? _falloff
       : Math.floor(totalCards / 2);
     if (falloff !== _falloff) logFalloffWarning();
@@ -264,9 +264,11 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
       return halfSizeDiff - (maxTotalSize - totalSize) * Number(normMousePosition < 0.5);
     } else {
       const unscaledSizeAtMousePos = unscaledLength * normMousePosition;
+
       const mousePosInSliceLengths = normMousePosition / sliceLength;
       const sliceRemainder = normMousePosition % sliceLength;
       const isInCard = sliceRemainder < normCardLength;
+
       const completeSlices = Math.floor(mousePosInSliceLengths);
       const completeCards = Math.min(completeSlices + Number(!isInCard), totalCards);
       const completeGaps = Math.min(completeSlices, totalGaps);
@@ -277,9 +279,16 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
       const completedGapSize = gapScales
         .slice(0, completeGaps)
         .reduce((total, scale) => total + scale * gap, 0);
-      const remainderSize = isInCard
-        ? sliceRemainder / normCardLength * cardScales[completeCards] * basis
-        : sliceRemainder % normCardLength / normGapLength * gapScales[Math.min(completeGaps, totalGaps - 1)] * gap;
+
+      const remainderBasis = isInCard
+        ? cardScales[completeCards] * basis
+        : gapScales[Math.min(completeGaps, totalGaps - 1)] * gap;
+      const normRemainder = isInCard
+        ? sliceRemainder / normCardLength
+        : sliceRemainder % normCardLength / normGapLength;
+
+      const remainderSize = normRemainder * remainderBasis;
+
       const scaledSizeAtMousePos = completedCardSize + completedGapSize + remainderSize;
 
       return scaledSizeAtMousePos - unscaledSizeAtMousePos;
