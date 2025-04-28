@@ -42,15 +42,16 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
     [BLOCKS.LIST_ITEM]: (node) => (
       // avoid wrapping li text children in <p> tags for styling
       // https://github.com/contentful/rich-text/issues/126
-      <li>
-        {documentToReactComponents(node as Document, {
-          renderNode: {
-            ...DEFAULT_RICH_TEXT_OPTIONS.renderNode,
-            [BLOCKS.PARAGRAPH]: (_, children) => children,
-            [BLOCKS.LIST_ITEM]: (_, children) => children,
-          }
-        })}
-      </li>
+      documentToReactComponents(node as Document, {
+        renderNode: {
+          ...DEFAULT_RICH_TEXT_OPTIONS.renderNode,
+          [BLOCKS.PARAGRAPH]: (_, children) => children,
+          [BLOCKS.LIST_ITEM]: (_, children) => <li className="my-2">{children}</li>,
+          [BLOCKS.UL_LIST]: (_, children) => (
+            <ul className="list-disc list-inside my-2 pl-6">{children}</ul>
+          ),
+        }
+      })
     ),
     [INLINES.HYPERLINK]: (node, children) => (
       <a

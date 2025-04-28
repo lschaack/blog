@@ -118,7 +118,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
 
   const containerElement = useRef<HTMLUListElement>(null);
 
-  const [normMousePosition, setNormMousePosition] = useState(0);
+  const [mousePos, setMousPos] = useState(0);
   const [isMouseOver, setIsMouseOver] = useState(false);
 
   const easingFactor = useEaseUpDown(
@@ -177,7 +177,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
       focusHandlers.push({
         focus: () => {
           // mock the cursor being positioned over this card
-          setNormMousePosition(cardPositions[i]);
+          setMousPos(cardPositions[i]);
 
           setIsMouseOver(true);
         },
@@ -214,12 +214,12 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
         const relativeY = event.pageY - containerElement.current.offsetTop;
         const normY = relativeY / unscaledLength;
 
-        setNormMousePosition(clamp(normY, 0, 1));
+        setMousPos(clamp(normY, 0, 1));
       } else {
         const relativeX = event.pageX - containerElement.current.offsetLeft;
         const normX = relativeX / unscaledLength;
 
-        setNormMousePosition(clamp(normX, 0, 1));
+        setMousPos(clamp(normX, 0, 1));
       }
     }
   }, [isVertical, unscaledLength]);
@@ -236,22 +236,30 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     : scale;
   const scaleFactor = maxAvailableScale - 1;
 
-  const cardScales = cardPositions.map(normCardPosition => {
-    // 1 at mouse position, decreasing linearly to 0 at or beyond distance FALLOFF * sliceLength
-    const scale = SCALE_STRATEGY[scaleStrategy](
-      clampPosToFalloffBounds(normCardPosition, normMousePosition, sliceLength, falloff)
+  const cardScales = cardPositions.map(cardPos => {
+    const normDistanceFromCursor = clampPosToFalloffBounds(
+      cardPos,
+      mousePos,
+      sliceLength,
+      falloff
     );
 
-    return 1 + scaleFactor * scale;
+    const normScale = SCALE_STRATEGY[scaleStrategy](normDistanceFromCursor);
+
+    return 1 + normScale * scaleFactor;
   });
 
-  const gapScales = gapPositions.map(normGapPosition => {
-    // 1 at mouse position, decreasing linearly to 0 at or beyond distance FALLOFF * sliceLength
-    const scale = SCALE_STRATEGY[scaleStrategy](
-      clampPosToFalloffBounds(normGapPosition, normMousePosition, sliceLength, falloff)
+  const gapScales = gapPositions.map(gapPos => {
+    const normDistanceFromCursor = clampPosToFalloffBounds(
+      gapPos,
+      mousePos,
+      sliceLength,
+      falloff
     );
 
-    return 1 + scaleFactor * scale;
+    const normScale = SCALE_STRATEGY[scaleStrategy](normDistanceFromCursor);
+
+    return 1 + normScale * scaleFactor;
   });
 
   const totalCardSize = cardScales.reduce((totalCardSize, size) => totalCardSize + size * basis, 0);
@@ -261,12 +269,12 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   const getShift = () => {
     if (shiftStrategy === 'disabled') return 0;
     else if (shiftStrategy === 'elegant') {
-      return halfSizeDiff - (maxTotalSize - totalSize) * Number(normMousePosition < 0.5);
+      return halfSizeDiff - (maxTotalSize - totalSize) * Number(mousePos < 0.5);
     } else {
-      const unscaledSizeAtMousePos = unscaledLength * normMousePosition;
+      const unscaledSizeAtMousePos = unscaledLength * mousePos;
 
-      const mousePosInSliceLengths = normMousePosition / sliceLength;
-      const sliceRemainder = normMousePosition % sliceLength;
+      const mousePosInSliceLengths = mousePos / sliceLength;
+      const sliceRemainder = mousePos % sliceLength;
       const isInCard = sliceRemainder < normCardLength;
 
       const completeSlices = Math.floor(mousePosInSliceLengths);
@@ -298,7 +306,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   const shift = easingFactor * getShift();
 
   animatedVariables.set("easingFactor", easingFactor);
-  animatedVariables.set("normMousePosition", normMousePosition);
+  animatedVariables.set("normMousePosition", mousePos);
   // prevent division by 0
   animatedVariables.set("normShift", halfSizeDiff ? shift / halfSizeDiff : 0);
 
