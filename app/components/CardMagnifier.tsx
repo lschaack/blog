@@ -73,7 +73,7 @@ const SCALE_STRATEGY: Record<ScaleStrategy, (
   square: distance => Math.pow(distance, 2),
 };
 
-export type ShiftStrategy = 'elegant' | 'accurate' | 'disabled';
+export type ShiftStrategy = 'elegant' | 'elegantAndWrong' | 'accurate' | 'disabled';
 
 export type CardMagnifierProps = {
   children?: ReactNode;
@@ -102,6 +102,7 @@ const roundToPrecision = (num: number, places = 1) => {
   return Math.round(num * multiplier) / multiplier;
 }
 
+// TODO: change "size" to "length"
 export const CardMagnifier: FC<CardMagnifierProps> = ({
   children,
   direction = 'horizontal',
@@ -135,7 +136,8 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     normCardLength,
     normGapLength,
     halfSizeDiff,
-    maxTotalSize,
+    sizeDiffWrong,
+    maxScaledSize,
     cardPositions,
     gapPositions,
     focusHandlers,
@@ -160,12 +162,16 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     const sliceLength = roundToPrecision(normCardLength + normGapLength, 12);
     const halfSliceLength = sliceLength / 2;
 
-    const sizeDiff = falloff * (basis + gap) * (scale - 1);
-    const maxTotalSize = unscaledLength + sizeDiff;
+    // TODO: is this still right if scaleFactor is less than scale - 1? I'd be confused if it was
+    const sizeDiff = (scale - 1) * falloff * (basis + gap);
+    // calculate wrong value for blog
+    const sizeDiffWrong = scale * falloff * (basis + gap);
+    const maxScaledSize = unscaledLength + sizeDiff;
     const halfSizeDiff = sizeDiff / 2;
 
+    animatedVariables.set("expectedSizeDiffWrong", Math.round(sizeDiffWrong))
     animatedVariables.set("halfSizeDiff", halfSizeDiff.toFixed(2))
-    animatedVariables.set("maxTotalSize", maxTotalSize.toFixed(2))
+    animatedVariables.set("maxScaledSize", maxScaledSize.toFixed(2))
 
     const cardPositions: number[] = [];
     const gapPositions: number[] = [];
@@ -201,7 +207,8 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
       normCardLength,
       normGapLength,
       halfSizeDiff,
-      maxTotalSize,
+      sizeDiffWrong,
+      maxScaledSize,
       cardPositions,
       gapPositions,
       focusHandlers,
@@ -262,14 +269,16 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     return 1 + normScale * scaleFactor;
   });
 
-  const totalCardSize = cardScales.reduce((totalCardSize, size) => totalCardSize + size * basis, 0);
-  const totalGapSize = gapScales.reduce((totalGapSize, size) => totalGapSize + size * gap, 0)
-  const totalSize = totalCardSize + totalGapSize;
+  const measuredCardSize = cardScales.reduce((totalCardSize, size) => totalCardSize + size * basis, 0);
+  const measuredGapSize = gapScales.reduce((totalGapSize, size) => totalGapSize + size * gap, 0)
+  const measuredSize = measuredCardSize + measuredGapSize;
 
   const getShift = () => {
     if (shiftStrategy === 'disabled') return 0;
     else if (shiftStrategy === 'elegant') {
-      return halfSizeDiff - (maxTotalSize - totalSize) * Number(mousePos < 0.5);
+      return halfSizeDiff - (maxScaledSize - measuredSize) * Number(mousePos < 0.5);
+    } else if (shiftStrategy === 'elegantAndWrong') {
+      return sizeDiffWrong / 2 - (maxScaledSize - measuredSize) * Number(mousePos < 0.5);
     } else {
       const unscaledSizeAtMousePos = unscaledLength * mousePos;
 
@@ -291,6 +300,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
       const remainderBasis = isInCard
         ? cardScales[completeCards] * basis
         : gapScales[Math.min(completeGaps, totalGaps - 1)] * gap;
+      // FIXME: gapLength === 0 causes NaN at the right edge w/other sliders maxed out
       const normRemainder = isInCard
         ? sliceRemainder / normCardLength
         : sliceRemainder % normCardLength / normGapLength;
@@ -305,6 +315,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
 
   const shift = easingFactor * getShift();
 
+  animatedVariables.set("observedSizeDiff", Math.round(measuredSize - unscaledLength));
   animatedVariables.set("easingFactor", easingFactor);
   animatedVariables.set("normMousePosition", mousePos);
   // prevent division by 0

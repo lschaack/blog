@@ -1,3 +1,5 @@
+'use client';
+
 import { createContext, FC, useContext, useEffect, useReducer, useState } from "react";
 import { throttle } from "lodash";
 import { createNoise2D } from "simplex-noise";

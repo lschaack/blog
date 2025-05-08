@@ -96,7 +96,7 @@ export const ExclusiveOptions = ({
     <ExclusiveOptionsContext.Provider value={context}>
       <fieldset className="flex flex-col font-mono">
         <div
-          className="w-full h-full cursor-pointer flex justify-between"
+          className="w-full h-full cursor-pointer flex gap-8 justify-between items-baseline"
           style={{ transform: `translateY(${-legendPosition}px)` }}
           onClick={() => {
             const nextDirection = direction === EasingDirection.DOWN

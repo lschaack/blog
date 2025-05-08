@@ -18,6 +18,7 @@ const GAP_MAX = 25;
 const SCALE_MIN = 1;
 const SCALE_MAX = 5;
 
+//TODO: Enable basis modification and increase SCALE_MAX
 export default function Demo() {
   const [scale, setScale] = useState(3);
   const [falloff, setFalloff] = useState(3);
