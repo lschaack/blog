@@ -46,16 +46,9 @@ export default function RootLayout({
       'transition-colors'
     )}>
       <body className="font-sans bg-zinc-50">
-        <div className={clsx(
-          'max-w-[100vw]',
-          'grid sm:p-6',
-          'grid-rows-layout-mobile grid-cols-layout-mobile',
-          'sm:grid-rows-layout-desktop sm:grid-cols-layout-desktop'
-        )}>
-          <main className="p-6 flex flex-col gap-y-3 items-center sm:items-start max-w-full">
-            {children}
-          </main>
-        </div>
+        <main className="w-full flex justify-center">
+          {children}
+        </main>
       </body>
     </html>
   );

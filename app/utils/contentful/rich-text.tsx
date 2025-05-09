@@ -22,22 +22,22 @@ const NEXT_KNOWN_IMAGE_EXTENSIONS = [
 export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
   renderNode: {
     [BLOCKS.PARAGRAPH]: (_, children) => (
-      <p className="my-4">{children}</p>
+      <p className="text-lg my-4">{children}</p>
     ),
     [BLOCKS.HEADING_1]: (_, children) => (
       <h1 className="text-3xl font-bold mt-9 mb-3">{children}</h1>
     ),
     [BLOCKS.HEADING_2]: (_, children) => (
-      <h2 className="text-2xl font-bold mt-6 mb-1">{children}</h2>
+      <h2 className="text-2xl font-bold mt-7 mb-1">{children}</h2>
     ),
     [BLOCKS.HEADING_3]: (_, children) => (
-      <h3 className="text-xl font-bold mt-4 mb-1">{children}</h3>
+      <h3 className="text-xl font-bold mt-2 mb-1">{children}</h3>
     ),
     [BLOCKS.HEADING_4]: (_, children) => (
       <h4 className="text-lg font-bold mt-2">{children}</h4>
     ),
     [BLOCKS.UL_LIST]: (_, children) => (
-      <ul className="list-disc list-inside my-4">{children}</ul>
+      <ul className="list-disc list-inside my-4 pl-6">{children}</ul>
     ),
     [BLOCKS.LIST_ITEM]: (node) => (
       // avoid wrapping li text children in <p> tags for styling
@@ -46,7 +46,7 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
         renderNode: {
           ...DEFAULT_RICH_TEXT_OPTIONS.renderNode,
           [BLOCKS.PARAGRAPH]: (_, children) => children,
-          [BLOCKS.LIST_ITEM]: (_, children) => <li className="my-2">{children}</li>,
+          [BLOCKS.LIST_ITEM]: (_, children) => <li className="my-2 -indent-5">{children}</li>,
           [BLOCKS.UL_LIST]: (_, children) => (
             <ul className="list-disc list-inside my-2 pl-6">{children}</ul>
           ),
@@ -66,7 +66,7 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
   },
 };
 
-export const getBlogPostOptions = (links: BlogPostBodyLinks): Options => {
+export const getBlogPostOptions = (links: Partial<BlogPostBodyLinks>): Options => {
   const assetMap = new Map<string, Asset>();
   if (links.assets?.block) {
     for (const asset of links.assets.block) {

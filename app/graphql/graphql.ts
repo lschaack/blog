@@ -829,6 +829,7 @@ export enum EntryOrder {
 }
 
 export enum ImageFormat {
+  /** AVIF image format. */
   Avif = 'AVIF',
   /** JPG image format. */
   Jpg = 'JPG',
@@ -926,6 +927,7 @@ export type ImageTransformOptions = {
 export type Query = {
   __typename?: 'Query';
   _node?: Maybe<_Node>;
+  _nodes: Array<Maybe<_Node>>;
   asset?: Maybe<Asset>;
   assetCollection?: Maybe<AssetCollection>;
   author?: Maybe<Author>;
@@ -944,6 +946,13 @@ export type Query = {
 
 export type Query_NodeArgs = {
   id: Scalars['ID']['input'];
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+export type Query_NodesArgs = {
+  ids: Array<Scalars['ID']['input']>;
   locale?: InputMaybe<Scalars['String']['input']>;
   preview?: InputMaybe<Scalars['Boolean']['input']>;
 };
@@ -1147,6 +1156,15 @@ export type CfAuthorNestedFilter = {
   sys?: InputMaybe<SysFilter>;
 };
 
+export type GetAllPostsQueryVariables = Exact<{
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+}>;
+
+
+export type GetAllPostsQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', total: number, items: Array<{ __typename?: 'BlogPost', title?: string | null, slug?: string | null, sys: { __typename?: 'Sys', id: string, firstPublishedAt?: any | null }, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
+
 export type GetBlogPostWithSlugQueryVariables = Exact<{
   preview?: InputMaybe<Scalars['Boolean']['input']>;
   slug?: InputMaybe<Scalars['String']['input']>;
@@ -1174,6 +1192,33 @@ export class TypedDocumentString<TResult, TVariables>
   }
 }
 
+export const GetAllPostsDocument = new TypedDocumentString(`
+    query GetAllPosts($preview: Boolean, $skip: Int, $limit: Int) {
+  blogPostCollection(preview: $preview, skip: $skip, limit: $limit) {
+    total
+    items {
+      sys {
+        id
+        firstPublishedAt
+      }
+      title
+      slug
+      author {
+        ... on Author {
+          sys {
+            id
+          }
+          name
+          profilePicture {
+            url
+            title
+          }
+        }
+      }
+    }
+  }
+}
+    `) as unknown as TypedDocumentString<GetAllPostsQuery, GetAllPostsQueryVariables>;
 export const GetBlogPostWithSlugDocument = new TypedDocumentString(`
     query GetBlogPostWithSlug($preview: Boolean, $slug: String) {
   blogPostCollection(preview: $preview, limit: 1, where: {slug: $slug}) {

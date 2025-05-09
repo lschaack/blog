@@ -3,12 +3,13 @@ import { documentToReactComponents } from "@contentful/rich-text-react-renderer"
 import { getBlogPostOptions } from "@/app/utils/contentful/rich-text";
 import { client } from "@/app/utils/contentful/client";
 import { getBlogPostWithSlug } from "@/app/queries/getBlogPostWithSlug";
+import { BlogPostBodyLinks, GetBlogPostWithSlugQuery } from "@/app/graphql/graphql";
 
 const getEntriesMatchingSlug = (slug: string) => {
-  return client.query({
+  return client.query<GetBlogPostWithSlugQuery>({
     query: getBlogPostWithSlug,
     variables: {
-      preview: true,
+      preview: process.env.NODE_ENV === 'development',
       slug
     }
   });
@@ -22,15 +23,18 @@ export default async function Post({
   const { slug } = await params;
   const res = await getEntriesMatchingSlug(slug)
 
-  const post = res.data.blogPostCollection.items[0];
+  const post = res.data.blogPostCollection?.items[0];
 
   if (!post) {
     notFound();
   } else {
     return (
-      <main className="max-w-4xl mx-auto">
-        {documentToReactComponents(post.body.json, getBlogPostOptions(post.body.links))}
-      </main>
+      <article className="w-full max-w-2xl overflow-hidden mx-6">
+        {post.body && documentToReactComponents(
+          post.body.json,
+          getBlogPostOptions(post.body.links as BlogPostBodyLinks)
+        )}
+      </article>
     );
   }
 }

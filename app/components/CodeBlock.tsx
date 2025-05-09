@@ -15,7 +15,7 @@ export const CodeBlock = ({ entry }: { entry: CodeBlockType }) => {
     const highlighted = hljs.highlight(entry.code, { language: entry.language });
 
     return (
-      <pre className="p-4 bg-stone-100 rounded-lg overflow-auto">
+      <pre className="text-sm p-4 bg-stone-100 rounded-lg overflow-auto">
         <code dangerouslySetInnerHTML={{ __html: highlighted.value }} />
       </pre>
     );

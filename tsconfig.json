@@ -22,6 +22,7 @@
         "schema": "./app/schema.graphql"
       }
     ],
+    "baseUrl": "./",
     "paths": {
       "@/*": ["./*"]
     }
