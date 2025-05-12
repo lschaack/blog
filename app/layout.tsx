@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 
 import clsx from "clsx";
 import "@/app/globals.css";
+import { Header } from "./components/Header";
 
 const noto_sans = Noto_Sans({
   subsets: ['latin'],
@@ -46,6 +47,7 @@ export default function RootLayout({
       'transition-colors'
     )}>
       <body className="font-sans bg-zinc-50">
+        <Header />
         <main className="w-full flex justify-center">
           {children}
         </main>
