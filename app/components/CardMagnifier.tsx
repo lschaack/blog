@@ -305,9 +305,8 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
         .reduce((total, scale) => total + scale * gap, 0);
 
       const remainderBasis = isInCard
-        ? cardScales[completeCards] * basis
+        ? (cardScales[completeCards] ?? 0) * basis
         : gapScales[Math.min(completeGaps, totalGaps - 1)] * gap;
-      // FIXME: gapLength === 0 causes NaN at the right edge w/other sliders maxed out
       const normRemainder = isInCard
         ? sliceRemainder / normCardLength
         : sliceRemainder % normCardLength / normGapLength;
