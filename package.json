@@ -15,6 +15,7 @@
     "@contentful/rich-text-types": "^17.0.0",
     "@next/env": "^15.2.2",
     "@types/lodash": "^4.17.16",
+    "@vercel/analytics": "^1.5.0",
     "clsx": "^2.1.1",
     "contentful": "^11.5.6",
     "graphql-tag": "^2.12.6",

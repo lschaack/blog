@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans, Noto_Sans_Mono } from "next/font/google";
 import localFont from "next/font/local";
+import { Analytics } from "@vercel/analytics/next";
 
 import clsx from "clsx";
 import "@/app/globals.css";
@@ -51,6 +52,7 @@ export default function RootLayout({
         <main className="w-full flex justify-center">
           {children}
         </main>
+        <Analytics />
       </body>
     </html>
   );
