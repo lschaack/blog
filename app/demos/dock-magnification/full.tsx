@@ -38,7 +38,7 @@ export default function Demo() {
 
   return (
     <AnimatedVariablesContext.Provider value={ANIMATED_VARIABLES}>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 max-w-4xl">
         <Toggle
           id="runLfo"
           label="Run LFO"

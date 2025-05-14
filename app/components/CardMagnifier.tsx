@@ -6,6 +6,7 @@ import {
   FocusEventHandler,
   MouseEventHandler,
   ReactNode,
+  TouchEventHandler,
   useCallback,
   useContext,
   useMemo,
@@ -18,8 +19,10 @@ import { clamp, throttle } from "lodash";
 import { useEaseUpDown } from "@/app/hooks/useEaseUpDown";
 import { AnimatedVariablesContext } from "@/app/components/AnimatedVariables";
 import { EasingDirection } from "@/app/utils/requestEasingFrames";
+import { useForceRenderOnResize } from "@/app/hooks/useForceRenderOnResize";
 
 const EASING_MS = 300;
+const DRAG_MODIFIER = 1000;
 
 type CardProps = {
   size: number;
@@ -105,7 +108,7 @@ const roundToPrecision = (num: number, places = 1) => {
 // TODO: change "size" to "length"
 export const CardMagnifier: FC<CardMagnifierProps> = ({
   children,
-  direction = 'horizontal',
+  direction,
   basis,
   gap,
   className,
@@ -115,12 +118,16 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   scale = 3,
 }) => {
   const animatedVariables = useContext(AnimatedVariablesContext);
-  const isVertical = direction === 'vertical';
+  useForceRenderOnResize(direction === undefined);
+  const isVertical = direction === undefined
+    ? document.documentElement.clientWidth < 600
+    : direction === 'vertical';
 
   const containerElement = useRef<HTMLUListElement>(null);
 
   const [mousePos, setMousPos] = useState(0);
   const [isMouseOver, setIsMouseOver] = useState(false);
+  const [touchStart, setTouchStart] = useState<number | null>(null);
 
   const easingFactor = useEaseUpDown(
     EASING_MS,
@@ -313,6 +320,16 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     }
   }
 
+  // TODO: set scroll height to center largest image?
+  const handleTouchMove: TouchEventHandler<HTMLUListElement> = e => {
+    if (touchStart) {
+      const delta = e.touches[0][isVertical ? 'pageY' : 'pageX'] - touchStart;
+
+      setMousPos(clamp(mousePos - delta / DRAG_MODIFIER, 0, 1));
+      setTouchStart(e.touches[0][isVertical ? 'pageY' : 'pageX']);
+    }
+  }
+
   const shift = easingFactor * getShift();
 
   animatedVariables.set("observedSizeDiff", Math.round(measuredSize - unscaledLength));
@@ -330,9 +347,19 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
       onMouseMove={handleMouseMove}
       onMouseEnter={() => setIsMouseOver(true)}
       onMouseLeave={() => setIsMouseOver(false)}
-      className={clsx('relative', className)}
+      onTouchStart={e => {
+        setTouchStart(e.touches[0][isVertical ? 'pageY' : 'pageX']);
+        setIsMouseOver(true);
+      }}
+      onTouchEnd={() => {
+        setTouchStart(null);
+        setIsMouseOver(false);
+      }}
+      onTouchMove={handleTouchMove}
+      className={clsx('relative touch-none', className)}
       style={{
-        [isVertical ? 'maxHeight' : 'maxWidth']: unscaledLength
+        [isVertical ? 'maxHeight' : 'maxWidth']: unscaledLength,
+        justifySelf: isVertical ? 'center' : 'unset',
       }}
     >
       <div
