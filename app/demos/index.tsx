@@ -9,6 +9,7 @@ export const DEMOS = {
   'dock-magnification-accurate-shift': lazy(() => import('./dock-magnification/accurate-shift')),
   'dock-magnification-elegant-shift': lazy(() => import('./dock-magnification/elegant-shift')),
   'dock-magnification-size-diff-wrong': lazy(() => import('./dock-magnification/size-diff-wrong')),
+  'test': lazy(() => import('./test')),
 }
 
 export const Demo = ({ entry }: { entry: DemoType }) => {
