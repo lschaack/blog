@@ -1,5 +1,6 @@
 // Tailwind classes need to appear in full to not be stripped from the build,
 // so afaict some form of this is necessary
+// TODO: but rename some of these though and come up with a better system cause this kind of sucks
 export const inputColorClasses = {
   amber: {
     track: 'bg-amber-200',
@@ -8,6 +9,7 @@ export const inputColorClasses = {
     thumb: 'bg-amber-800',
     thumbActive: 'bg-amber-950',
     focused: 'shadow-lg ring-4 ring-amber-200',
+    altFocused: 'shadow-lg ring-4 ring-amber-500',
   },
   emerald: {
     track: 'bg-emerald-200',
@@ -16,6 +18,7 @@ export const inputColorClasses = {
     thumb: 'bg-emerald-800',
     thumbActive: 'bg-emerald-950',
     focused: 'shadow-lg ring-4 ring-emerald-200',
+    altFocused: 'shadow-lg ring-4 ring-emerald-500',
   },
   lime: {
     track: 'bg-lime-200',
@@ -24,6 +27,7 @@ export const inputColorClasses = {
     thumb: 'bg-lime-800',
     thumbActive: 'bg-lime-950',
     focused: 'shadow-lg ring-4 ring-lime-200',
+    altFocused: 'shadow-lg ring-4 ring-lime-500',
   },
   teal: {
     track: 'bg-teal-200',
@@ -32,6 +36,7 @@ export const inputColorClasses = {
     thumb: 'bg-teal-800',
     thumbActive: 'bg-teal-950',
     focused: 'shadow-lg ring-4 ring-teal-200',
+    altFocused: 'shadow-lg ring-4 ring-teal-500',
   },
   cyan: {
     track: 'bg-cyan-200',
@@ -40,6 +45,7 @@ export const inputColorClasses = {
     thumb: 'bg-cyan-800',
     thumbActive: 'bg-cyan-950',
     focused: 'shadow-lg ring-4 ring-cyan-200',
+    altFocused: 'shadow-lg ring-4 ring-cyan-500',
   },
   blue: {
     track: 'bg-blue-200',
@@ -48,6 +54,7 @@ export const inputColorClasses = {
     thumb: 'bg-blue-800',
     thumbActive: 'bg-blue-950',
     focused: 'shadow-lg ring-4 ring-blue-200',
+    altFocused: 'shadow-lg ring-4 ring-blue-500',
   },
   indigo: {
     track: 'bg-indigo-200',
@@ -56,6 +63,7 @@ export const inputColorClasses = {
     thumb: 'bg-indigo-800',
     thumbActive: 'bg-indigo-950',
     focused: 'shadow-lg ring-4 ring-indigo-200',
+    altFocused: 'shadow-lg ring-4 ring-indigo-500',
   },
   rose: {
     track: 'bg-rose-200',
@@ -64,5 +72,6 @@ export const inputColorClasses = {
     thumb: 'bg-rose-800',
     thumbActive: 'bg-rose-950',
     focused: 'shadow-lg ring-4 ring-rose-200',
+    altFocused: 'shadow-lg ring-4 ring-rose-500',
   }
 } as const;

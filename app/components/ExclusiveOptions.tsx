@@ -27,6 +27,12 @@ export const Option = <T extends OptionValue>({
   disabled,
 }: OptionProps<T>) => {
   const context = useContext(ExclusiveOptionsContext);
+  const [isFocused, setIsFocused] = useState(false);
+  const focusEasingFactor = useEaseUpDown(
+    100,
+    isFocused ? EasingDirection.UP : EasingDirection.DOWN,
+    'easeOut'
+  );
 
   if (!context) {
     throw new Error('Option must be used within an ExclusiveOptions');
@@ -44,19 +50,29 @@ export const Option = <T extends OptionValue>({
         name={name}
         value={value}
         onChange={onChange}
+        tabIndex={-1}
         className="sr-only"
         disabled={disabled}
         checked={isSelected}
       />
       <label
         htmlFor={id}
+        tabIndex={disabled ? -1 : 0}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        onKeyUp={e => {
+          if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click();
+        }}
         className={clsx(
-          "cursor-pointer w-full p-2 block transition-colors duration-200",
+          "cursor-pointer w-full p-2 block transition-colors duration-200 outline-none",
           inputColorClasses[context.color].track,
           isSelected && inputColorClasses[context.color].filled,
           isSelected && "text-white",
           disabled && "bg-gray-100! cursor-not-allowed!",
         )}
+        style={{
+          marginLeft: `${focusEasingFactor * 24}px`,
+        }}
       >
         {label}
       </label>
@@ -89,6 +105,22 @@ export const ExclusiveOptions = ({
     triggerSpring();
   }
 
+  const toggleOpenClose = (requestDirection?: EasingDirection) => {
+    if (!requestDirection || requestDirection !== direction) {
+      const nextDirection = requestDirection ?? (
+        // If no requested direction, toggle previous
+        direction === EasingDirection.DOWN
+          ? EasingDirection.UP
+          : EasingDirection.DOWN
+      );
+      setDirection(nextDirection);
+
+      if (nextDirection === EasingDirection.DOWN) {
+        setFiredLegendImpulse(false);
+      }
+    }
+  };
+
   const wrapperHeight = easingFactor * (optionWrapper.current?.scrollHeight ?? 0);
   const legendPosition = springEasingFactor * LEGEND_DISPLACEMENT;
 
@@ -98,16 +130,7 @@ export const ExclusiveOptions = ({
         <div
           className="w-full h-full cursor-pointer flex gap-8 justify-between items-baseline"
           style={{ transform: `translateY(${-legendPosition}px)` }}
-          onClick={() => {
-            const nextDirection = direction === EasingDirection.DOWN
-              ? EasingDirection.UP
-              : EasingDirection.DOWN;
-            setDirection(nextDirection);
-
-            if (nextDirection === EasingDirection.DOWN) {
-              setFiredLegendImpulse(false);
-            }
-          }}
+          onClick={() => toggleOpenClose()}
         >
           <legend
             className={clsx(
@@ -119,7 +142,20 @@ export const ExclusiveOptions = ({
           </legend>
           <p>{context.value}</p>
         </div>
-        <div ref={optionWrapper} className="overflow-hidden" style={{ height: wrapperHeight }}>
+        <div
+          ref={optionWrapper}
+          className="overflow-hidden"
+          style={{ height: wrapperHeight }}
+          onFocus={() => toggleOpenClose(EasingDirection.UP)}
+          onBlur={e => {
+            const isKeyboardNav = e.relatedTarget !== null;
+            const isLeavingOptionList = !optionWrapper.current?.contains(e.relatedTarget);
+
+            if (isKeyboardNav && isLeavingOptionList) {
+              toggleOpenClose(EasingDirection.DOWN)
+            }
+          }}
+        >
           {children}
         </div>
       </fieldset>

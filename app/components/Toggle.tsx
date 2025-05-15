@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useState } from 'react';
 import clsx from 'clsx';
 
 import { inputColorClasses } from "@/app/utils/colors";
@@ -12,6 +12,8 @@ type ToggleProps = {
 }
 
 export const Toggle: FC<ToggleProps> = ({ color, value, id, label, onChange }) => {
+  const [isFocused, setIsFocused] = useState(false);
+
   return (
     <div className="w-full">
       <input
@@ -19,6 +21,8 @@ export const Toggle: FC<ToggleProps> = ({ color, value, id, label, onChange }) =
         className="sr-only"
         id={id}
         onChange={() => onChange(!value)}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
         checked={value}
       />
       <label
@@ -28,6 +32,7 @@ export const Toggle: FC<ToggleProps> = ({ color, value, id, label, onChange }) =
           inputColorClasses[color].track,
           value && inputColorClasses[color].filled,
           value && "text-white",
+          isFocused && inputColorClasses[color][value ? 'focused' : 'altFocused'],
         )}
       >
         {label}
