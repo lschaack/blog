@@ -26,7 +26,7 @@ export const Header = () => {
   return (
     <header className="flex flex-col items-center">
       <h1>
-        <pre className="font-mono text-3xl mt-12" dangerouslySetInnerHTML={{
+        <pre className="font-mono text-3xl my-12" dangerouslySetInnerHTML={{
           __html: highlighted.value
         }} />
       </h1>

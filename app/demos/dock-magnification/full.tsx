@@ -18,7 +18,6 @@ const GAP_MAX = 25;
 const SCALE_MIN = 1;
 const SCALE_MAX = 5;
 
-//TODO: Enable basis modification and increase SCALE_MAX
 export default function Demo() {
   const [scale, setScale] = useState(3);
   const [falloff, setFalloff] = useState(3);
@@ -99,7 +98,8 @@ export default function Demo() {
               id="falloff"
               color="lime"
               min={1}
-              max={10}
+              // FIXME: make this more dynamic if I enable more than 7 images
+              max={shiftStrategy.includes('elegant') ? 3 : 10}
               defaultValue={falloff}
               step={1.0}
               onChange={setFalloff}
@@ -146,52 +146,52 @@ export default function Demo() {
           gap={runLfo ? gapLfoValue : gap}
         >
           <Image
-            src="/ball thrower.jpeg"
+            src="/ball-thrower.jpeg"
             height={640}
             width={640}
-            alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
+            alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing"
             priority
           />
           <Image
-            src="/ball thrower.jpeg"
+            src="/blep.jpeg"
             height={640}
             width={640}
-            alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
+            alt="My dog Orzo getting way too close to the camera with dirt on his nose and the tip of his tongue sticking out"
             priority
           />
           <Image
-            src="/ball thrower.jpeg"
+            src="/happy-girl.jpeg"
             height={640}
             width={640}
-            alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
+            alt="My dog Pinto looking completely at peace in a field of some kind of tall grass"
             priority
           />
           <Image
-            src="/ball thrower.jpeg"
+            src="/babushka.jpeg"
             height={640}
             width={640}
-            alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
+            alt="Orzo looking tragic immediately after a bath, towel draped over his head"
             priority
           />
           <Image
-            src="/ball thrower.jpeg"
+            src="/cozy-grass.jpeg"
             height={640}
             width={640}
-            alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
+            alt="Pinto laying as flat as possible with her nose pressed into some freshly-cut grass"
             priority
           />
           <Image
-            src="/ball thrower.jpeg"
+            src="/puppy-dog-eyes.jpeg"
             height={640}
             width={640}
-            alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
+            alt="Orzo looking so high up that you can see the whites of his eyes, showing off his underbite"
             priority
           />
           <Image
-            src="/ball thrower.jpeg"
+            src="/AC.jpeg"
             height={640}
             width={640}
-            alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
+            alt="Somebody else's dog in Honolulu, getting a break from the heat outside in an air conditioned shop"
             priority
           />
         </CardMagnifier>

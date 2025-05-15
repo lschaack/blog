@@ -16,46 +16,46 @@ export default function Demo() {
       gap={5}
     >
       <Image
-        src="/ball thrower.jpeg"
+        src="/ball-thrower.jpeg"
         height={640}
         width={640}
-        alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
-        priority
+        alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing"
       />
       <Image
-        src="/ball thrower.jpeg"
+        src="/blep.jpeg"
         height={640}
         width={640}
-        alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
-        priority
+        alt="My dog Orzo getting way too close to the camera with dirt on his nose and the tip of his tongue sticking out"
       />
       <Image
-        src="/ball thrower.jpeg"
+        src="/happy-girl.jpeg"
         height={640}
         width={640}
-        alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
-        priority
+        alt="My dog Pinto looking completely at peace in a field of some kind of tall grass"
       />
       <Image
-        src="/ball thrower.jpeg"
+        src="/babushka.jpeg"
         height={640}
         width={640}
-        alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
-        priority
+        alt="Orzo looking tragic immediately after a bath, towel draped over his head"
       />
       <Image
-        src="/ball thrower.jpeg"
+        src="/cozy-grass.jpeg"
         height={640}
         width={640}
-        alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
-        priority
+        alt="Pinto laying as flat as possible with her nose pressed into some freshly-cut grass"
       />
       <Image
-        src="/ball thrower.jpeg"
+        src="/puppy-dog-eyes.jpeg"
         height={640}
         width={640}
-        alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing."
-        priority
+        alt="Orzo looking so high up that you can see the whites of his eyes, showing off his underbite"
+      />
+      <Image
+        src="/AC.jpeg"
+        height={640}
+        width={640}
+        alt="Somebody else's dog in Honolulu, getting a break from the heat outside in an air conditioned shop"
       />
     </CardMagnifier>
   );
