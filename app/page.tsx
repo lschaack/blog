@@ -32,9 +32,9 @@ export default async function Home() {
       <div>
         <ul className="flex flex-wrap gap-16 max-w-4xl">
           {posts.map(post => post?.slug && (
-            <HoverBubble key={post.sys.id}>
-              <li className="max-w-96">
-                <a href={`/posts/${post.slug}`}>
+            <a href={`/posts/${post.slug}`} key={post.sys.id}>
+              <HoverBubble>
+                <li className="max-w-96">
                   <h2 className="text-2xl font-bold">
                     {post.title}
                   </h2>
@@ -48,9 +48,9 @@ export default async function Home() {
                   <p>
                     {post.subtitle}
                   </p>
-                </a>
-              </li>
-            </HoverBubble>
+                </li>
+              </HoverBubble>
+            </a>
           ))}
         </ul>
       </div>

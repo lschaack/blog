@@ -126,7 +126,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
 
   const containerElement = useRef<HTMLUListElement>(null);
 
-  const [mousePos, setMousPos] = useState(0);
+  const [mousePos, setMousePos] = useState(0);
   const [isMouseOver, setIsMouseOver] = useState(false);
   const [touchStart, setTouchStart] = useState<number | null>(null);
 
@@ -191,7 +191,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
       focusHandlers.push({
         focus: () => {
           // mock the cursor being positioned over this card
-          setMousPos(cardPositions[i]);
+          setMousePos(cardPositions[i]);
 
           setIsMouseOver(true);
         },
@@ -229,12 +229,12 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
         const relativeY = event.pageY - containerElement.current.offsetTop;
         const normY = relativeY / unscaledLength;
 
-        setMousPos(clamp(normY, 0, 1));
+        setMousePos(clamp(normY, 0, 1));
       } else {
         const relativeX = event.pageX - containerElement.current.offsetLeft;
         const normX = relativeX / unscaledLength;
 
-        setMousPos(clamp(normX, 0, 1));
+        setMousePos(clamp(normX, 0, 1));
       }
     }
   }, [isVertical, unscaledLength]);
@@ -325,7 +325,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     if (touchStart) {
       const delta = e.touches[0][isVertical ? 'pageY' : 'pageX'] - touchStart;
 
-      setMousPos(clamp(mousePos - delta / DRAG_MODIFIER, 0, 1));
+      setMousePos(clamp(mousePos - delta / DRAG_MODIFIER, 0, 1));
       setTouchStart(e.touches[0][isVertical ? 'pageY' : 'pageX']);
     }
   }
