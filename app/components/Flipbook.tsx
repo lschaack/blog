@@ -23,7 +23,9 @@ export const Flipbook = <ElementType extends HTMLElement>({
   return (
     <div
       onMouseEnter={() => {
-        const intervalId = setInterval(
+        if (intervalId) clearInterval(intervalId);
+
+        const nextIntervalId = setInterval(
           () => {
             index.current = (index.current + 1) % 2;
             setContent(frames[index.current])
@@ -31,7 +33,7 @@ export const Flipbook = <ElementType extends HTMLElement>({
           intervalMs
         );
 
-        setIntervalId(intervalId);
+        setIntervalId(nextIntervalId);
       }}
       onMouseLeave={() => clearInterval(intervalId)}
     >

@@ -8,8 +8,11 @@ export const getAllPosts = gql`
         sys {
           id
           firstPublishedAt
+          publishedAt
         }
         title
+        subtitle
+        tags
         slug
         author {
           ... on Author {

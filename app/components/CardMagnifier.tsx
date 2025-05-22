@@ -21,7 +21,7 @@ import { AnimatedVariablesContext } from "@/app/components/AnimatedVariables";
 import { EasingDirection } from "@/app/utils/requestEasingFrames";
 import { useForceRenderOnResize } from "@/app/hooks/useForceRenderOnResize";
 
-const EASING_MS = 300;
+const EASING_MS = 200;
 const DRAG_MODIFIER = 1000;
 
 type CardProps = {
@@ -119,6 +119,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
 }) => {
   const animatedVariables = useContext(AnimatedVariablesContext);
   useForceRenderOnResize(direction === undefined);
+  // FIXME: document undefined on server
   const isVertical = direction === undefined
     ? document.documentElement.clientWidth < 600
     : direction === 'vertical';

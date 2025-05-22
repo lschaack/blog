@@ -29,10 +29,25 @@ export default async function Home() {
   } else {
     return (
       <div>
-        <h1>Hello</h1>
-        <ul>
+        <ul className="flex flex-wrap gap-16 max-w-4xl">
           {posts.map(post => post?.slug && (
-            <a key={post.sys.id} href={`/posts/${post.slug}`}>{post.title}</a>
+            <li key={post.sys.id} className="max-w-96">
+              <a href={`/posts/${post.slug}`}>
+                <h2 className="text-2xl font-bold">
+                  {post.title}
+                </h2>
+                <p className="text-sm mb-1">
+                  {(new Date(post.sys.publishedAt)).toLocaleDateString(navigator.language, {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+                <p>
+                  {post.subtitle}
+                </p>
+              </a>
+            </li>
           ))}
         </ul>
       </div>

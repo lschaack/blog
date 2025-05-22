@@ -166,6 +166,8 @@ type AuthorLinkingCollections {
 enum AuthorLinkingCollectionsBlogPostCollectionOrder {
   slug_ASC
   slug_DESC
+  subtitle_ASC
+  subtitle_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC
@@ -201,7 +203,9 @@ type BlogPost implements Entry & _Node {
   contentfulMetadata: ContentfulMetadata!
   linkedFrom(allowedLocales: [String]): BlogPostLinkingCollections
   slug(locale: String): String
+  subtitle(locale: String): String
   sys: Sys!
+  tags(locale: String): [String]
   title(locale: String): String
 }
 
@@ -268,7 +272,18 @@ input BlogPostFilter {
   slug_not: String
   slug_not_contains: String
   slug_not_in: [String]
+  subtitle: String
+  subtitle_contains: String
+  subtitle_exists: Boolean
+  subtitle_in: [String]
+  subtitle_not: String
+  subtitle_not_contains: String
+  subtitle_not_in: [String]
   sys: SysFilter
+  tags_contains_all: [String]
+  tags_contains_none: [String]
+  tags_contains_some: [String]
+  tags_exists: Boolean
   title: String
   title_contains: String
   title_exists: Boolean
@@ -285,6 +300,8 @@ type BlogPostLinkingCollections {
 enum BlogPostOrder {
   slug_ASC
   slug_DESC
+  subtitle_ASC
+  subtitle_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC

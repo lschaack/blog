@@ -64,7 +64,9 @@ const MAX_ROT = 1.5;
 const noiseX = createNoise2D();
 const noiseY = createNoise2D();
 const noiseRot = createNoise2D();
-const maxNoiseInput = Math.pow(2, 31);
+// https://github.com/jwagner/simplex-noise.js/blob/main/simplex-noise.ts#L99
+// Add a safe margin to max, cause Math.pow(2, 31) does actually break sometimes
+const maxNoiseInput = Math.pow(2, 30);
 
 export const AnimatedVariableMeter: FC<AnimatedVariableMeterProps> = ({
   varName,
