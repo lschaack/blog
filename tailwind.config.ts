@@ -24,10 +24,6 @@ const config: Config = {
       boxShadow: {
         "outline": '0 0 0 4px theme(colors.accent.DEFAULT)',
       },
-      fontFamily: {
-        sans: ["var(--font-noto-sans)"],
-        mono: ["var(--font-noto-sans-mono)"],
-      }
     },
   },
   plugins: [],

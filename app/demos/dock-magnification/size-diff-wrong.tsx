@@ -10,7 +10,7 @@ const ANIMATED_VARIABLES = new Map<string, string | number | boolean>();
 export default function Demo() {
   return (
     <AnimatedVariablesContext.Provider value={ANIMATED_VARIABLES}>
-      <div className="font-mono flex flex-col gap-2">
+      <div className="font-geist-mono flex flex-col gap-2">
         <AnimatedVariableValue
           varName="expectedSizeDiffWrong"
           displayName="Expected"

@@ -18,7 +18,7 @@ export const Header = () => {
       <Link href="/" className="my-12 cursor-pointer">
         <h1>
           <Flipbook<HTMLPreElement>
-            className="font-mono text-3xl"
+            className="font-geist-mono text-3xl"
             frames={frames}
             intervalMs={650}
             elementType="pre"

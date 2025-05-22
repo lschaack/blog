@@ -143,7 +143,6 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
     <div
       className={clsx(
         "relative",
-        "bg-neutral-100 rounded-lg",
         //"border-4",
         doAnimate ? "border-emerald-300" : "border-transparent",
       )}

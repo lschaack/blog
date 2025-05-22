@@ -58,7 +58,7 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
         href={node.data.uri}
         target="_blank"
         rel="noopener noreferrer"
-        className="underline decoration-wavy"
+        className="underline"
       >
         {children}
       </a>

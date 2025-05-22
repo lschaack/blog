@@ -32,7 +32,11 @@ export default async function Home() {
       <div>
         <ul className="flex flex-wrap gap-16 max-w-4xl">
           {posts.map(post => post?.slug && (
-            <a href={`/posts/${post.slug}`} key={post.sys.id}>
+            <a
+              href={`/posts/${post.slug}`}
+              key={post.sys.id}
+              className="bg-zinc-100 rounded-lg"
+            >
               <HoverBubble>
                 <li className="max-w-96">
                   <h2 className="text-2xl font-bold">
@@ -53,7 +57,7 @@ export default async function Home() {
             </a>
           ))}
         </ul>
-      </div>
+      </div >
     );
   }
 }

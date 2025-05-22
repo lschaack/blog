@@ -28,7 +28,7 @@ export const Toggle: FC<ToggleProps> = ({ color, value, id, label, onChange }) =
       <label
         htmlFor={id}
         className={clsx(
-          "w-full p-2 block font-mono cursor-pointer transition-colors duration-200",
+          "w-full p-2 block font-geist-mono cursor-pointer transition-colors duration-200",
           inputColorClasses[color].track,
           value && inputColorClasses[color].filled,
           value && "text-white",
