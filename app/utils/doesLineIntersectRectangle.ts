@@ -8,7 +8,7 @@ type RectangleCoords = {
 };
 
 type IntersectionType =
-  | { intersects: false }
+  | { intersects: false; startInside: false, endInside: false }
   | { intersects: true; startInside: boolean; endInside: boolean };
 
 type DoesLineIntersectRectangle = (lineStart: Vec2, lineEnd: Vec2, rectangle: RectangleCoords) => IntersectionType;
@@ -63,5 +63,5 @@ export const doesLineIntersectRectangle: DoesLineIntersectRectangle = (lineStart
     return { intersects: true, startInside, endInside };
   }
 
-  return { intersects: false };
+  return { intersects: false, startInside: false, endInside: false };
 };

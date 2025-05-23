@@ -30,46 +30,53 @@ export default function Demo() {
         gap={5}
       >
         <Image
-          src="/ball-thrower.jpeg"
+          src="/babushka.jpeg"
           height={640}
           width={640}
-          alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing"
+          alt="Orzo looking tragic immediately after a bath, towel draped over his head"
+          priority
         />
         <Image
           src="/blep.jpeg"
           height={640}
           width={640}
           alt="My dog Orzo getting way too close to the camera with dirt on his nose and the tip of his tongue sticking out"
+          priority
         />
         <Image
           src="/happy-girl.jpeg"
           height={640}
           width={640}
           alt="My dog Pinto looking completely at peace in a field of some kind of tall grass"
+          priority
         />
         <Image
-          src="/babushka.jpeg"
+          src="/triptych.jpeg"
           height={640}
           width={640}
-          alt="Orzo looking tragic immediately after a bath, towel draped over his head"
+          alt="A triptych of orzo eating a fortune cookie, seeing the fortune, and eating that too"
+          priority
         />
         <Image
           src="/cozy-grass.jpeg"
           height={640}
           width={640}
           alt="Pinto laying as flat as possible with her nose pressed into some freshly-cut grass"
+          priority
         />
         <Image
-          src="/puppy-dog-eyes.jpeg"
+          src="/leap.jpeg"
           height={640}
           width={640}
-          alt="Orzo looking so high up that you can see the whites of his eyes, showing off his underbite"
+          alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing"
+          priority
         />
         <Image
           src="/AC.jpeg"
           height={640}
           width={640}
           alt="Somebody else's dog in Honolulu, getting a break from the heat outside in an air conditioned shop"
+          priority
         />
       </CardMagnifier>
     </AnimatedVariablesContext.Provider>

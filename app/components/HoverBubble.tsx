@@ -7,10 +7,10 @@ import clsx from "clsx";
 import { useAnimationFrames } from "../hooks/useAnimationFrames";
 import { doesLineIntersectRectangle } from "../utils/doesLineIntersectRectangle";
 
-const BORDER = 10;
-const STIFFNESS = 0.005;
+const BORDER = 24;
+const STIFFNESS = 0.002;
 const DECAY = 0.95;
-const ANIMATION_THRESHOLD = 0.01;
+const ANIMATION_THRESHOLD = 0.001;
 
 type Vec2 = [number, number];
 type RectangleCoords = {
@@ -44,6 +44,10 @@ const multiply = (a: number, b: number) => a * b;
 const dotProduct = (a: Vec2, b: Vec2) => zipWith(a, b, multiply);
 const negate = (n: number) => -n;
 const multiplyBy = (by: number) => (n: number) => n * by;
+
+const lerp = (x: number, y: number, a: number) => x * (1 - a) + y * a;
+// TODO: name this something more descriptive...
+const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
 
 const getSpringForce = (offset: Vec2, delta: number) => {
   const length = magnitude(offset);
@@ -108,6 +112,14 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
   const [doAnimate, setDoAnimate] = useState(false);
   const relativeMouseStart = useRef<Vec2 | null>(null);
   const isContained = useRef(false);
+  const prevOffset = useRef<Vec2>([0, 0]);
+  const offsetLerped = useRef<Vec2>([0, 0]);
+
+  // FIXME: This is absolute react abuse
+  useEffect(() => {
+    offsetLerped.current = zipWith(prevOffset.current, offset, (a, b) => lerp(a, b, 0.75)) as Vec2;
+    prevOffset.current = offset;
+  }, [offset]);
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -176,14 +188,18 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
 
         setDoAnimate(false);
 
+        offsetLerped.current = [0, 0];
         return [0, 0];
       } else {
-        return zipWith(offset, velocity.current, add) as Vec2;
+        const nextOffset = zipWith(offset, velocity.current, add) as Vec2;
+
+        return nextOffset;
       }
     })
   }, []);
 
   useAnimationFrames(applySpringForce, doAnimate);
+
 
   return (
     <div
@@ -198,12 +214,12 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
       ref={containerElement}
     >
       <div
-        className="bg-cyan-100 rounded-2xl absolute"
+        className="bg-blue-100 rounded-2xl absolute"
         style={{
-          top: Math.max(offset[1], 0),
-          right: Math.abs(Math.min(offset[0], 0)),
-          bottom: Math.abs(Math.min(offset[1], 0)),
-          left: Math.max(offset[0], 0),
+          top: asymmetricFilter(offsetLerped.current[1]),
+          right: asymmetricFilter(-offsetLerped.current[0]),
+          bottom: asymmetricFilter(-offsetLerped.current[1]),
+          left: asymmetricFilter(offsetLerped.current[0]),
         }}
       />
       <div

@@ -146,10 +146,10 @@ export default function Demo() {
           gap={runLfo ? gapLfoValue : gap}
         >
           <Image
-            src="/ball-thrower.jpeg"
+            src="/babushka.jpeg"
             height={640}
             width={640}
-            alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing"
+            alt="Orzo looking tragic immediately after a bath, towel draped over his head"
             priority
           />
           <Image
@@ -167,10 +167,10 @@ export default function Demo() {
             priority
           />
           <Image
-            src="/babushka.jpeg"
+            src="/triptych.jpeg"
             height={640}
             width={640}
-            alt="Orzo looking tragic immediately after a bath, towel draped over his head"
+            alt="A triptych of orzo eating a fortune cookie, seeing the fortune, and eating that too"
             priority
           />
           <Image
@@ -181,10 +181,10 @@ export default function Demo() {
             priority
           />
           <Image
-            src="/puppy-dog-eyes.jpeg"
+            src="/leap.jpeg"
             height={640}
             width={640}
-            alt="Orzo looking so high up that you can see the whites of his eyes, showing off his underbite"
+            alt="A photo of me staring at a ball with bulging eyes while my dog Orzo sits on my shoulder doing the same thing"
             priority
           />
           <Image
