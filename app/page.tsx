@@ -35,7 +35,6 @@ export default async function Home() {
             <a
               href={`/posts/${post.slug}`}
               key={post.sys.id}
-              className="bg-zinc-100 rounded-lg"
             >
               <HoverBubble>
                 <li className="max-w-96">

@@ -1,9 +1,11 @@
 "use client";
 
-import { FC, ReactNode, useEffect, useRef, useState } from "react";
+import { FC, ReactNode, useCallback, useEffect, useRef, useState } from "react";
 
 import { zipWith } from "lodash";
 import clsx from "clsx";
+import { useAnimationFrames } from "../hooks/useAnimationFrames";
+import { doesLineIntersectRectangle } from "../utils/doesLineIntersectRectangle";
 
 const BORDER = 10;
 const STIFFNESS = 0.005;
@@ -11,6 +13,12 @@ const DECAY = 0.95;
 const ANIMATION_THRESHOLD = 0.01;
 
 type Vec2 = [number, number];
+type RectangleCoords = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
 
 const magnitude = <T extends number[]>(vector: T) => {
   return Math.sqrt(
@@ -53,6 +61,46 @@ const applyForces = (velocity: Vec2, force: Vec2) => {
   return applied;
 }
 
+const getStableCoords = (element: HTMLElement): RectangleCoords => {
+  const {
+    top: baseTop,
+    right: baseRight,
+    bottom: baseBottom,
+    left: baseLeft,
+  } = element.getBoundingClientRect();
+
+  const top = baseTop + document.documentElement.scrollTop;
+  const right = baseRight + document.documentElement.scrollLeft;
+  const bottom = baseBottom + document.documentElement.scrollTop;
+  const left = baseLeft + document.documentElement.scrollLeft;
+
+  return { top, right, bottom, left };
+}
+
+const isPointContained = (point: Vec2, coords: RectangleCoords) => {
+  const { top, right, bottom, left } = coords;
+  const [x, y] = point;
+
+  return (
+    x >= left && x <= right
+    && y >= top && y <= bottom
+  );
+}
+
+const isPointInBorder = (point: Vec2, coords: RectangleCoords, border: number) => {
+  const { top, right, bottom, left } = coords;
+  const [x, y] = point;
+
+  const fromTop = y - top;
+  const fromRight = right - x;
+  const fromBottom = bottom - y;
+  const fromLeft = x - left;
+
+  const minDistance = Math.min(fromTop, fromRight, fromBottom, fromLeft);
+
+  return minDistance <= border;
+}
+
 export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
   const [offset, setOffset] = useState<Vec2>([0, 0]);
   const containerElement = useRef<HTMLDivElement>(null);
@@ -64,75 +112,44 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
       if (containerElement.current) {
-        const {
-          top: baseTop,
-          right: baseRight,
-          bottom: baseBottom,
-          left: baseLeft,
-        } = containerElement.current.getBoundingClientRect();
+        const coords = getStableCoords(containerElement.current);
+        const { pageX, pageY } = event;
+        const currMousePos: Vec2 = [pageX, pageY];
+        const prevMousePos: Vec2 = [pageX - event.movementX, pageY - event.movementY];
+        const intersectionResult = doesLineIntersectRectangle(prevMousePos, currMousePos, coords);
 
-        const top = baseTop + document.documentElement.scrollTop;
-        const right = baseRight + document.documentElement.scrollLeft;
-        const bottom = baseBottom + document.documentElement.scrollTop;
-        const left = baseLeft + document.documentElement.scrollLeft;
+        if (intersectionResult.intersects) {
+          if (intersectionResult.endInside) {
+            if (isPointInBorder(currMousePos, coords, BORDER)) {
+              const { top, left } = coords;
+              const relativePos: Vec2 = [pageX - left, pageY - top];
+              // Track start point so we can use the inter-border vector to determine the offset
+              relativeMouseStart.current ??= relativePos;
 
-        const width = right - left;
-        const height = bottom - top;
+              const fromStart = zipWith(relativePos, relativeMouseStart.current!, subtract) as Vec2;
 
-        const relativeY = event.pageY - top;
-        const relativeX = event.pageX - left;
+              setOffset(fromStart)
 
-        const isCursorInContainer = (
-          relativeX >= 0
-          && relativeY >= 0
-          && relativeX <= width
-          && relativeY <= height
-        );
+              setDoAnimate(false);
+            } else {
+              if (intersectionResult.startInside) {
+                relativeMouseStart.current = null;
+                isContained.current = true;
+                setDoAnimate(true);
+              } else {
+                // if cursor skipped through the border, apply offset all at once
+                const cursorMovement = zipWith(currMousePos, prevMousePos, subtract);
+                const cursorDirection = normalize(cursorMovement);
+                const cursorVelocity = magnitude(cursorMovement);
 
-        // FIXME: this should replicate current logic, but need to handle edge case where
-        // cursor skips over the entire element
-        if (isCursorInContainer) {
-          // is the cursor in the border?
-          // if so, pin offset to cursor
-          // else, run physics as usual
-          const fromTop = relativeY;
-          const fromRight = width - relativeX;
-          const fromBottom = height - relativeY;
-          const fromLeft = relativeX;
-
-          const minDistance = Math.min(
-            fromTop,
-            fromRight,
-            fromBottom,
-            fromLeft,
-          );
-
-          const isCursorInBorder = minDistance <= BORDER;
-
-          if (isCursorInBorder) {
-            const relativePos: Vec2 = [relativeX, relativeY];
-            // Track start point so we can use the inter-border vector to determine the offset
-            // Would ideally go next to setDoAnimate for clarity, but needed for fromStart
-            relativeMouseStart.current ??= relativePos;
-
-            const fromStart = zipWith(
-              relativePos,
-              relativeMouseStart.current!,
-              subtract,
-            ) as Vec2;
-
-            setOffset(fromStart)
-
-            setDoAnimate(false);
+                setOffset(cursorDirection.map(multiplyBy(Math.min(cursorVelocity, BORDER))) as Vec2);
+              }
+            }
           } else {
             relativeMouseStart.current = null;
-            isContained.current = true;
+            isContained.current = false;
             setDoAnimate(true);
           }
-        } else {
-          relativeMouseStart.current = null;
-          isContained.current = false;
-          setDoAnimate(true);
         }
       }
     }
@@ -142,53 +159,37 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
     return () => document.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  useEffect(() => {
-    if (doAnimate) {
-      let frameId: number;
-      let prevTime: number;
+  const applySpringForce = useCallback((delta: number) => {
+    // apply spring physics
+    setOffset(offset => {
+      const force = getSpringForce(offset, delta);
+      velocity.current = applyForces(velocity.current, force);
 
-      const animate = (currTime: number) => {
-        const delta = prevTime ? currTime - prevTime : 16.67;
+      // jump to still at low values or else this will basically never end
+      const shouldStop = (
+        length < ANIMATION_THRESHOLD
+        && magnitude(velocity.current) < ANIMATION_THRESHOLD
+      );
 
-        // apply spring physics
-        setOffset(offset => {
-          const force = getSpringForce(offset, delta);
-          velocity.current = applyForces(velocity.current, force);
+      if (shouldStop) {
+        velocity.current = [0, 0];
 
-          // jump to still at low values or else this will basically never end
-          const shouldStop = (
-            length < ANIMATION_THRESHOLD
-            && magnitude(velocity.current) < ANIMATION_THRESHOLD
-          );
+        setDoAnimate(false);
 
-          if (shouldStop) {
-            velocity.current = [0, 0];
-
-            setDoAnimate(false);
-
-            return [0, 0];
-          } else {
-            return zipWith(offset, velocity.current, add) as Vec2;
-          }
-        })
-
-        prevTime = currTime;
-        frameId = requestAnimationFrame(animate);
+        return [0, 0];
+      } else {
+        return zipWith(offset, velocity.current, add) as Vec2;
       }
+    })
+  }, []);
 
-      frameId = requestAnimationFrame(animate);
-
-      return () => {
-        if (frameId) cancelAnimationFrame(frameId);
-      }
-    }
-  }, [doAnimate]);
+  useAnimationFrames(applySpringForce, doAnimate);
 
   return (
     <div
       className={clsx(
         "relative",
-        "border-4",
+        //"border-4",
         doAnimate ? "border-emerald-300" : "border-transparent",
       )}
       style={{
@@ -196,6 +197,15 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
       }}
       ref={containerElement}
     >
+      <div
+        className="bg-cyan-100 rounded-2xl absolute"
+        style={{
+          top: Math.max(offset[1], 0),
+          right: Math.abs(Math.min(offset[0], 0)),
+          bottom: Math.abs(Math.min(offset[1], 0)),
+          left: Math.max(offset[0], 0),
+        }}
+      />
       <div
         style={{
           position: 'relative',
