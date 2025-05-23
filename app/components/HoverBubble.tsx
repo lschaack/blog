@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, MouseEventHandler, ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { FC, ReactNode, useEffect, useRef, useState } from "react";
 
 import { zipWith } from "lodash";
 import clsx from "clsx";
@@ -32,6 +32,8 @@ const normalize = <T extends number[]>(vector: T) => {
 
 const add = (a: number, b: number) => a + b;
 const subtract = (a: number, b: number) => a - b;
+const multiply = (a: number, b: number) => a * b;
+const dotProduct = (a: Vec2, b: Vec2) => zipWith(a, b, multiply);
 const negate = (n: number) => -n;
 const multiplyBy = (by: number) => (n: number) => n * by;
 
@@ -41,7 +43,14 @@ const getSpringForce = (offset: Vec2, delta: number) => {
   const direction = normalize(offset.map(negate));
   const force = direction.map(multiplyBy(forceVal));
 
-  return force;
+  return force as Vec2;
+}
+
+const applyForces = (velocity: Vec2, force: Vec2) => {
+  const decayed = velocity.map(multiplyBy(DECAY)) as Vec2;
+  const applied = zipWith(decayed, force, add) as Vec2;
+
+  return applied;
 }
 
 export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
@@ -106,30 +115,14 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
             // Would ideally go next to setDoAnimate for clarity, but needed for fromStart
             relativeMouseStart.current ??= relativePos;
 
-            const fromStart = normalize(
-              zipWith(
-                relativePos,
-                relativeMouseStart.current!,
-                subtract,
-              )
-            );
+            const fromStart = zipWith(
+              relativePos,
+              relativeMouseStart.current!,
+              subtract,
+            ) as Vec2;
 
-            if (isContained.current) {
-              const distanceFromInnerEdge = BORDER - minDistance;
-              const nextOffset = fromStart.map(multiplyBy(distanceFromInnerEdge)) as Vec2;
+            setOffset(fromStart)
 
-              if (nextOffset.some(isNaN)) debugger;
-
-              setOffset(nextOffset);
-            } else {
-              const nextOffset = fromStart.map(multiplyBy(minDistance)) as Vec2;
-
-              if (nextOffset.some(isNaN)) debugger;
-
-              setOffset(nextOffset);
-            }
-
-            console.log('stop b/c in border')
             setDoAnimate(false);
           } else {
             relativeMouseStart.current = null;
@@ -160,15 +153,17 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
         // apply spring physics
         setOffset(offset => {
           const force = getSpringForce(offset, delta);
-
-          velocity.current = velocity.current.map(multiplyBy(DECAY)) as Vec2;
-          velocity.current = zipWith(velocity.current, force, add) as Vec2;
+          velocity.current = applyForces(velocity.current, force);
 
           // jump to still at low values or else this will basically never end
-          if (length < ANIMATION_THRESHOLD && magnitude(velocity.current) < ANIMATION_THRESHOLD) {
+          const shouldStop = (
+            length < ANIMATION_THRESHOLD
+            && magnitude(velocity.current) < ANIMATION_THRESHOLD
+          );
+
+          if (shouldStop) {
             velocity.current = [0, 0];
 
-            console.log('stop b/c done')
             setDoAnimate(false);
 
             return [0, 0];
