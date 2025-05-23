@@ -8,7 +8,7 @@ import clsx from "clsx";
 const BORDER = 10;
 const STIFFNESS = 0.005;
 const DECAY = 0.95;
-const ANIMATION_THRESHOLD = 0.1;
+const ANIMATION_THRESHOLD = 0.01;
 
 type Vec2 = [number, number];
 
@@ -35,68 +35,119 @@ const subtract = (a: number, b: number) => a - b;
 const negate = (n: number) => -n;
 const multiplyBy = (by: number) => (n: number) => n * by;
 
+const getSpringForce = (offset: Vec2, delta: number) => {
+  const length = magnitude(offset);
+  const forceVal = length * STIFFNESS * delta;
+  const direction = normalize(offset.map(negate));
+  const force = direction.map(multiplyBy(forceVal));
+
+  return force;
+}
+
 export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
   const [offset, setOffset] = useState<Vec2>([0, 0]);
-  const [isContained, setIsContained] = useState(false);
   const containerElement = useRef<HTMLDivElement>(null);
   const velocity = useRef<Vec2>([0, 0]);
   const [doAnimate, setDoAnimate] = useState(false);
   const relativeMouseStart = useRef<Vec2 | null>(null);
+  const isContained = useRef(false);
 
-  const handleMouseMove: MouseEventHandler = useCallback(event => {
-    if (containerElement.current) {
-      const {
-        offsetTop,
-        offsetLeft,
-        offsetWidth,
-        offsetHeight,
-      } = containerElement.current;
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (containerElement.current) {
+        const {
+          top: baseTop,
+          right: baseRight,
+          bottom: baseBottom,
+          left: baseLeft,
+        } = containerElement.current.getBoundingClientRect();
 
-      const relativeY = event.pageY - offsetTop;
-      const relativeX = event.pageX - offsetLeft;
+        const top = baseTop + document.documentElement.scrollTop;
+        const right = baseRight + document.documentElement.scrollLeft;
+        const bottom = baseBottom + document.documentElement.scrollTop;
+        const left = baseLeft + document.documentElement.scrollLeft;
 
-      if (relativeMouseStart.current === null) relativeMouseStart.current = [relativeX, relativeY];
+        const width = right - left;
+        const height = bottom - top;
 
-      const fromTop = relativeY;
-      const fromRight = offsetWidth - relativeX;
-      const fromBottom = offsetHeight - relativeY;
-      const fromLeft = relativeX;
+        const relativeY = event.pageY - top;
+        const relativeX = event.pageX - left;
 
-      const minDistance = Math.min(
-        fromTop,
-        fromRight,
-        fromBottom,
-        fromLeft,
-      );
-
-      // if cursor is in the border, it should "catch" the box
-      // if not, we should run spring physics
-      if (minDistance <= BORDER) {
-        setDoAnimate(false);
-
-        const relativePos = [relativeX, relativeY];
-
-        const fromStart = normalize(
-          zipWith(
-            relativePos,
-            relativeMouseStart.current!,
-            subtract,
-          )
+        const isCursorInContainer = (
+          relativeX >= 0
+          && relativeY >= 0
+          && relativeX <= width
+          && relativeY <= height
         );
 
-        if (isContained) {
-          const distanceFromInnerEdge = BORDER - minDistance;
-          setOffset(fromStart.map(multiplyBy(distanceFromInnerEdge)) as Vec2)
+        // FIXME: this should replicate current logic, but need to handle edge case where
+        // cursor skips over the entire element
+        if (isCursorInContainer) {
+          // is the cursor in the border?
+          // if so, pin offset to cursor
+          // else, run physics as usual
+          const fromTop = relativeY;
+          const fromRight = width - relativeX;
+          const fromBottom = height - relativeY;
+          const fromLeft = relativeX;
+
+          const minDistance = Math.min(
+            fromTop,
+            fromRight,
+            fromBottom,
+            fromLeft,
+          );
+
+          const isCursorInBorder = minDistance <= BORDER;
+
+          if (isCursorInBorder) {
+            const relativePos: Vec2 = [relativeX, relativeY];
+            // Track start point so we can use the inter-border vector to determine the offset
+            // Would ideally go next to setDoAnimate for clarity, but needed for fromStart
+            relativeMouseStart.current ??= relativePos;
+
+            const fromStart = normalize(
+              zipWith(
+                relativePos,
+                relativeMouseStart.current!,
+                subtract,
+              )
+            );
+
+            if (isContained.current) {
+              const distanceFromInnerEdge = BORDER - minDistance;
+              const nextOffset = fromStart.map(multiplyBy(distanceFromInnerEdge)) as Vec2;
+
+              if (nextOffset.some(isNaN)) debugger;
+
+              setOffset(nextOffset);
+            } else {
+              const nextOffset = fromStart.map(multiplyBy(minDistance)) as Vec2;
+
+              if (nextOffset.some(isNaN)) debugger;
+
+              setOffset(nextOffset);
+            }
+
+            console.log('stop b/c in border')
+            setDoAnimate(false);
+          } else {
+            relativeMouseStart.current = null;
+            isContained.current = true;
+            setDoAnimate(true);
+          }
         } else {
-          setOffset(fromStart.map(multiplyBy(minDistance)) as Vec2)
+          relativeMouseStart.current = null;
+          isContained.current = false;
+          setDoAnimate(true);
         }
-      } else {
-        setIsContained(true);
-        setDoAnimate(true);
-        relativeMouseStart.current = null;
       }
     }
-  }, [isContained]);
+
+    document.addEventListener('mousemove', handleMouseMove);
+
+    return () => document.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   useEffect(() => {
     if (doAnimate) {
@@ -104,14 +155,12 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
       let prevTime: number;
 
       const animate = (currTime: number) => {
-        const delta = prevTime ? currTime - prevTime : 0;
+        const delta = prevTime ? currTime - prevTime : 16.67;
 
         // apply spring physics
         setOffset(offset => {
-          const length = magnitude(offset);
-          const forceVal = length * STIFFNESS * delta;
-          const direction = normalize(offset.map(negate));
-          const force = direction.map(multiplyBy(forceVal));
+          const force = getSpringForce(offset, delta);
+
           velocity.current = velocity.current.map(multiplyBy(DECAY)) as Vec2;
           velocity.current = zipWith(velocity.current, force, add) as Vec2;
 
@@ -119,6 +168,7 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
           if (length < ANIMATION_THRESHOLD && magnitude(velocity.current) < ANIMATION_THRESHOLD) {
             velocity.current = [0, 0];
 
+            console.log('stop b/c done')
             setDoAnimate(false);
 
             return [0, 0];
@@ -143,19 +193,13 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
     <div
       className={clsx(
         "relative",
-        //"border-4",
+        "border-4",
         doAnimate ? "border-emerald-300" : "border-transparent",
       )}
       style={{
         padding: `${BORDER}px`
       }}
       ref={containerElement}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={() => {
-        setIsContained(false);
-        relativeMouseStart.current = null;
-        setDoAnimate(true);
-      }}
     >
       <div
         style={{
