@@ -14,7 +14,7 @@ import {
 
 const BORDER = 12;
 const SPRING_STIFFNESS = 0.002;
-const BUBBLE_STIFFNESS = 0.3;
+const BUBBLE_STIFFNESS = 0.05;
 const DECAY = 0.95;
 const ANIMATION_THRESHOLD = 0.001;
 
@@ -66,11 +66,10 @@ const applyForces = (velocity: Vec2, forces: Vec2[]) => {
 
 export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
   const [offset, _setOffset] = useState<Vec2>([0, 0]);
+  const [impulses, setImpulses] = useState<Vec2[]>([]);
   const [lerpedOffset, _setLerpedOffset] = useState<Vec2>([0, 0]);
   const containerElement = useRef<HTMLDivElement>(null);
   const velocity = useRef<Vec2>([0, 0]);
-  const [doAnimate, setDoAnimate] = useState(false);
-  const impulses = useRef<Vec2[]>([]);
 
   const setOffset: typeof _setOffset = valueOrCallback => {
     _setOffset(prev => {
@@ -122,16 +121,21 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
           new ShapeWithHole(outerRectangle, innerRectangle)
         );
 
-        const force = intersectingSegments.reduce((force, segment) => {
-          const segmentVector: Vec2 = [
-            segment.start.x - segment.end.x,
-            segment.start.y - segment.end.y,
-          ];
+        if (intersectingSegments.length) {
+          const force = multiplyVec2(
+            intersectingSegments.reduce((force, segment) => {
+              const segmentVector: Vec2 = [
+                segment.start.x - segment.end.x,
+                segment.start.y - segment.end.y,
+              ];
 
-          return addVec2(force, segmentVector) as Vec2;
-        }, [0, 0] as Vec2);
+              return addVec2(force, segmentVector) as Vec2;
+            }, [0, 0]),
+            BUBBLE_STIFFNESS
+          );
 
-        impulses.current.push(multiplyVec2(force, BUBBLE_STIFFNESS));
+          setImpulses(prev => [...prev, force]);
+        }
       }
     }
 
@@ -140,37 +144,45 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
     return () => document.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  const doAnimate = !offset.every(component => component === 0) || impulses.length > 0;
+
   const applySpringForce = useCallback((delta: number) => {
     // apply spring physics
-    setOffset(offset => {
-      const springForce = getSpringForce(offset, delta);
-      impulses.current.push(springForce);
-      velocity.current = applyForces(velocity.current, impulses.current);
-      impulses.current = [];
+    setImpulses(impulses => {
+      setOffset(offset => {
+        const springForce = getSpringForce(offset, delta);
+        velocity.current = applyForces(velocity.current, [...impulses, springForce]);
 
-      // jump to still at low values or else this will basically never end
-      const shouldStop = (
-        length < ANIMATION_THRESHOLD
-        && magnitude(velocity.current) < ANIMATION_THRESHOLD
-      );
+        // jump to still at low values or else this will basically never end
+        const shouldStop = (
+          length < ANIMATION_THRESHOLD
+          && magnitude(velocity.current) < ANIMATION_THRESHOLD
+        );
 
-      if (shouldStop) {
-        velocity.current = [0, 0];
+        if (shouldStop) {
+          velocity.current = [0, 0];
+          _setLerpedOffset([0, 0]);
 
-        setDoAnimate(false);
+          return [0, 0];
+        } else {
+          const nextOffset = addVec2(offset, velocity.current) as Vec2;
 
-        _setLerpedOffset([0, 0]);
+          return nextOffset;
+        }
+      });
 
-        return [0, 0];
-      } else {
-        const nextOffset = addVec2(offset, velocity.current) as Vec2;
-
-        return nextOffset;
-      }
+      // impulses are always consumed entirely when setting offset,
+      // but the callback allows me to use the most recent impulses without
+      // adding `impulses` as a dependency to this callback, which results
+      // in the animation constantly being stopped and restarted
+      //
+      // NOTE: this is react abuse afaik - if you're reading this and you
+      // happen to know a way around this pattern, let me know
+      return [];
     })
-  }, []);
+  }, [doAnimate]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useAnimationFrames(applySpringForce);
+  useAnimationFrames(applySpringForce, doAnimate);
 
   return (
     <div
