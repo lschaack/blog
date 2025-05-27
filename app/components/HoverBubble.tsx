@@ -5,20 +5,20 @@ import { zipWith } from "lodash";
 import clsx from "clsx";
 
 import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
-import { doesLineIntersectRectangle } from "@/app/utils/doesLineIntersectRectangle";
+import {
+  findVectorSegmentsInShape,
+  Point,
+  Rectangle,
+  ShapeWithHole
+} from "@/app/utils/findVectorSegmentsInShape";
 
 const BORDER = 12;
-const STIFFNESS = 0.002;
+const SPRING_STIFFNESS = 0.002;
+const BUBBLE_STIFFNESS = 0.3;
 const DECAY = 0.95;
 const ANIMATION_THRESHOLD = 0.001;
 
 type Vec2 = [number, number];
-type RectangleCoords = {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-};
 
 const magnitude = <T extends number[]>(vector: T) => {
   return Math.sqrt(
@@ -39,9 +39,10 @@ const normalize = <T extends number[]>(vector: T) => {
 }
 
 const add = (a: number, b: number) => a + b;
-const subtract = (a: number, b: number) => a - b;
+const addVec2 = (a: Vec2, b: Vec2) => zipWith(a, b, add) as Vec2;
 const negate = (n: number) => -n;
 const multiplyBy = (by: number) => (n: number) => n * by;
+const multiplyVec2 = (v: Vec2, by: number) => v.map(multiplyBy(by)) as Vec2;
 
 const lerp = (x: number, y: number, a: number) => x * (1 - a) + y * a;
 // TODO: name this something more descriptive...
@@ -49,48 +50,18 @@ const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
 
 const getSpringForce = (offset: Vec2, delta: number) => {
   const length = magnitude(offset);
-  const forceVal = length * STIFFNESS * delta;
+  const forceVal = length * SPRING_STIFFNESS * delta;
   const direction = normalize(offset.map(negate));
   const force = direction.map(multiplyBy(forceVal));
 
   return force as Vec2;
 }
 
-const applyForces = (velocity: Vec2, force: Vec2) => {
+const applyForces = (velocity: Vec2, forces: Vec2[]) => {
   const decayed = velocity.map(multiplyBy(DECAY)) as Vec2;
-  const applied = zipWith(decayed, force, add) as Vec2;
+  const applied = addVec2(decayed, forces.reduce(addVec2));
 
   return applied;
-}
-
-const getStableCoords = (element: HTMLElement): RectangleCoords => {
-  const {
-    top: baseTop,
-    right: baseRight,
-    bottom: baseBottom,
-    left: baseLeft,
-  } = element.getBoundingClientRect();
-
-  const top = baseTop + document.documentElement.scrollTop;
-  const right = baseRight + document.documentElement.scrollLeft;
-  const bottom = baseBottom + document.documentElement.scrollTop;
-  const left = baseLeft + document.documentElement.scrollLeft;
-
-  return { top, right, bottom, left };
-}
-
-const isPointInBorder = (point: Vec2, coords: RectangleCoords, border: number) => {
-  const { top, right, bottom, left } = coords;
-  const [x, y] = point;
-
-  const fromTop = y - top;
-  const fromRight = right - x;
-  const fromBottom = bottom - y;
-  const fromLeft = x - left;
-
-  const minDistance = Math.min(fromTop, fromRight, fromBottom, fromLeft);
-
-  return minDistance <= border;
 }
 
 export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
@@ -99,8 +70,7 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
   const containerElement = useRef<HTMLDivElement>(null);
   const velocity = useRef<Vec2>([0, 0]);
   const [doAnimate, setDoAnimate] = useState(false);
-  const relativeMouseStart = useRef<Vec2 | null>(null);
-  const isContained = useRef(false);
+  const impulses = useRef<Vec2[]>([]);
 
   const setOffset: typeof _setOffset = valueOrCallback => {
     _setOffset(prev => {
@@ -119,53 +89,49 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
       if (containerElement.current) {
-        const coords = getStableCoords(containerElement.current);
         const { pageX, pageY } = event;
-        const currMousePos: Vec2 = [pageX, pageY];
-        const prevMousePos: Vec2 = [pageX - event.movementX, pageY - event.movementY];
-        const {
-          intersects,
-          startInside,
-          endInside,
-          intersectionPoints,
-        } = doesLineIntersectRectangle(prevMousePos, currMousePos, coords);
 
-        if (intersects) {
-          if (endInside) {
-            if (isPointInBorder(currMousePos, coords, BORDER)) {
-              const { top, left } = coords;
-              const relativePos: Vec2 = [pageX - left, pageY - top];
-              const relativeIntersection: Vec2 = [
-                intersectionPoints[0][0] - left,
-                intersectionPoints[0][1] - top,
-              ];
-              // Track start point so we can use the inter-border vector to determine the offset
-              relativeMouseStart.current ??= relativeIntersection;
+        const currMousePos: Point = {
+          x: pageX,
+          y: pageY
+        };
 
-              const fromStart = zipWith(relativePos, relativeMouseStart.current!, subtract) as Vec2;
+        const prevMousePos: Point = {
+          x: pageX - event.movementX,
+          y: pageY - event.movementY
+        };
 
-              setOffset(fromStart)
-              setDoAnimate(false);
-            } else {
-              if (startInside) {
-                relativeMouseStart.current = null;
-                isContained.current = true;
-                setDoAnimate(true);
-              } else {
-                // if cursor skipped through the border, apply offset all at once
-                const cursorMovement = zipWith(currMousePos, prevMousePos, subtract);
-                const cursorDirection = normalize(cursorMovement);
-                const cursorVelocity = magnitude(cursorMovement);
-
-                setOffset(cursorDirection.map(multiplyBy(Math.min(cursorVelocity, BORDER))) as Vec2);
-              }
-            }
-          } else {
-            relativeMouseStart.current = null;
-            isContained.current = false;
-            setDoAnimate(true);
-          }
+        // TODO: does this account for scroll or different parent?
+        const outerRectangle: Rectangle = {
+          x: containerElement.current.offsetLeft,
+          y: containerElement.current.offsetTop,
+          width: containerElement.current.offsetWidth,
+          height: containerElement.current.offsetHeight,
         }
+
+        const innerRectangle: Rectangle = {
+          x: outerRectangle.x + BORDER,
+          y: outerRectangle.y + BORDER,
+          width: outerRectangle.width - 2 * BORDER,
+          height: outerRectangle.height - 2 * BORDER,
+        }
+
+        const intersectingSegments = findVectorSegmentsInShape(
+          currMousePos,
+          prevMousePos,
+          new ShapeWithHole(outerRectangle, innerRectangle)
+        );
+
+        const force = intersectingSegments.reduce((force, segment) => {
+          const segmentVector: Vec2 = [
+            segment.start.x - segment.end.x,
+            segment.start.y - segment.end.y,
+          ];
+
+          return addVec2(force, segmentVector) as Vec2;
+        }, [0, 0] as Vec2);
+
+        impulses.current.push(multiplyVec2(force, BUBBLE_STIFFNESS));
       }
     }
 
@@ -177,8 +143,10 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
   const applySpringForce = useCallback((delta: number) => {
     // apply spring physics
     setOffset(offset => {
-      const force = getSpringForce(offset, delta);
-      velocity.current = applyForces(velocity.current, force);
+      const springForce = getSpringForce(offset, delta);
+      impulses.current.push(springForce);
+      velocity.current = applyForces(velocity.current, impulses.current);
+      impulses.current = [];
 
       // jump to still at low values or else this will basically never end
       const shouldStop = (
@@ -195,15 +163,14 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
 
         return [0, 0];
       } else {
-        const nextOffset = zipWith(offset, velocity.current, add) as Vec2;
+        const nextOffset = addVec2(offset, velocity.current) as Vec2;
 
         return nextOffset;
       }
     })
   }, []);
 
-  useAnimationFrames(applySpringForce, doAnimate);
-
+  useAnimationFrames(applySpringForce);
 
   return (
     <div
