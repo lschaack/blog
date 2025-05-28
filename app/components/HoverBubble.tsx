@@ -197,37 +197,39 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   useAnimationFrames(applySpringForce, doAnimate);
 
   return (
-    <div
-      className={clsx(
-        "relative",
-        debug && "border-4",
-        doAnimate ? "border-emerald-300" : "border-transparent",
-      )}
-      style={{
-        padding: `${boundaryWidth}px`,
-      }}
-      ref={containerElement}
-    >
-      {showBubble && (
+    <div ref={containerElement} className="relative">
+      <div
+        className={clsx(
+          "relative bg-stone-50",
+          "transition-colors duration-500 ease-out",
+          showBubble ? "border-emerald-700/30 rounded-4xl overflow-hidden" : "border-transparent",
+          debug && doAnimate && "border-rose-200/75!",
+          indicatorClassname,
+        )}
+        style={{
+          borderWidth: `${boundaryWidth}px`,
+          willChange: doAnimate ? "inset" : 'unset',
+          top: asymmetricFilter(lerpedOffset[1]),
+          right: asymmetricFilter(-lerpedOffset[0]),
+          bottom: asymmetricFilter(-lerpedOffset[1]),
+          left: asymmetricFilter(lerpedOffset[0]),
+        }}
+      >
         <div
-          className={clsx(
-            "bg-blue-50 border-blue-200 rounded-4xl",
-            indicatorClassname,
-            "absolute"
-          )}
+          className="bg-emerald-50/30"
           style={{
-            borderWidth: `${boundaryWidth}px`,
-            top: asymmetricFilter(lerpedOffset[1]),
-            right: asymmetricFilter(-lerpedOffset[0]),
-            bottom: asymmetricFilter(-lerpedOffset[1]),
-            left: asymmetricFilter(lerpedOffset[0]),
+            position: 'relative',
+            left: offset[0],
+            top: offset[1],
           }}
-        />
-      )}
+        >
+          {children}
+        </div>
+      </div>
       {debug && (
         <div className="rounded-full w-2 h-2 bg-black absolute left-1/2 top-1/2 overflow-visible">
           <div
-            className="rounded-full w-2 h-2 bg-amber-500 absolute"
+            className="rounded-full w-2 h-2 bg-rose-500 absolute"
             style={{
               left: lerpedOffset[0],
               top: lerpedOffset[1],
@@ -242,15 +244,6 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           />
         </div>
       )}
-      <div
-        style={{
-          position: 'relative',
-          left: offset[0],
-          top: offset[1],
-        }}
-      >
-        {children}
-      </div>
     </div>
   )
 }

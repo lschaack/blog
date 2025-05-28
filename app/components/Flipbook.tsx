@@ -22,12 +22,12 @@ export const Flipbook = <ElementType extends HTMLElement>({
 
   return (
     <div
-      onMouseEnter={() => {
+      onMouseOverCapture={() => {
         if (intervalId) clearInterval(intervalId);
 
         const nextIntervalId = setInterval(
           () => {
-            index.current = (index.current + 1) % 2;
+            index.current = (index.current + 1) % frames.length;
             setContent(frames[index.current])
           },
           intervalMs
@@ -35,7 +35,7 @@ export const Flipbook = <ElementType extends HTMLElement>({
 
         setIntervalId(nextIntervalId);
       }}
-      onMouseLeave={() => clearInterval(intervalId)}
+      onMouseOutCapture={() => clearInterval(intervalId)}
     >
       {createElement(
         elementType,

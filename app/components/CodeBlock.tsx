@@ -4,7 +4,7 @@ import { RichTextError } from "@/app/components/RichTextError";
 
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
-import "highlight.js/styles/github.css";
+import "highlight.js/styles/monokai.css";
 
 hljs.registerLanguage("typescript", typescript);
 
@@ -15,7 +15,7 @@ export const CodeBlock = ({ entry }: { entry: CodeBlockType }) => {
     const highlighted = hljs.highlight(entry.code, { language: entry.language });
 
     return (
-      <pre className="font-geist-mono text-sm p-4 bg-stone-100 rounded-lg overflow-auto">
+      <pre className="font-geist-mono text-sm p-4 rounded-lg overflow-auto hljs">
         <code dangerouslySetInnerHTML={{ __html: highlighted.value }} />
       </pre>
     );

@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
+import Image from "next/image";
 
 import { client } from "@/app/utils/contentful/client";
 import { getAllPosts } from "@/app/queries/getAllPosts";
 import { GetAllPostsQuery } from "@/app/graphql/graphql";
 import { HoverBubble } from "@/app/components/HoverBubble";
+import { fill } from "lodash";
 
 const LIMIT = 20;
 
@@ -30,31 +32,46 @@ export default async function Home() {
   } else {
     return (
       <div>
-        <ul className="flex flex-wrap gap-16 max-w-4xl">
+        <ul className="flex flex-wrap justify-center gap-4 max-w-7xl">
           {posts.map(post => post?.slug && (
-            <a
-              href={`/posts/${post.slug}`}
-              key={post.sys.id}
-            >
-              <HoverBubble boundaryWidth={8} showBubble>
-                <li className="max-w-96 p-2">
-                  <h2 className="text-2xl font-bold">
-                    {post.title}
-                  </h2>
-                  <p className="text-sm mb-1">
-                    {(new Date(post.sys.publishedAt)).toLocaleDateString(navigator.language, {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </p>
-                  <p>
-                    {post.subtitle}
-                  </p>
-                </li>
-              </HoverBubble>
-            </a>
-          ))}
+            fill(Array(20),
+              <a
+                href={`/posts/${post.slug}`}
+                key={post.sys.id}
+              >
+                <HoverBubble boundaryWidth={8} showBubble debug>
+                  <li className="max-w-96 relative rounded-3xl overflow-hidden">
+                    <div className="relative w-full aspect-2/1">
+                      {post.heroImage && (
+                        <Image
+                          src={post.heroImage.url!}
+                          alt={post.heroImage.description!}
+                          className="object-cover"
+                          fill
+                        />
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h2 className="text-2xl font-bold">
+                        {post.title}
+                      </h2>
+                      <p className="text-sm mb-1">
+                        {(new Date(post.sys.publishedAt)).toLocaleDateString(navigator.language, {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}
+                      </p>
+                      <p>
+                        {post.subtitle}
+                      </p>
+                    </div>
+                  </li>
+                </HoverBubble>
+              </a>
+            )
+          )
+          )}
         </ul>
       </div >
     );

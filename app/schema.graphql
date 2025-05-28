@@ -97,6 +97,7 @@ input AssetFilter {
 
 type AssetLinkingCollections {
   authorCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): AuthorCollection
+  blogPostCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): BlogPostCollection
   captionedImageCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): CaptionedImageCollection
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
 }
@@ -201,6 +202,7 @@ type BlogPost implements Entry & _Node {
   author(locale: String, preview: Boolean, where: AuthorFilter): Author
   body(locale: String): BlogPostBody
   contentfulMetadata: ContentfulMetadata!
+  heroImage(locale: String, preview: Boolean): Asset
   linkedFrom(allowedLocales: [String]): BlogPostLinkingCollections
   slug(locale: String): String
   subtitle(locale: String): String
@@ -265,6 +267,7 @@ input BlogPostFilter {
   body_exists: Boolean
   body_not_contains: String
   contentfulMetadata: ContentfulMetadataFilter
+  heroImage_exists: Boolean
   slug: String
   slug_contains: String
   slug_exists: Boolean

@@ -33,7 +33,7 @@ export default function RootLayout({
       <body className={clsx(
         geistMono.variable,
         lato.variable,
-        'bg-zinc-50 font-lato'
+        'bg-stone-50/30 text-stone-800 font-lato'
       )}>
         <Header />
         <main className="w-full flex justify-center">

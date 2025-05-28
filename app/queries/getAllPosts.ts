@@ -14,6 +14,12 @@ export const getAllPosts = gql`
         subtitle
         tags
         slug
+        heroImage {
+          url
+          description
+          width
+          height
+        }
         author {
           ... on Author {
             sys {
