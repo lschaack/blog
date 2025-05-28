@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { lerp } from "@/app/utils/lerp";
 
 /**
  * Handles boilerplate for animating in an effect
@@ -6,6 +7,8 @@ import { useEffect } from "react";
  * NOTE: callback should be memoized for performance
  */
 export const useAnimationFrames = (callback: (delta: number) => void, enable = true) => {
+  const fps = useRef(60);
+
   useEffect(() => {
     if (enable) {
       let frameId: number;
@@ -13,6 +16,9 @@ export const useAnimationFrames = (callback: (delta: number) => void, enable = t
 
       const animate: FrameRequestCallback = (currTime: number) => {
         const delta = prevTime ? currTime - prevTime : 16.67; // assume 60fps
+        const momentaryFps = 1000 / delta;
+        // TODO: lerp isn't really a great lpf for this, just what I've got at hand
+        fps.current = lerp(fps.current, momentaryFps, 0.5);
 
         callback(delta);
 
@@ -27,4 +33,6 @@ export const useAnimationFrames = (callback: (delta: number) => void, enable = t
       }
     }
   }, [callback, enable]);
+
+  return fps;
 }

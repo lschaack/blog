@@ -11,9 +11,11 @@ import {
   Rectangle,
   ShapeWithHole
 } from "@/app/utils/findVectorSegmentsInShape";
+import { lerp } from "@/app/utils/lerp";
 
-const BORDER = 12;
-const SPRING_STIFFNESS = 0.002;
+const DEFAULT_BOUNDARY_WIDTH = 8;
+const DEFAULT_OFFSET_LERP_AMOUNT = 0.65;
+const SPRING_STIFFNESS = 0.001;
 const BUBBLE_STIFFNESS = 0.05;
 const DECAY = 0.95;
 const ANIMATION_THRESHOLD = 0.001;
@@ -44,7 +46,6 @@ const negate = (n: number) => -n;
 const multiplyBy = (by: number) => (n: number) => n * by;
 const multiplyVec2 = (v: Vec2, by: number) => v.map(multiplyBy(by)) as Vec2;
 
-const lerp = (x: number, y: number, a: number) => x * (1 - a) + y * a;
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
 
@@ -64,7 +65,22 @@ const applyForces = (velocity: Vec2, forces: Vec2[]) => {
   return applied;
 }
 
-export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
+type HoverBubbleProps = {
+  children?: ReactNode;
+  boundaryWidth?: number;
+  showBubble?: boolean;
+  bubbleClassname?: boolean;
+  bubbleSluggishness?: number;
+  debug?: boolean;
+}
+export const HoverBubble: FC<HoverBubbleProps> = ({
+  children,
+  boundaryWidth = DEFAULT_BOUNDARY_WIDTH,
+  bubbleSluggishness: bubbleSluggishness = DEFAULT_OFFSET_LERP_AMOUNT,
+  showBubble = true,
+  bubbleClassname: indicatorClassname,
+  debug = false,
+}) => {
   const [offset, _setOffset] = useState<Vec2>([0, 0]);
   const [impulses, setImpulses] = useState<Vec2[]>([]);
   const [lerpedOffset, _setLerpedOffset] = useState<Vec2>([0, 0]);
@@ -78,7 +94,7 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
         : valueOrCallback;
 
       _setLerpedOffset(
-        zipWith(prev, next, (a, b) => lerp(a, b, 0.75)) as Vec2
+        zipWith(lerpedOffset, next, (a, b) => lerp(a, b, bubbleSluggishness)) as Vec2
       );
 
       return next;
@@ -109,10 +125,10 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
         }
 
         const innerRectangle: Rectangle = {
-          x: outerRectangle.x + BORDER,
-          y: outerRectangle.y + BORDER,
-          width: outerRectangle.width - 2 * BORDER,
-          height: outerRectangle.height - 2 * BORDER,
+          x: outerRectangle.x + boundaryWidth,
+          y: outerRectangle.y + boundaryWidth,
+          width: outerRectangle.width - 2 * boundaryWidth,
+          height: outerRectangle.height - 2 * boundaryWidth,
         }
 
         const intersectingSegments = findVectorSegmentsInShape(
@@ -142,7 +158,7 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
     document.addEventListener('mousemove', handleMouseMove);
 
     return () => document.removeEventListener('mousemove', handleMouseMove);
-  }, []);
+  }, [boundaryWidth]);
 
   const doAnimate = !offset.every(component => component === 0) || impulses.length > 0;
 
@@ -188,23 +204,48 @@ export const HoverBubble: FC<{ children?: ReactNode }> = ({ children }) => {
     <div
       className={clsx(
         "relative",
-        //"border-4",
+        debug && "border-4",
         doAnimate ? "border-emerald-300" : "border-transparent",
       )}
       style={{
-        padding: `${BORDER}px`
+        padding: `${boundaryWidth}px`
       }}
       ref={containerElement}
     >
-      <div
-        className="bg-blue-100 rounded-2xl absolute"
-        style={{
-          top: asymmetricFilter(lerpedOffset[1]),
-          right: asymmetricFilter(-lerpedOffset[0]),
-          bottom: asymmetricFilter(-lerpedOffset[1]),
-          left: asymmetricFilter(lerpedOffset[0]),
-        }}
-      />
+      {showBubble && (
+        <div
+          className={clsx(
+            "bg-blue-50 border-blue-200 rounded-4xl",
+            indicatorClassname,
+            "absolute"
+          )}
+          style={{
+            borderWidth: `${boundaryWidth}px`,
+            top: asymmetricFilter(lerpedOffset[1]),
+            right: asymmetricFilter(-lerpedOffset[0]),
+            bottom: asymmetricFilter(-lerpedOffset[1]),
+            left: asymmetricFilter(lerpedOffset[0]),
+          }}
+        />
+      )}
+      {debug && (
+        <div className="rounded-full w-2 h-2 bg-black absolute left-1/2 top-1/2 overflow-visible">
+          <div
+            className="rounded-full w-2 h-2 bg-amber-500 absolute"
+            style={{
+              left: lerpedOffset[0],
+              top: lerpedOffset[1],
+            }}
+          />
+          <div
+            className="rounded-full w-2 h-2 bg-emerald-500 absolute"
+            style={{
+              left: offset[0],
+              top: offset[1],
+            }}
+          />
+        </div>
+      )}
       <div
         style={{
           position: 'relative',

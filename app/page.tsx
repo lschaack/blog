@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { client } from "@/app/utils/contentful/client";
 import { getAllPosts } from "@/app/queries/getAllPosts";
 import { GetAllPostsQuery } from "@/app/graphql/graphql";
-import { HoverBubble } from "./components/HoverBubble";
+import { HoverBubble } from "@/app/components/HoverBubble";
 
 const LIMIT = 20;
 
@@ -36,8 +36,8 @@ export default async function Home() {
               href={`/posts/${post.slug}`}
               key={post.sys.id}
             >
-              <HoverBubble>
-                <li className="max-w-96">
+              <HoverBubble boundaryWidth={8} showBubble>
+                <li className="max-w-96 p-2">
                   <h2 className="text-2xl font-bold">
                     {post.title}
                   </h2>
