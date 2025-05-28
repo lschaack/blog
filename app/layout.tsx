@@ -15,10 +15,12 @@ export const metadata: Metadata = {
 const lato = Lato({
   variable: '--font-lato',
   weight: ['300', '400', '700'],
+  subsets: ['latin'],
 });
 
 const geistMono = Geist_Mono({
   variable: '--font-geist-mono',
+  subsets: ['latin'],
 });
 
 export default function RootLayout({

@@ -12,13 +12,12 @@ import {
   ShapeWithHole
 } from "@/app/utils/findVectorSegmentsInShape";
 import { lerp } from "@/app/utils/lerp";
+import { ANIMATION_THRESHOLD, getDecay } from "@/app/utils/physicsConsts";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.65;
-const SPRING_STIFFNESS = 0.001;
-const BUBBLE_STIFFNESS = 0.05;
-const DECAY = 0.95;
-const ANIMATION_THRESHOLD = 0.001;
+const SPRING_STIFFNESS = 0.01;
+const BUBBLE_STIFFNESS = 0.1;
 
 type Vec2 = [number, number];
 
@@ -49,17 +48,17 @@ const multiplyVec2 = (v: Vec2, by: number) => v.map(multiplyBy(by)) as Vec2;
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
 
-const getSpringForce = (offset: Vec2, delta: number) => {
+const getSpringForce = (offset: Vec2) => {
   const length = magnitude(offset);
-  const forceVal = length * SPRING_STIFFNESS * delta;
+  const forceVal = length * SPRING_STIFFNESS;
   const direction = normalize(offset.map(negate));
   const force = direction.map(multiplyBy(forceVal));
 
   return force as Vec2;
 }
 
-const applyForces = (velocity: Vec2, forces: Vec2[]) => {
-  const decayed = velocity.map(multiplyBy(DECAY)) as Vec2;
+const applyForces = (velocity: Vec2, forces: Vec2[], delta: number) => {
+  const decayed = multiplyVec2(velocity, getDecay(delta));
   const applied = addVec2(decayed, forces.reduce(addVec2));
 
   return applied;
@@ -166,14 +165,11 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     // apply spring physics
     setImpulses(impulses => {
       setOffset(offset => {
-        const springForce = getSpringForce(offset, delta);
-        velocity.current = applyForces(velocity.current, [...impulses, springForce]);
+        const springForce = getSpringForce(offset);
+        velocity.current = applyForces(velocity.current, [...impulses, springForce], delta);
 
         // jump to still at low values or else this will basically never end
-        const shouldStop = (
-          length < ANIMATION_THRESHOLD
-          && magnitude(velocity.current) < ANIMATION_THRESHOLD
-        );
+        const shouldStop = magnitude(velocity.current) < ANIMATION_THRESHOLD;
 
         if (shouldStop) {
           velocity.current = [0, 0];
@@ -208,7 +204,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         doAnimate ? "border-emerald-300" : "border-transparent",
       )}
       style={{
-        padding: `${boundaryWidth}px`
+        padding: `${boundaryWidth}px`,
       }}
       ref={containerElement}
     >
