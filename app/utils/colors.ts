@@ -66,8 +66,8 @@ export const inputColorClasses = {
     altFocused: 'shadow-lg ring-4 ring-indigo-500/75',
   },
   rose: {
-    track: 'bg-rose-200/75',
-    border: 'border-rose-200/75',
+    track: 'bg-rose-300/75',
+    border: 'border-rose-300/75',
     filled: 'bg-rose-500/75',
     thumb: 'bg-rose-800',
     thumbActive: 'bg-rose-950',

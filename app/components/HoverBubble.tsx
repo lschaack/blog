@@ -13,37 +13,22 @@ import {
 } from "@/app/utils/findVectorSegmentsInShape";
 import { lerp } from "@/app/utils/lerp";
 import { ANIMATION_THRESHOLD, getDecay } from "@/app/utils/physicsConsts";
+import {
+  addVec2,
+  clampVec,
+  magnitude,
+  multiplyBy,
+  multiplyVec,
+  negate,
+  normalize,
+  segmentToVec2,
+  Vec2,
+} from "@/app/utils/vector";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.65;
 const SPRING_STIFFNESS = 0.01;
 const BUBBLE_STIFFNESS = 0.1;
-
-type Vec2 = [number, number];
-
-const magnitude = <T extends number[]>(vector: T) => {
-  return Math.sqrt(
-    vector.reduce(
-      (sum, n) => sum + n ** 2,
-      0
-    )
-  )
-}
-
-const normalize = <T extends number[]>(vector: T) => {
-  const mag = magnitude(vector);
-
-  // TODO: should I be more explicit in warning about this?
-  if (mag === 0) return vector;
-
-  return vector.map(n => n / mag) as T;
-}
-
-const add = (a: number, b: number) => a + b;
-const addVec2 = (a: Vec2, b: Vec2) => zipWith(a, b, add) as Vec2;
-const negate = (n: number) => -n;
-const multiplyBy = (by: number) => (n: number) => n * by;
-const multiplyVec2 = (v: Vec2, by: number) => v.map(multiplyBy(by)) as Vec2;
 
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
@@ -58,7 +43,7 @@ const getSpringForce = (offset: Vec2) => {
 }
 
 const applyForces = (velocity: Vec2, forces: Vec2[], delta: number) => {
-  const decayed = multiplyVec2(velocity, getDecay(delta));
+  const decayed = multiplyVec(velocity, getDecay(delta));
   const applied = addVec2(decayed, forces.reduce(addVec2));
 
   return applied;
@@ -85,6 +70,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   const [lerpedOffset, _setLerpedOffset] = useState<Vec2>([0, 0]);
   const containerElement = useRef<HTMLDivElement>(null);
   const velocity = useRef<Vec2>([0, 0]);
+  const doubleBoundaryWidth = 2 * boundaryWidth;
 
   const setOffset: typeof _setOffset = valueOrCallback => {
     _setOffset(prev => {
@@ -126,8 +112,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         const innerRectangle: Rectangle = {
           x: outerRectangle.x + boundaryWidth,
           y: outerRectangle.y + boundaryWidth,
-          width: outerRectangle.width - 2 * boundaryWidth,
-          height: outerRectangle.height - 2 * boundaryWidth,
+          width: outerRectangle.width - doubleBoundaryWidth,
+          height: outerRectangle.height - doubleBoundaryWidth,
         }
 
         const intersectingSegments = findVectorSegmentsInShape(
@@ -137,15 +123,14 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         );
 
         if (intersectingSegments.length) {
-          const force = multiplyVec2(
-            intersectingSegments.reduce((force, segment) => {
-              const segmentVector: Vec2 = [
-                segment.start.x - segment.end.x,
-                segment.start.y - segment.end.y,
-              ];
+          const intersection = intersectingSegments.reduce(
+            (total, segment) => addVec2(total, segmentToVec2(segment)),
+            [0, 0] as Vec2
+          );
 
-              return addVec2(force, segmentVector) as Vec2;
-            }, [0, 0]),
+          const force = multiplyVec(
+            // clamp to avoid excessive force when moving quickly through the boundary
+            clampVec(intersection, -doubleBoundaryWidth, doubleBoundaryWidth),
             BUBBLE_STIFFNESS
           );
 
@@ -157,7 +142,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     document.addEventListener('mousemove', handleMouseMove);
 
     return () => document.removeEventListener('mousemove', handleMouseMove);
-  }, [boundaryWidth]);
+  }, [boundaryWidth, doubleBoundaryWidth]);
 
   const doAnimate = !offset.every(component => component === 0) || impulses.length > 0;
 
@@ -200,9 +185,10 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     <div ref={containerElement} className="relative">
       <div
         className={clsx(
-          "relative bg-stone-50",
+          "bg-amber-50/80",
+          "relative",
           "transition-colors duration-500 ease-out",
-          showBubble ? "border-emerald-700/30 rounded-4xl overflow-hidden" : "border-transparent",
+          showBubble ? "border-amber-900/30 rounded-4xl overflow-hidden" : "border-transparent",
           debug && doAnimate && "border-rose-200/75!",
           indicatorClassname,
         )}
@@ -216,7 +202,6 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         }}
       >
         <div
-          className="bg-emerald-50/30"
           style={{
             position: 'relative',
             left: offset[0],

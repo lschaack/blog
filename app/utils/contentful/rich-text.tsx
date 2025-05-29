@@ -46,7 +46,9 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
         renderNode: {
           ...DEFAULT_RICH_TEXT_OPTIONS.renderNode,
           [BLOCKS.PARAGRAPH]: (_, children) => children,
-          [BLOCKS.LIST_ITEM]: (_, children) => <li className="my-2 -indent-5">{children}</li>,
+          // 22px below is a janky workaround for default list behavior not
+          // having any indent on lines after the first, could be better...
+          [BLOCKS.LIST_ITEM]: (_, children) => <li className="my-2 -indent-[22px]">{children}</li>,
           [BLOCKS.UL_LIST]: (_, children) => (
             <ul className="list-disc list-inside my-2 pl-6">{children}</ul>
           ),
@@ -113,7 +115,17 @@ export const getBlogPostOptions = (links: Partial<BlogPostBodyLinks>): Options =
         if (asset) {
           if (asset.url) {
             if (asset.url.endsWith(".webm")) {
-              return <video src={asset.url} autoPlay playsInline muted loop />;
+              return (
+                <video
+                  src={asset.url}
+                  width={asset.width!}
+                  height={asset.height!}
+                  autoPlay
+                  playsInline
+                  muted
+                  loop
+                />
+              );
             } else if (NEXT_KNOWN_IMAGE_EXTENSIONS.some(ext => asset.url?.endsWith(ext))) {
               return (
                 <Image

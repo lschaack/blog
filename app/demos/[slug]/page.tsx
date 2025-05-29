@@ -12,7 +12,7 @@ export default async function Demo({
 
   if (Demo) {
     return (
-      <div className="w-full flex justify-center items-center">
+      <div className="flex justify-center items-center p-6 bg-stone-50/70">
         <Demo />
       </div>
     );

@@ -29,7 +29,7 @@ export default async function Post({
     notFound();
   } else {
     return (
-      <article className="w-full max-w-2xl px-6 md:px-0">
+      <article className="w-full max-w-2xl px-6 bg-stone-50/70 overflow-hidden md:overflow-visible">
         {post.body && documentToReactComponents(
           post.body.json,
           getBlogPostOptions(post.body.links as BlogPostBodyLinks)

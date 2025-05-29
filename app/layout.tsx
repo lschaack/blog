@@ -29,11 +29,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="h-full">
       <body className={clsx(
         geistMono.variable,
         lato.variable,
-        'bg-stone-50/30 text-stone-800 font-lato'
+        'bg-stone-50/30 text-stone-800 font-lato',
+        'bg-[url(/mesa-background.jpg)] bg-contain backdrop-blur-3xl',
+        'min-h-screen overflow-x-hidden pb-8',
       )}>
         <Header />
         <main className="w-full flex justify-center">
