@@ -29,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className="scroll-smooth">
       <body className={clsx(
         geistMono.variable,
         lato.variable,

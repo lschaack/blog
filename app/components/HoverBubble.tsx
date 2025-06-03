@@ -185,10 +185,10 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     <div ref={containerElement} className="relative">
       <div
         className={clsx(
-          "bg-amber-50/80",
+          "bg-stone-50/80",
           "relative",
           "transition-colors duration-500 ease-out",
-          showBubble ? "border-amber-900/30 rounded-4xl overflow-hidden" : "border-transparent",
+          showBubble ? "border-stone-900/30 rounded-4xl overflow-hidden" : "border-transparent",
           debug && doAnimate && "border-rose-200/75!",
           indicatorClassname,
         )}

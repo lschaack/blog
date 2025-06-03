@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import { EasingStrategy } from '@/app/utils/easingFunctions';
 import { EasingDirection, requestEasingFrames } from '@/app/utils/requestEasingFrames';
+import { throttle } from 'lodash';
 
 export const useEaseTrigger = (
   duration: number,
@@ -9,7 +10,8 @@ export const useEaseTrigger = (
 ) => {
   const [easingFactor, setEasingFactor] = useState(0);
 
-  const trigger = () => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const trigger = useCallback(throttle(() => {
     setEasingFactor(0);
     requestEasingFrames(
       0,
@@ -18,7 +20,7 @@ export const useEaseTrigger = (
       setEasingFactor,
       easingStrategy
     );
-  }
+  }, duration), [duration, easingStrategy]);
 
   return { easingFactor, trigger };
 }

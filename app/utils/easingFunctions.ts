@@ -27,6 +27,10 @@ export const springInPlace = curry(
   (bounces: number, time: number) => (1 - time) * Math.sin(bounces * Math.PI * time)
 );
 
+export const bounceInPlace = curry(
+  (bounces: number, time: number) => Math.abs(springInPlace(bounces, time))
+);
+
 // kind of vague, but lower results in a tighter elbow - higher differential
 // between the fastest and the slowest phases of the animation
 const EASING_ELBOW_SIN = 0.5;
@@ -48,7 +52,11 @@ export const EASING_STRATEGY = {
   },
   springInPlace: {
     ease: springInPlace(3),
-    inverse: () => 0, // FIXME: not needed in current use, but come on, me
+    inverse: () => 0,
+  },
+  bounceInPlace: {
+    ease: bounceInPlace(3),
+    inverse: () => 0,
   }
 } as const;
 

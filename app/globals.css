@@ -10,4 +10,41 @@
    */
   --font-geist-mono: "Geist Mono", monospace;
   --font-lato: "Lato", sans-serif;
+
+  --animate-twist: twist 2s ease normal;
+
+  @keyframes twist {
+    /*0% {*/
+    /*  transform: rotateX(8deg) rotateY(-20deg);*/
+    /*}*/
+    20% {
+      transform: rotateX(8deg) rotateY(-40deg);
+    }
+    60% {
+      animation-timing-function: ease-in;
+      transform: rotateX(8deg) rotateY(374deg);
+    }
+    78% {
+      transform: rotateX(8deg) rotateY(340deg);
+    }
+    92% {
+      animation-timing-function: ease-in;
+      transform: rotateX(8deg) rotateY(344deg);
+    }
+    96% {
+      transform: rotateX(8deg) rotateY(340deg);
+    }
+    /*97% {*/
+    /*  animation-timing-function: step-start;*/
+    /*  transform: rotateX(8deg) rotateY(-20deg);*/
+    /*}*/
+    98% {
+      animation-timing-function: ease-in;
+      transform: rotateX(8deg) rotateY(342deg);
+    }
+    100% {
+      /*transform: initial;*/
+      transform: rotateX(8deg) rotateY(340deg);
+    }
+  }
 }

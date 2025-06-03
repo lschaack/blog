@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { documentToReactComponents, type Options } from "@contentful/rich-text-react-renderer";
-import { BLOCKS, Document, INLINES } from "@contentful/rich-text-types";
+import { documentToPlainTextString } from '@contentful/rich-text-plain-text-renderer';
+import { BLOCKS, INLINES, Document } from "@contentful/rich-text-types";
 
 import { Asset, BlogPostBodyLinks, Entry } from "@/app/graphql/graphql";
 import { isCaptionedImage, isCodeBlock, isDemo } from "@/app/utils/contentful/predicates";
@@ -8,6 +9,7 @@ import { CaptionedImage } from "@/app/components/CaptionedImage";
 import { CodeBlock } from "@/app/components/CodeBlock";
 import { RichTextError } from "@/app/components/RichTextError";
 import { Demo } from "@/app/demos";
+import { kebabCase } from "lodash/fp";
 
 const NEXT_KNOWN_IMAGE_EXTENSIONS = [
   "jpg",
@@ -24,17 +26,37 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
     [BLOCKS.PARAGRAPH]: (_, children) => (
       <p className="text-lg my-4">{children}</p>
     ),
-    [BLOCKS.HEADING_1]: (_, children) => (
-      <h1 className="text-3xl font-bold mt-9 mb-3">{children}</h1>
+    [BLOCKS.HEADING_1]: (node, children) => (
+      <h1
+        className="text-3xl font-bold mt-9 mb-3"
+        id={kebabCase(documentToPlainTextString(node))}
+      >
+        {children}
+      </h1>
     ),
-    [BLOCKS.HEADING_2]: (_, children) => (
-      <h2 className="text-2xl font-bold mt-7 mb-1">{children}</h2>
+    [BLOCKS.HEADING_2]: (node, children) => (
+      <h2
+        className="text-2xl font-bold mt-7 mb-1"
+        id={kebabCase(documentToPlainTextString(node))}
+      >
+        {children}
+      </h2>
     ),
-    [BLOCKS.HEADING_3]: (_, children) => (
-      <h3 className="text-xl font-bold mt-2 mb-1">{children}</h3>
+    [BLOCKS.HEADING_3]: (node, children) => (
+      <h3
+        className="text-xl font-bold mt-2 mb-1"
+        id={kebabCase(documentToPlainTextString(node))}
+      >
+        {children}
+      </h3>
     ),
-    [BLOCKS.HEADING_4]: (_, children) => (
-      <h4 className="text-lg font-bold mt-2">{children}</h4>
+    [BLOCKS.HEADING_4]: (node, children) => (
+      <h4
+        className="text-lg font-bold mt-2"
+        id={kebabCase(documentToPlainTextString(node))}
+      >
+        {children}
+      </h4>
     ),
     [BLOCKS.UL_LIST]: (_, children) => (
       <ul className="list-disc list-inside my-4 pl-6">{children}</ul>
