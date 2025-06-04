@@ -33,19 +33,23 @@ export default async function Post({
   } else {
     return (
       <div className="flex justify-center w-full">
-        {post.body && (
-          //null
-          <Navigator
-            className="sticky top-8 self-start"
-            body={post.body as BlogPostBody}
-          />
-        )}
+        <div className="grow relative">
+          <div className="h-full absolute right-4">
+            {post.body && (
+              <Navigator
+                className="sticky top-4 self-start"
+                body={post.body as BlogPostBody}
+              />
+            )}
+          </div>
+        </div>
         <article className="max-w-2xl px-6 py-2 bg-stone-50/70 overflow-hidden md:overflow-visible">
           {post.body && documentToReactComponents(
             post.body.json,
             getBlogPostOptions(post.body.links as BlogPostBodyLinks)
           )}
         </article>
+        <div className="grow" />
       </div>
     );
   }

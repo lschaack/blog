@@ -286,7 +286,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
     else if (shiftStrategy === 'elegant') {
       return halfSizeDiff - (maxScaledSize - measuredSize) * Number(mousePos < 0.5);
     } else if (shiftStrategy === 'elegantAndWrong') {
-      return sizeDiffWrong / 2 - (maxScaledSize - measuredSize) * Number(mousePos < 0.5);
+      return sizeDiffWrong / 2 - (maxScaledSize - measuredSize);
     } else {
       const unscaledSizeAtMousePos = unscaledLength * mousePos;
 

@@ -6,6 +6,7 @@ import { Block } from "@contentful/rich-text-types";
 import { documentToPlainTextString } from "@contentful/rich-text-plain-text-renderer";
 import { kebabCase } from "lodash/fp";
 import { CommonNode } from "@contentful/rich-text-react-renderer";
+
 import { BlogPostBody } from "@/app/graphql/graphql";
 
 const extractHeadings = (node: CommonNode): Block[] => {
@@ -15,7 +16,7 @@ const extractHeadings = (node: CommonNode): Block[] => {
 }
 
 const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
-  const [isAtHeading, setIsAtHeading] = useState(false);
+  const [isPassed, setIsPassed] = useState(false);
   const content = documentToPlainTextString(node);
   const anchor = kebabCase(content);
   const level = node.nodeType.split('-')[1];
@@ -25,29 +26,38 @@ const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
       const heading = document.querySelector<HTMLHeadingElement>(`#${anchor}`);
       const midScreen = window.scrollY + window.innerHeight / 2;
 
-      if (heading) setIsAtHeading(midScreen > heading.offsetTop);
+      if (heading) setIsPassed(midScreen > heading.offsetTop);
     }
 
     window.addEventListener('scroll', handleScroll);
 
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [, anchor]);
+  }, [anchor]);
 
   return (
-    <li>
-      <a
-        href={`#${anchor}`}
+    <a
+      href={`#${anchor}`}
+      className={clsx(
+        "transition-colors duration-75",
+        "-ml-px border-l-1 py-1",
+        isPassed
+          ? "passed border-stone-50 bg-stone-500/10"
+          : "passed border-l-transparent bg-transparent",
+        "nth-last-[1 of .passed]:bg-amber-400"
+      )}
+    >
+      <li
         className={clsx(
-          "font-bold text-l",
-          isAtHeading && "before:content-['>']",
+          "font-bold",
+          isPassed ? "text-stone-800" : "text-stone-800/70",
         )}
         style={{
-          paddingLeft: `${8 * parseInt(level)}px`
+          paddingLeft: `${12 * parseInt(level)}px`
         }}
       >
         {content}
-      </a>
-    </li>
+      </li>
+    </a>
   );
 }
 
@@ -56,12 +66,14 @@ export const Navigator: FC<{ body: BlogPostBody; className?: string }> = ({ body
 
   return (
     <ul className={clsx('p-6 bg-stone-50/70', className)}>
-      {headings.map((heading, i) => (
-        <NavigatorEntry
-          key={`heading-${i}`}
-          node={heading}
-        />
-      ))}
+      <div className="flex flex-col border-stone-800/70 border-l">
+        {headings.map((heading, i) => (
+          <NavigatorEntry
+            key={`heading-${i}`}
+            node={heading}
+          />
+        ))}
+      </div>
     </ul>
   )
 }
