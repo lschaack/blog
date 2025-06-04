@@ -1,10 +1,10 @@
 "use client";
 
 import { FC, ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { zipWith } from "lodash";
+import { throttle, zipWith } from "lodash";
 import clsx from "clsx";
 
-import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
+import { useAnimationFrames, usePhysicsFrames } from "@/app/hooks/useAnimationFrames";
 import {
   findVectorSegmentsInShape,
   Point,
@@ -43,8 +43,11 @@ const getSpringForce = (offset: Vec2) => {
 }
 
 const applyForces = (velocity: Vec2, forces: Vec2[], delta: number) => {
-  const decayed = multiplyVec(velocity, getDecay(delta));
-  const applied = addVec2(decayed, multiplyVec(forces.reduce(addVec2), delta));
+  const decay = getDecay(delta);
+  const force = multiplyVec(forces.reduce(addVec2), delta);
+
+  const decayed = multiplyVec(velocity, decay);
+  const applied = addVec2(decayed, force);
 
   return applied;
 }
@@ -87,7 +90,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   }
 
   useEffect(() => {
-    const handleMouseMove = (event: MouseEvent) => {
+    const handleMouseMove = throttle((event: MouseEvent) => {
       if (containerElement.current) {
         const { pageX, pageY } = event;
 
@@ -136,7 +139,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           setImpulse(force);
         }
       }
-    }
+    }, 1000 / 60);
 
     document.addEventListener('mousemove', handleMouseMove);
 
