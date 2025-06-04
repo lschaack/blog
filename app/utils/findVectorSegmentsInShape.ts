@@ -100,6 +100,8 @@ export function findVectorSegmentsInShape(
   // Get all intersection points with hole
   const holeIntersections = lineRectangleIntersections(start, end, shape.hole);
 
+  if (!outerIntersections.length && !holeIntersections.length) return segments;
+
   // Combine all points including start and end
   const allPoints: Point[] = [start, ...outerIntersections, ...holeIntersections, end];
 

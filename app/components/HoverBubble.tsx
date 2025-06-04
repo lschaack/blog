@@ -12,7 +12,7 @@ import {
   ShapeWithHole
 } from "@/app/utils/findVectorSegmentsInShape";
 import { lerp } from "@/app/utils/lerp";
-import { ANIMATION_THRESHOLD, getDecay } from "@/app/utils/physicsConsts";
+import { ANIMATION_THRESHOLD, getDecay, PHYSICS_FRAME_RATE_MS } from "@/app/utils/physicsConsts";
 import {
   addVec2,
   clampVec,
@@ -69,7 +69,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   debug = false,
 }) => {
   const [offset, _setOffset] = useState<Vec2>([0, 0]);
-  const [impulse, setImpulse] = useState<Vec2>([0, 0]);
+  const [impulses, setImpulses] = useState<Vec2[]>([]);
   const [lerpedOffset, _setLerpedOffset] = useState<Vec2>([0, 0]);
   const containerElement = useRef<HTMLDivElement>(null);
   const velocity = useRef<Vec2>([0, 0]);
@@ -90,7 +90,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   }
 
   useEffect(() => {
-    const handleMouseMove = throttle((event: MouseEvent) => {
+    const handleMouseMove = (event: MouseEvent) => {
       if (containerElement.current) {
         const { pageX, pageY } = event;
 
@@ -136,24 +136,24 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
           const force = multiplyVec(normed, BUBBLE_STIFFNESS);
 
-          setImpulse(force);
+          setImpulses(prev => [...prev, force]);
         }
       }
-    }, 1000 / 60);
+    };
 
     document.addEventListener('mousemove', handleMouseMove);
 
     return () => document.removeEventListener('mousemove', handleMouseMove);
   }, [boundaryWidth, doubleBoundaryWidth]);
 
-  const doAnimate = !offset.every(component => component === 0) || impulse.length > 0;
+  const doAnimate = !offset.every(component => component === 0) || impulses.length > 0;
 
   const applySpringForce = useCallback((delta: number) => {
     // apply spring physics
-    setImpulse(impulse => {
+    setImpulses(impulses => {
       setOffset(offset => {
         const springForce = getSpringForce(offset);
-        velocity.current = applyForces(velocity.current, [impulse, springForce], delta);
+        velocity.current = applyForces(velocity.current, [...impulses, springForce], delta);
 
         // jump to still at low values or else this will basically never end
         const shouldStop = magnitude(velocity.current) < ANIMATION_THRESHOLD;
@@ -177,7 +177,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
       //
       // NOTE: this is react abuse afaik - if you're reading this and you
       // happen to know a way around this pattern, let me know
-      return [0, 0];
+      return [];
     })
   }, [doAnimate]); // eslint-disable-line react-hooks/exhaustive-deps
 

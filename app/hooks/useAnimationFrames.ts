@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { lerp } from "@/app/utils/lerp";
+import { PHYSICS_FRAME_RATE_MS } from "@/app/utils/physicsConsts";
 
 /**
  * Handles boilerplate for animating in an effect
@@ -15,7 +16,7 @@ export const useAnimationFrames = (callback: (delta: number) => void, enable = t
       let prevTime: number;
 
       const animate: FrameRequestCallback = (currTime: number) => {
-        const delta = prevTime ? currTime - prevTime : 16.67; // assume 60fps
+        const delta = prevTime ? currTime - prevTime : PHYSICS_FRAME_RATE_MS;
         const momentaryFps = 1000 / delta;
 
         // avoid getting stuck at Infinity when currTime === prevTime,
