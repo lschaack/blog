@@ -27,8 +27,8 @@ import {
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.65;
-const SPRING_STIFFNESS = 0.003;
-const BUBBLE_STIFFNESS = 30;
+const SPRING_STIFFNESS = 0.0003;
+const BUBBLE_STIFFNESS = 3;
 
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
@@ -44,7 +44,7 @@ const getSpringForce = (offset: Vec2) => {
 
 const applyForces = (velocity: Vec2, forces: Vec2[], delta: number) => {
   const decayed = multiplyVec(velocity, getDecay(delta));
-  const applied = addVec2(decayed, forces.reduce(addVec2));
+  const applied = addVec2(decayed, multiplyVec(forces.reduce(addVec2), delta));
 
   return applied;
 }

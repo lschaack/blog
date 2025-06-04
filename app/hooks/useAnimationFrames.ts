@@ -17,8 +17,7 @@ export const useAnimationFrames = (callback: (delta: number) => void, enable = t
       const animate: FrameRequestCallback = (currTime: number) => {
         const delta = prevTime ? currTime - prevTime : 16.67; // assume 60fps
         const momentaryFps = 1000 / delta;
-        // TODO: lerp isn't really a great lpf for this, just what I've got at hand
-        fps.current = lerp(fps.current, momentaryFps, 0.5);
+        fps.current = lerp(fps.current, momentaryFps, 0.05);
 
         callback(delta);
 

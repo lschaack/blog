@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next";
 import clsx from 'clsx';
 
 import { Header } from "@/app/components/Header";
+import { FrameRateChecker } from "@/app/components/FrameRateChecker";
 
 export const metadata: Metadata = {
   title: "let something = ",
@@ -23,6 +24,8 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+const isDev = process.env.NODE_ENV === 'development';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -37,6 +40,8 @@ export default function RootLayout({
         'bg-[url(/mesa-background-downsampled.jpg)] bg-cover bg-center bg-fixed backdrop-blur-3xl',
         'min-h-screen overflow-x-hidden pb-8',
       )}>
+        {/* FIXME: remove */}
+        {isDev && <FrameRateChecker />}
         <Header />
         <main className="w-full flex justify-center">
           {children}
