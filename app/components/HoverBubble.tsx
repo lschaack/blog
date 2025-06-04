@@ -27,8 +27,8 @@ import {
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.65;
-const SPRING_STIFFNESS = 0.01;
-const BUBBLE_STIFFNESS = 0.1;
+const SPRING_STIFFNESS = 0.003;
+const BUBBLE_STIFFNESS = 30;
 
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
@@ -66,7 +66,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   debug = false,
 }) => {
   const [offset, _setOffset] = useState<Vec2>([0, 0]);
-  const [impulses, setImpulses] = useState<Vec2[]>([]);
+  const [impulse, setImpulse] = useState<Vec2>([0, 0]);
   const [lerpedOffset, _setLerpedOffset] = useState<Vec2>([0, 0]);
   const containerElement = useRef<HTMLDivElement>(null);
   const velocity = useRef<Vec2>([0, 0]);
@@ -127,14 +127,13 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
             (total, segment) => addVec2(total, segmentToVec2(segment)),
             [0, 0] as Vec2
           );
+          // clamp to avoid excessive force when moving quickly through the boundary
+          const clamped = clampVec(intersection, -doubleBoundaryWidth, doubleBoundaryWidth);
+          const normed: Vec2 = [clamped[0] / window.innerWidth, clamped[1] / window.innerHeight];
 
-          const force = multiplyVec(
-            // clamp to avoid excessive force when moving quickly through the boundary
-            clampVec(intersection, -doubleBoundaryWidth, doubleBoundaryWidth),
-            BUBBLE_STIFFNESS
-          );
+          const force = multiplyVec(normed, BUBBLE_STIFFNESS);
 
-          setImpulses(prev => [...prev, force]);
+          setImpulse(force);
         }
       }
     }
@@ -144,14 +143,14 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     return () => document.removeEventListener('mousemove', handleMouseMove);
   }, [boundaryWidth, doubleBoundaryWidth]);
 
-  const doAnimate = !offset.every(component => component === 0) || impulses.length > 0;
+  const doAnimate = !offset.every(component => component === 0) || impulse.length > 0;
 
   const applySpringForce = useCallback((delta: number) => {
     // apply spring physics
-    setImpulses(impulses => {
+    setImpulse(impulse => {
       setOffset(offset => {
         const springForce = getSpringForce(offset);
-        velocity.current = applyForces(velocity.current, [...impulses, springForce], delta);
+        velocity.current = applyForces(velocity.current, [impulse, springForce], delta);
 
         // jump to still at low values or else this will basically never end
         const shouldStop = magnitude(velocity.current) < ANIMATION_THRESHOLD;
@@ -175,7 +174,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
       //
       // NOTE: this is react abuse afaik - if you're reading this and you
       // happen to know a way around this pattern, let me know
-      return [];
+      return [0, 0];
     })
   }, [doAnimate]); // eslint-disable-line react-hooks/exhaustive-deps
 
