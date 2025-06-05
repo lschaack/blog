@@ -24,8 +24,6 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-const isDev = process.env.NODE_ENV === 'development';
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -41,7 +39,7 @@ export default function RootLayout({
         'min-h-screen overflow-x-hidden pb-8',
       )}>
         {/* FIXME: remove */}
-        {isDev && <FrameRateChecker />}
+        <FrameRateChecker />
         <Header />
         <main className="w-full flex justify-center">
           {children}

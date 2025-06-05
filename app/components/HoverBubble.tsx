@@ -1,10 +1,9 @@
 "use client";
 
-import { FC, ReactNode, useCallback, useEffect, useRef, useState } from "react";
-import { throttle, zipWith } from "lodash";
+import { FC, ReactNode, useCallback, useEffect, useReducer, useRef } from "react";
 import clsx from "clsx";
 
-import { useAnimationFrames, usePhysicsFrames } from "@/app/hooks/useAnimationFrames";
+import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
 import {
   findVectorSegmentsInShape,
   Point,
@@ -12,7 +11,13 @@ import {
   ShapeWithHole
 } from "@/app/utils/findVectorSegmentsInShape";
 import { lerp } from "@/app/utils/lerp";
-import { ANIMATION_THRESHOLD, getDecay, PHYSICS_FRAME_RATE_MS } from "@/app/utils/physicsConsts";
+import {
+  getDecay,
+  VELOCITY_ANIMATION_THRESHOLD,
+  BUBBLE_STIFFNESS,
+  SPRING_STIFFNESS,
+  OFFSET_ANIMATION_THRESHOLD,
+} from "@/app/utils/physicsConsts";
 import {
   addVec2,
   clampVec,
@@ -26,9 +31,7 @@ import {
 } from "@/app/utils/vector";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
-const DEFAULT_OFFSET_LERP_AMOUNT = 0.65;
-const SPRING_STIFFNESS = 0.0003;
-const BUBBLE_STIFFNESS = 3;
+const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
 
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
@@ -52,6 +55,11 @@ const applyForces = (velocity: Vec2, forces: Vec2[], delta: number) => {
   return applied;
 }
 
+type PhysicsState = {
+  offset: Vec2;
+  velocity: Vec2;
+}
+
 type HoverBubbleProps = {
   children?: ReactNode;
   boundaryWidth?: number;
@@ -68,26 +76,17 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   bubbleClassname: indicatorClassname,
   debug = false,
 }) => {
-  const [offset, _setOffset] = useState<Vec2>([0, 0]);
-  const [impulses, setImpulses] = useState<Vec2[]>([]);
-  const [lerpedOffset, _setLerpedOffset] = useState<Vec2>([0, 0]);
+  const physicsState = useRef<PhysicsState>({ offset: [0, 0], velocity: [0, 0] });
+  const lerpedOffset = useRef<Vec2>([0, 0]);
+  const impulses = useRef<Vec2[]>([]);
   const containerElement = useRef<HTMLDivElement>(null);
-  const velocity = useRef<Vec2>([0, 0]);
   const doubleBoundaryWidth = 2 * boundaryWidth;
+  const [, forceUpdate] = useReducer(x => x + 1, 0);
 
-  const setOffset: typeof _setOffset = valueOrCallback => {
-    _setOffset(prev => {
-      const next = typeof valueOrCallback === 'function'
-        ? valueOrCallback(prev)
-        : valueOrCallback;
-
-      _setLerpedOffset(
-        zipWith(lerpedOffset, next, (a, b) => lerp(a, b, bubbleSluggishness)) as Vec2
-      );
-
-      return next;
-    })
-  }
+  const doAnimate = (
+    !physicsState.current.offset.every(component => component === 0)
+    || impulses.current.length > 0
+  );
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -104,7 +103,6 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           y: pageY - event.movementY
         };
 
-        // TODO: does this account for scroll or different parent?
         const outerRectangle: Rectangle = {
           x: containerElement.current.offsetLeft,
           y: containerElement.current.offsetTop,
@@ -136,7 +134,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
           const force = multiplyVec(normed, BUBBLE_STIFFNESS);
 
-          setImpulses(prev => [...prev, force]);
+          impulses.current.push(force);
+          forceUpdate();
         }
       }
     };
@@ -146,40 +145,45 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     return () => document.removeEventListener('mousemove', handleMouseMove);
   }, [boundaryWidth, doubleBoundaryWidth]);
 
-  const doAnimate = !offset.every(component => component === 0) || impulses.length > 0;
-
   const applySpringForce = useCallback((delta: number) => {
     // apply spring physics
-    setImpulses(impulses => {
-      setOffset(offset => {
-        const springForce = getSpringForce(offset);
-        velocity.current = applyForces(velocity.current, [...impulses, springForce], delta);
+    const springForce = getSpringForce(physicsState.current.offset);
 
-        // jump to still at low values or else this will basically never end
-        const shouldStop = magnitude(velocity.current) < ANIMATION_THRESHOLD;
+    impulses.current.push(springForce);
 
-        if (shouldStop) {
-          velocity.current = [0, 0];
-          _setLerpedOffset([0, 0]);
+    physicsState.current.velocity = applyForces(
+      physicsState.current.velocity,
+      impulses.current,
+      delta
+    );
 
-          return [0, 0];
-        } else {
-          const nextOffset = addVec2(offset, velocity.current) as Vec2;
+    impulses.current = [];
 
-          return nextOffset;
-        }
-      });
+    // jump to still at low values or else this will basically never end
+    const shouldStop = (
+      Math.abs(magnitude(physicsState.current.velocity)) < VELOCITY_ANIMATION_THRESHOLD
+      && physicsState.current.offset.every(component => Math.abs(component) < OFFSET_ANIMATION_THRESHOLD)
+    );
 
-      // impulses are always consumed entirely when setting offset,
-      // but the callback allows me to use the most recent impulses without
-      // adding `impulses` as a dependency to this callback, which results
-      // in the animation constantly being stopped and restarted
-      //
-      // NOTE: this is react abuse afaik - if you're reading this and you
-      // happen to know a way around this pattern, let me know
-      return [];
-    })
-  }, [doAnimate]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (shouldStop) {
+      physicsState.current.velocity = [0, 0];
+      physicsState.current.offset = [0, 0];
+      lerpedOffset.current = [0, 0];
+    } else {
+      const nextOffset = addVec2(physicsState.current.offset, physicsState.current.velocity) as Vec2;
+
+      physicsState.current.offset = nextOffset;
+      lerpedOffset.current = lerpedOffset.current.map(
+        (component, i) => lerp(
+          component,
+          physicsState.current.offset[i],
+          bubbleSluggishness,
+        )
+      ) as Vec2;
+    }
+
+    forceUpdate();
+  }, [bubbleSluggishness]);
 
   useAnimationFrames(applySpringForce, doAnimate);
 
@@ -191,42 +195,42 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           "relative",
           "transition-colors duration-500 ease-out",
           showBubble ? "border-stone-900/30 rounded-4xl overflow-hidden" : "border-transparent",
-          debug && doAnimate && "border-rose-200/75!",
+          debug && doAnimate && "border-blue-200/75!",
           indicatorClassname,
         )}
         style={{
           borderWidth: `${boundaryWidth}px`,
-          willChange: doAnimate ? "inset" : 'unset',
-          top: asymmetricFilter(lerpedOffset[1]),
-          right: asymmetricFilter(-lerpedOffset[0]),
-          bottom: asymmetricFilter(-lerpedOffset[1]),
-          left: asymmetricFilter(lerpedOffset[0]),
+          willChange: doAnimate ? 'inset' : 'unset',
+          top: asymmetricFilter(lerpedOffset.current[1]),
+          right: asymmetricFilter(-lerpedOffset.current[0]),
+          bottom: asymmetricFilter(-lerpedOffset.current[1]),
+          left: asymmetricFilter(lerpedOffset.current[0]),
         }}
       >
         <div
           style={{
             position: 'relative',
-            left: offset[0],
-            top: offset[1],
+            left: physicsState.current.offset[0],
+            top: physicsState.current.offset[1],
           }}
         >
           {children}
         </div>
       </div>
       {debug && (
-        <div className="rounded-full w-2 h-2 bg-black absolute left-1/2 top-1/2 overflow-visible">
+        <div className="absolute rounded-full w-2 h-2 bg-black left-1/2 top-1/2 overflow-visible">
           <div
-            className="rounded-full w-2 h-2 bg-rose-500 absolute"
+            className="absolute rounded-full w-2 h-2 bg-emerald-300"
             style={{
-              left: lerpedOffset[0],
-              top: lerpedOffset[1],
+              left: physicsState.current.offset[0],
+              top: physicsState.current.offset[1],
             }}
           />
           <div
-            className="rounded-full w-2 h-2 bg-emerald-500 absolute"
+            className="absolute rounded-full w-2 h-2 bg-rose-300"
             style={{
-              left: offset[0],
-              top: offset[1],
+              left: lerpedOffset.current[0],
+              top: lerpedOffset.current[1],
             }}
           />
         </div>

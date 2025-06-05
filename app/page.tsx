@@ -34,12 +34,12 @@ export default async function Home() {
       <div>
         <ul className="flex flex-wrap justify-center gap-4 max-w-7xl">
           {posts.map(post => post?.slug && (
-            fill(Array(20),
+            fill(Array(20), undefined).map((_, i) => (
               <a
                 href={`/posts/${post.slug}`}
-                key={post.sys.id}
+                key={`${post.sys.id}-${i}`}
               >
-                <HoverBubble boundaryWidth={8} showBubble>
+                <HoverBubble boundaryWidth={8} showBubble debug>
                   <li className="max-w-96 relative rounded-3xl overflow-hidden">
                     <div className="relative w-full aspect-2/1">
                       {post.heroImage && (
@@ -69,9 +69,8 @@ export default async function Home() {
                   </li>
                 </HoverBubble>
               </a>
-            )
-          )
-          )}
+            ))
+          ))}
         </ul>
       </div >
     );
