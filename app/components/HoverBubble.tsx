@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, ReactNode, useCallback, useEffect, useReducer, useRef } from "react";
+import { FC, ReactNode, useCallback, useContext, useEffect, useReducer, useRef } from "react";
 import clsx from "clsx";
 
 import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
@@ -29,6 +29,7 @@ import {
   segmentToVec2,
   Vec2,
 } from "@/app/utils/vector";
+import { DebugContext } from "./DebugContext";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
@@ -66,7 +67,6 @@ type HoverBubbleProps = {
   showBubble?: boolean;
   bubbleClassname?: boolean;
   bubbleSluggishness?: number;
-  debug?: boolean;
 }
 export const HoverBubble: FC<HoverBubbleProps> = ({
   children,
@@ -74,8 +74,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   bubbleSluggishness: bubbleSluggishness = DEFAULT_OFFSET_LERP_AMOUNT,
   showBubble = true,
   bubbleClassname: indicatorClassname,
-  debug = false,
 }) => {
+  const { debug } = useContext(DebugContext);
   const physicsState = useRef<PhysicsState>({ offset: [0, 0], velocity: [0, 0] });
   const lerpedOffset = useRef<Vec2>([0, 0]);
   const impulses = useRef<Vec2[]>([]);

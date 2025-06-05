@@ -2,16 +2,13 @@ import Link from "next/link";
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 import "highlight.js/styles/monokai.css";
+
 import { SignPost } from "@/app/components/SignPost";
+import { DebugToggle } from "@/app/components/DebugToggle";
 
 hljs.registerLanguage("typescript", typescript);
 
 const highlighted = hljs.highlight('let something', { language: 'typescript' }).value;
-
-//const frames = [
-//  hljs.highlight('let something = ░', { language: 'typescript' }).value,
-//  hljs.highlight('let something = █', { language: 'typescript' }).value,
-//];
 
 export const Header = () => {
   return (
@@ -25,18 +22,12 @@ export const Header = () => {
                 __html: highlighted
               }}
             />
-            {/*
-          <Flipbook<HTMLPreElement>
-            className="font-geist-mono text-3xl"
-            frames={frames}
-            intervalMs={650}
-            elementType="pre"
-            useInnerHtml
-          />
-          */}
           </h1>
         </SignPost>
       </Link>
+      <div className="absolute top-4 right-4">
+        <DebugToggle />
+      </div>
     </header>
   )
 }

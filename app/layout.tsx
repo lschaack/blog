@@ -6,6 +6,7 @@ import { Analytics } from "@vercel/analytics/next";
 import clsx from 'clsx';
 
 import { Header } from "@/app/components/Header";
+import { DebugProvider } from "@/app/components/DebugContext";
 import { FrameRateChecker } from "@/app/components/FrameRateChecker";
 
 export const metadata: Metadata = {
@@ -36,14 +37,15 @@ export default function RootLayout({
         lato.variable,
         'bg-stone-50/30 text-stone-800 font-lato',
         'bg-[url(/mesa-background-downsampled.jpg)] bg-cover bg-center bg-fixed backdrop-blur-3xl',
-        'min-h-screen overflow-x-hidden pb-8',
+        'min-h-screen overflow-x-hidden overflow-y-auto pb-8',
       )}>
-        {/* FIXME: remove */}
-        <FrameRateChecker />
-        <Header />
-        <main className="w-full flex justify-center">
-          {children}
-        </main>
+        <DebugProvider>
+          <Header />
+          <main className="w-full flex justify-center">
+            {children}
+          </main>
+          <FrameRateChecker />
+        </DebugProvider>
         <Analytics />
       </body>
     </html>

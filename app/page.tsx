@@ -39,7 +39,7 @@ export default async function Home() {
                 href={`/posts/${post.slug}`}
                 key={`${post.sys.id}-${i}`}
               >
-                <HoverBubble boundaryWidth={8} showBubble debug>
+                <HoverBubble boundaryWidth={8} showBubble>
                   <li className="max-w-96 relative rounded-3xl overflow-hidden">
                     <div className="relative w-full aspect-2/1">
                       {post.heroImage && (
