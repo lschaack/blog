@@ -2,6 +2,7 @@
 
 import { FC, ReactNode, useCallback, useContext, useEffect, useReducer, useRef } from "react";
 import clsx from "clsx";
+import { add } from "lodash";
 
 import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
 import {
@@ -29,7 +30,7 @@ import {
   segmentToVec2,
   Vec2,
 } from "@/app/utils/vector";
-import { DebugContext } from "./DebugContext";
+import { DebugContext } from "@/app/components/DebugContext";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
@@ -37,7 +38,7 @@ const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
 
-const getSpringForce = (offset: Vec2) => {
+const getSpringForceVec = (offset: Vec2) => {
   const length = magnitude(offset);
   const forceVal = length * SPRING_STIFFNESS;
   const direction = normalize(offset.map(negate));
@@ -46,7 +47,11 @@ const getSpringForce = (offset: Vec2) => {
   return force as Vec2;
 }
 
-const applyForces = (velocity: Vec2, forces: Vec2[], delta: number) => {
+const getSpringForce = (length: number, target = 0) => {
+  return (target - length) * SPRING_STIFFNESS;
+}
+
+const applyForcesVec = (velocity: Vec2, forces: Vec2[], delta: number) => {
   const decay = getDecay(delta);
   const force = multiplyVec(forces.reduce(addVec2), delta);
 
@@ -56,10 +61,46 @@ const applyForces = (velocity: Vec2, forces: Vec2[], delta: number) => {
   return applied;
 }
 
+const applyForces = (velocity: number, forces: number[], delta: number) => {
+  const decay = getDecay(delta);
+  const force = forces.reduce(add) * delta;
+
+  const decayed = velocity * decay;
+  const applied = decayed + force;
+
+  return applied;
+}
+
+type Inset = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
 type PhysicsState = {
   offset: Vec2;
   velocity: Vec2;
+  inset: Inset;
+  insetVelocity: Inset;
 }
+
+const getInitialPhysicsState = (): PhysicsState => ({
+  offset: [0, 0],
+  velocity: [0, 0],
+  inset: {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+  insetVelocity: {
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+  },
+});
 
 type HoverBubbleProps = {
   children?: ReactNode;
@@ -76,21 +117,38 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   bubbleClassname: indicatorClassname,
 }) => {
   const { debug } = useContext(DebugContext);
-  const physicsState = useRef<PhysicsState>({ offset: [0, 0], velocity: [0, 0] });
+  const physicsState = useRef<PhysicsState>({
+    offset: [0, 0],
+    velocity: [0, 0],
+    inset: {
+      top: 20,
+      right: 30,
+      bottom: 15,
+      left: 75,
+    },
+    insetVelocity: {
+      top: -1,
+      right: -1,
+      bottom: -1,
+      left: -1,
+    }
+  });
   const lerpedOffset = useRef<Vec2>([0, 0]);
   const impulses = useRef<Vec2[]>([]);
   const containerElement = useRef<HTMLDivElement>(null);
+  const bubbleElement = useRef<HTMLDivElement>(null);
   const doubleBoundaryWidth = 2 * boundaryWidth;
   const [, forceUpdate] = useReducer(x => x + 1, 0);
 
   const doAnimate = (
     !physicsState.current.offset.every(component => component === 0)
     || impulses.current.length > 0
+    || !Object.values(physicsState.current.insetVelocity).every(component => component === 0)
   );
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
-      if (containerElement.current) {
+      if (containerElement.current && bubbleElement.current) {
         const { pageX, pageY } = event;
 
         const currMousePos: Point = {
@@ -104,8 +162,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         };
 
         const outerRectangle: Rectangle = {
-          x: containerElement.current.offsetLeft,
-          y: containerElement.current.offsetTop,
+          x: containerElement.current.offsetLeft + bubbleElement.current.offsetLeft,
+          y: containerElement.current.offsetTop + bubbleElement.current.offsetTop,
           width: containerElement.current.offsetWidth,
           height: containerElement.current.offsetHeight,
         }
@@ -146,12 +204,12 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   }, [boundaryWidth, doubleBoundaryWidth]);
 
   const applySpringForce = useCallback((delta: number) => {
-    // apply spring physics
-    const springForce = getSpringForce(physicsState.current.offset);
+    // apply spring physicvelocitys
+    const springForce = getSpringForceVec(physicsState.current.offset);
 
     impulses.current.push(springForce);
 
-    physicsState.current.velocity = applyForces(
+    physicsState.current.velocity = applyForcesVec(
       physicsState.current.velocity,
       impulses.current,
       delta
@@ -159,16 +217,29 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
     impulses.current = [];
 
+    // apply spring physics to inset
+    for (const property in physicsState.current.inset) {
+      const key = property as keyof Inset; // TODO: this is stupid
+      const springForce = getSpringForce(physicsState.current.inset[key]);
+
+      physicsState.current.insetVelocity[key] = applyForces(
+        physicsState.current.insetVelocity[key],
+        [springForce],
+        delta
+      );
+
+      physicsState.current.inset[key] += physicsState.current.insetVelocity[key];
+    }
+
     // jump to still at low values or else this will basically never end
     const shouldStop = (
       Math.abs(magnitude(physicsState.current.velocity)) < VELOCITY_ANIMATION_THRESHOLD
       && physicsState.current.offset.every(component => Math.abs(component) < OFFSET_ANIMATION_THRESHOLD)
+      && Object.values(physicsState.current.insetVelocity).every(component => Math.abs(component) < VELOCITY_ANIMATION_THRESHOLD)
     );
 
     if (shouldStop) {
-      physicsState.current.velocity = [0, 0];
-      physicsState.current.offset = [0, 0];
-      lerpedOffset.current = [0, 0];
+      physicsState.current = getInitialPhysicsState();
     } else {
       const nextOffset = addVec2(physicsState.current.offset, physicsState.current.velocity) as Vec2;
 
@@ -188,53 +259,64 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   useAnimationFrames(applySpringForce, doAnimate);
 
   return (
-    <div ref={containerElement} className="relative">
+    <div
+      ref={containerElement}
+      className={clsx(
+        "relative",
+        indicatorClassname,
+      )}
+      style={{
+        // NOTE: needs to be on both this and child (I think)
+        padding: `${boundaryWidth}px`,
+      }}
+    >
+      {/* NOTE: Separate, absolutely-positioned bubble is necessary to allow separate values for
+        * left/right, top/bottom, creating the particular bounciness of the bubble effect. */}
       <div
+        ref={bubbleElement}
         className={clsx(
+          "absolute",
           "bg-stone-50/80",
-          "relative",
           "transition-colors duration-500 ease-out",
           showBubble ? "border-stone-900/30 rounded-4xl overflow-hidden" : "border-transparent",
           debug && doAnimate && "border-blue-200/75!",
-          indicatorClassname,
         )}
         style={{
           borderWidth: `${boundaryWidth}px`,
           willChange: doAnimate ? 'inset' : 'unset',
-          top: asymmetricFilter(lerpedOffset.current[1]),
-          right: asymmetricFilter(-lerpedOffset.current[0]),
-          bottom: asymmetricFilter(-lerpedOffset.current[1]),
-          left: asymmetricFilter(lerpedOffset.current[0]),
+          top: asymmetricFilter(lerpedOffset.current[1]) + physicsState.current.inset.top,
+          right: asymmetricFilter(-lerpedOffset.current[0]) + physicsState.current.inset.right,
+          bottom: asymmetricFilter(-lerpedOffset.current[1]) + physicsState.current.inset.bottom,
+          left: asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left,
+        }}
+      />
+      <div
+        style={{
+          position: 'relative',
+          left: physicsState.current.offset[0],
+          top: physicsState.current.offset[1],
         }}
       >
-        <div
-          style={{
-            position: 'relative',
-            left: physicsState.current.offset[0],
-            top: physicsState.current.offset[1],
-          }}
-        >
-          {children}
-        </div>
-        {debug && (
-          <div className="absolute rounded-full w-2 h-2 bg-black left-1/2 top-1/2 overflow-visible">
-            <div
-              className="absolute rounded-full w-2 h-2 bg-emerald-300"
-              style={{
-                left: physicsState.current.offset[0],
-                top: physicsState.current.offset[1],
-              }}
-            />
-            <div
-              className="absolute rounded-full w-2 h-2 bg-rose-300"
-              style={{
-                left: lerpedOffset.current[0],
-                top: lerpedOffset.current[1],
-              }}
-            />
-          </div>
-        )}
+        {children}
       </div>
+      {debug && (
+        <div className="absolute rounded-full w-2 h-2 bg-black left-1/2 top-1/2 overflow-visible">
+          <div
+            className="absolute rounded-full w-2 h-2 bg-emerald-300"
+            style={{
+              left: physicsState.current.offset[0],
+              top: physicsState.current.offset[1],
+            }}
+          />
+          <div
+            className="absolute rounded-full w-2 h-2 bg-rose-300"
+            style={{
+              left: lerpedOffset.current[0],
+              top: lerpedOffset.current[1],
+            }}
+          />
+        </div>
+      )}
     </div>
   )
 }

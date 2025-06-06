@@ -15,8 +15,8 @@ export const PostBubble = ({ post, fake = false }: PostBubbleProps) => {
       href={fake ? post.slug! : `/posts/${post.slug}`}
       key={post.sys?.id}
     >
-      <HoverBubble boundaryWidth={8} showBubble>
-        <li className="w-full max-w-96 relative rounded-3xl overflow-hidden">
+      <HoverBubble boundaryWidth={20} showBubble>
+        <li className="w-full max-w-96 relative overflow-hidden">
           <div className="relative w-full aspect-2/1">
             {post.heroImage && (
               <Image
