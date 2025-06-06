@@ -271,6 +271,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   const clipHeight = bubbleElement.current
     ? `${bubbleElement.current.offsetHeight - doubleBoundaryWidth}px`
     : '100%';
+  const clipRounding = Math.max(32 - boundaryWidth, 0);
 
   return (
     <div
@@ -306,7 +307,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
       <div
         style={{
           position: 'relative',
-          clipPath: `xywh(${clipX}px ${clipY}px ${clipWidth} ${clipHeight})`,
+          clipPath: `xywh(${clipX}px ${clipY}px ${clipWidth} ${clipHeight} round ${clipRounding}px)`,
           left: physicsState.current.offset[0],
           top: physicsState.current.offset[1],
         }}
