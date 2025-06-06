@@ -258,6 +258,20 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
   useAnimationFrames(applySpringForce, doAnimate);
 
+  const bubbleTop = asymmetricFilter(lerpedOffset.current[1]) + physicsState.current.inset.top;
+  const bubbleRight = asymmetricFilter(-lerpedOffset.current[0]) + physicsState.current.inset.right;
+  const bubbleBottom = asymmetricFilter(-lerpedOffset.current[1]) + physicsState.current.inset.bottom;
+  const bubbleLeft = asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left;
+  // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
+  const clipX = bubbleLeft - physicsState.current.offset[0];
+  const clipY = bubbleTop - physicsState.current.offset[1];
+  const clipWidth = bubbleElement.current
+    ? `${bubbleElement.current.offsetWidth - doubleBoundaryWidth}px`
+    : '100%';
+  const clipHeight = bubbleElement.current
+    ? `${bubbleElement.current.offsetHeight - doubleBoundaryWidth}px`
+    : '100%';
+
   return (
     <div
       ref={containerElement}
@@ -266,7 +280,6 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         indicatorClassname,
       )}
       style={{
-        // NOTE: needs to be on both this and child (I think)
         padding: `${boundaryWidth}px`,
       }}
     >
@@ -284,15 +297,16 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         style={{
           borderWidth: `${boundaryWidth}px`,
           willChange: doAnimate ? 'inset' : 'unset',
-          top: asymmetricFilter(lerpedOffset.current[1]) + physicsState.current.inset.top,
-          right: asymmetricFilter(-lerpedOffset.current[0]) + physicsState.current.inset.right,
-          bottom: asymmetricFilter(-lerpedOffset.current[1]) + physicsState.current.inset.bottom,
-          left: asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left,
+          top: bubbleTop,
+          right: bubbleRight,
+          bottom: bubbleBottom,
+          left: bubbleLeft,
         }}
       />
       <div
         style={{
           position: 'relative',
+          clipPath: `xywh(${clipX}px ${clipY}px ${clipWidth} ${clipHeight})`,
           left: physicsState.current.offset[0],
           top: physicsState.current.offset[1],
         }}
