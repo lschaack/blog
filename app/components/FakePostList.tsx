@@ -1,0 +1,74 @@
+"use client";
+
+import { fill } from "lodash";
+import { faker } from '@faker-js/faker';
+import { DeepPartial } from "@apollo/client/utilities";
+
+import { BlogPost } from "@/app/graphql/graphql";
+import { PostBubble } from "@/app/components/PostBubble";
+import { useCallback, useState } from "react";
+import { HoverBubble } from "./HoverBubble";
+
+const MAX_FAKE_POSTS = 8;
+
+const pregenerated = new Map<number, DeepPartial<BlogPost>>();
+
+const getMockPost = (seed: number): DeepPartial<BlogPost> => {
+  if (!pregenerated.get(seed)) {
+    faker.seed(seed);
+
+    pregenerated.set(seed, {
+      sys: {
+        id: faker.string.uuid(),
+        publishedAt: faker.date.past(),
+      },
+      slug: '/',
+      title: faker.lorem.words(),
+      subtitle: faker.lorem.paragraph({ min: 1, max: 2 }),
+      heroImage: {
+        url: faker.image.urlPicsumPhotos({ width: 400, height: 200 }),
+        description: faker.lorem.sentence(),
+      }
+    });
+  }
+
+  return pregenerated.get(seed)!;
+}
+
+export const FakePostList = () => {
+  const [howMany, setHowMany] = useState(0);
+  const fakePosts = fill(Array(howMany), undefined).map((_, i) => getMockPost(i));
+
+  const handleAddPosts = useCallback(() => {
+    const intervalId = setInterval(() => {
+      setHowMany(prev => {
+        const next = prev + 1;
+
+        if (next >= MAX_FAKE_POSTS) clearInterval(intervalId);
+
+        return next;
+      });
+    }, 50);
+  }, []);
+
+  return howMany === 0 ? (
+    <HoverBubble>
+      <button
+        className="p-16 font-bold text-3xl"
+        onClick={handleAddPosts}
+      >
+        MORE!!!!!!!
+      </button>
+    </HoverBubble>
+  ) : (
+    <>
+      {fakePosts.map(post => post!.slug && (
+        <PostBubble
+          post={post}
+          key={post.sys!.id}
+          fake
+        />
+      ))}
+    </>
+  );
+}

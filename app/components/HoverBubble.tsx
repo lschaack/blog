@@ -216,25 +216,25 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         >
           {children}
         </div>
+        {debug && (
+          <div className="absolute rounded-full w-2 h-2 bg-black left-1/2 top-1/2 overflow-visible">
+            <div
+              className="absolute rounded-full w-2 h-2 bg-emerald-300"
+              style={{
+                left: physicsState.current.offset[0],
+                top: physicsState.current.offset[1],
+              }}
+            />
+            <div
+              className="absolute rounded-full w-2 h-2 bg-rose-300"
+              style={{
+                left: lerpedOffset.current[0],
+                top: lerpedOffset.current[1],
+              }}
+            />
+          </div>
+        )}
       </div>
-      {debug && (
-        <div className="absolute rounded-full w-2 h-2 bg-black left-1/2 top-1/2 overflow-visible">
-          <div
-            className="absolute rounded-full w-2 h-2 bg-emerald-300"
-            style={{
-              left: physicsState.current.offset[0],
-              top: physicsState.current.offset[1],
-            }}
-          />
-          <div
-            className="absolute rounded-full w-2 h-2 bg-rose-300"
-            style={{
-              left: lerpedOffset.current[0],
-              top: lerpedOffset.current[1],
-            }}
-          />
-        </div>
-      )}
     </div>
   )
 }
