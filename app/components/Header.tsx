@@ -25,8 +25,9 @@ export const Header = () => {
           </h1>
         </SignPost>
       </Link>
-      <div className="absolute top-4 right-4">
-        <DebugToggle />
+      <div className="absolute top-4 right-4 flex flex-col">
+        <DebugToggle className="self-end mb-4 ml-auto" />
+        <div id="debug-menu-surface" />
       </div>
     </header>
   )

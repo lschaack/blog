@@ -1,15 +1,18 @@
 "use client";
 
-import { useContext } from "react";
+import { FC, useContext } from "react";
 import { Bug, BugOff } from "lucide-react";
 
 import { DebugContext } from "@/app/components/DebugContext";
 
-export const DebugToggle = () => {
+type DebugToggleProps = {
+  className?: string;
+}
+export const DebugToggle: FC<DebugToggleProps> = ({ className }) => {
   const { debug, setDebug } = useContext(DebugContext);
 
   return (
-    <button onClick={() => setDebug(prev => !prev)}>
+    <button onClick={() => setDebug(prev => !prev)} className={className}>
       <label>
         <input
           className="sr-only"

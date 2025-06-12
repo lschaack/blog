@@ -3,6 +3,7 @@
 import { FC, ReactNode, useCallback, useContext, useEffect, useReducer, useRef } from "react";
 import clsx from "clsx";
 import { add } from "lodash";
+import { SimpleFaker } from '@faker-js/faker';
 
 import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
 import {
@@ -18,6 +19,7 @@ import {
   BUBBLE_STIFFNESS,
   SPRING_STIFFNESS,
   OFFSET_ANIMATION_THRESHOLD,
+  BUBBLE_OVERKILL,
 } from "@/app/utils/physicsConsts";
 import {
   addVec2,
@@ -34,6 +36,13 @@ import { DebugContext } from "@/app/components/DebugContext";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
+const INITIAL_OFFSET_RANGE = 30;
+const INSET_OPTIONS = {
+  min: -INITIAL_OFFSET_RANGE,
+  max: INITIAL_OFFSET_RANGE,
+};
+
+const faker = new SimpleFaker({ seed: 0 });
 
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
@@ -85,22 +94,46 @@ type PhysicsState = {
   insetVelocity: Inset;
 }
 
-const getInitialPhysicsState = (): PhysicsState => ({
-  offset: [0, 0],
-  velocity: [0, 0],
-  inset: {
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
-  insetVelocity: {
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
-});
+const getInitialPhysicsState = (randomize = false): PhysicsState => {
+  if (randomize) {
+    return {
+      offset: [
+        faker.number.int(INSET_OPTIONS),
+        faker.number.int(INSET_OPTIONS)
+      ],
+      velocity: [0, 0],
+      inset: {
+        top: faker.number.int(INSET_OPTIONS),
+        right: faker.number.int(INSET_OPTIONS),
+        bottom: faker.number.int(INSET_OPTIONS),
+        left: faker.number.int(INSET_OPTIONS),
+      },
+      insetVelocity: {
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      },
+    }
+  } else {
+    return {
+      offset: [0, 0],
+      velocity: [0, 0],
+      inset: {
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      },
+      insetVelocity: {
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+      },
+    }
+  }
+};
 
 type HoverBubbleProps = {
   children?: ReactNode;
@@ -111,32 +144,23 @@ type HoverBubbleProps = {
 }
 export const HoverBubble: FC<HoverBubbleProps> = ({
   children,
-  boundaryWidth = DEFAULT_BOUNDARY_WIDTH,
+  boundaryWidth: _boundaryWidth = DEFAULT_BOUNDARY_WIDTH,
   bubbleSluggishness: bubbleSluggishness = DEFAULT_OFFSET_LERP_AMOUNT,
   showBubble = true,
   bubbleClassname: indicatorClassname,
 }) => {
-  const { debug } = useContext(DebugContext);
-  const physicsState = useRef<PhysicsState>({
-    offset: [0, 0],
-    velocity: [0, 0],
-    inset: {
-      top: 20,
-      right: 30,
-      bottom: 15,
-      left: 75,
-    },
-    insetVelocity: {
-      top: -1,
-      right: -1,
-      bottom: -1,
-      left: -1,
-    }
-  });
+  const { debug, debugMenuOptions } = useContext(DebugContext);
+  const physicsState = useRef<PhysicsState>(getInitialPhysicsState(true));
   const lerpedOffset = useRef<Vec2>([0, 0]);
   const impulses = useRef<Vec2[]>([]);
   const containerElement = useRef<HTMLDivElement>(null);
   const bubbleElement = useRef<HTMLDivElement>(null);
+  const overkill = debug
+    ? debugMenuOptions.bubbleOverkill as number ?? BUBBLE_OVERKILL
+    : BUBBLE_OVERKILL
+  const boundaryWidth = debug
+    ? debugMenuOptions.bubbleBorder as number ?? _boundaryWidth
+    : _boundaryWidth;
   const doubleBoundaryWidth = 2 * boundaryWidth;
   const [, forceUpdate] = useReducer(x => x + 1, 0);
 
@@ -258,11 +282,12 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
   useAnimationFrames(applySpringForce, doAnimate);
 
-  const bubbleTop = asymmetricFilter(lerpedOffset.current[1]) + physicsState.current.inset.top;
-  const bubbleRight = asymmetricFilter(-lerpedOffset.current[0]) + physicsState.current.inset.right;
-  const bubbleBottom = asymmetricFilter(-lerpedOffset.current[1]) + physicsState.current.inset.bottom;
-  const bubbleLeft = asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left;
+  const bubbleTop = overkill * asymmetricFilter(lerpedOffset.current[1]) + physicsState.current.inset.top;
+  const bubbleRight = overkill * asymmetricFilter(-lerpedOffset.current[0]) + physicsState.current.inset.right;
+  const bubbleBottom = overkill * asymmetricFilter(-lerpedOffset.current[1]) + physicsState.current.inset.bottom;
+  const bubbleLeft = overkill * asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left;
   // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
+  // FIXME: at max border, there are rare frames where the clipWidth and clipHeight seem to be slightly too large
   const clipX = bubbleLeft - physicsState.current.offset[0];
   const clipY = bubbleTop - physicsState.current.offset[1];
   const clipWidth = bubbleElement.current
@@ -293,7 +318,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           "bg-stone-50/80",
           "transition-colors duration-500 ease-out",
           showBubble ? "border-stone-900/30 rounded-4xl overflow-hidden" : "border-transparent",
-          debug && doAnimate && "border-blue-200/75!",
+          doAnimate && "border-blue-200/75!",
         )}
         style={{
           borderWidth: `${boundaryWidth}px`,
@@ -305,8 +330,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         }}
       />
       <div
+        className="relative"
         style={{
-          position: 'relative',
           clipPath: `xywh(${clipX}px ${clipY}px ${clipWidth} ${clipHeight} round ${clipRounding}px)`,
           left: physicsState.current.offset[0],
           top: physicsState.current.offset[1],

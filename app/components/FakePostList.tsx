@@ -1,13 +1,15 @@
 "use client";
 
-import { fill } from "lodash";
+import { useCallback, useState } from "react";
+import { fill, startCase } from "lodash";
 import { faker } from '@faker-js/faker';
 import { DeepPartial } from "@apollo/client/utilities";
 
 import { BlogPost } from "@/app/graphql/graphql";
 import { PostBubble } from "@/app/components/PostBubble";
-import { useCallback, useState } from "react";
-import { HoverBubble } from "./HoverBubble";
+import { HoverBubble } from "@/app/components/HoverBubble";
+import { BubbleConfigurator } from "@/app/components/BubbleConfigurator";
+import { DebugMenu } from "./DebugMenu";
 
 const MAX_FAKE_POSTS = 8;
 
@@ -23,7 +25,7 @@ const getMockPost = (seed: number): DeepPartial<BlogPost> => {
         publishedAt: faker.date.past(),
       },
       slug: '/',
-      title: faker.lorem.words(),
+      title: startCase(faker.lorem.words()),
       subtitle: faker.lorem.paragraph({ min: 1, max: 2 }),
       heroImage: {
         url: faker.image.urlPicsumPhotos({ width: 400, height: 200 }),
@@ -51,24 +53,31 @@ export const FakePostList = () => {
     }, 50);
   }, []);
 
-  return howMany === 0 ? (
-    <HoverBubble>
-      <button
-        className="p-16 font-bold text-3xl"
-        onClick={handleAddPosts}
-      >
-        MORE!!!!!!!
-      </button>
-    </HoverBubble>
-  ) : (
+  return (
     <>
-      {fakePosts.map(post => post!.slug && (
-        <PostBubble
-          post={post}
-          key={post.sys!.id}
-          fake
-        />
-      ))}
+      <DebugMenu>
+        <BubbleConfigurator />
+      </DebugMenu>
+      {howMany === 0 ? (
+        <HoverBubble>
+          <button
+            className="p-16 font-bold text-3xl"
+            onClick={handleAddPosts}
+          >
+            MORE!!!!!!!
+          </button>
+        </HoverBubble>
+      ) : (
+        <>
+          {fakePosts.map(post => post!.slug && (
+            <PostBubble
+              post={post}
+              key={post.sys!.id}
+              fake
+            />
+          ))}
+        </>
+      )}
     </>
   );
 }

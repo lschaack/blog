@@ -11,7 +11,7 @@ type LabelledValueProps = {
 export const LabelledValue: FC<LabelledValueProps> = ({ id, label, value, className, children }) => {
   return (
     <div className={`relative w-full font-geist-mono ${className}`}>
-      <div className="flex justify-between">
+      <div className="flex justify-between gap-8">
         <label htmlFor={id} className="block">{label}</label>
         <p>{value}</p>
       </div>
