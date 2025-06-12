@@ -2,8 +2,8 @@
 
 import { createContext, Dispatch, FC, ReactNode, SetStateAction, useState } from "react";
 
-type DebugOption = string | number | boolean | undefined;
-type DebugOptions = Record<string, DebugOption>;
+export type DebugOption = string | number | boolean | undefined;
+export type DebugOptions = Record<string, DebugOption>;
 
 type TDebugContext = {
   debug: boolean;

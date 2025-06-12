@@ -2,6 +2,7 @@
 
 import { FC, useContext } from "react";
 import { Bug, BugOff } from "lucide-react";
+import clsx from 'clsx';
 
 import { DebugContext } from "@/app/components/DebugContext";
 
@@ -12,7 +13,13 @@ export const DebugToggle: FC<DebugToggleProps> = ({ className }) => {
   const { debug, setDebug } = useContext(DebugContext);
 
   return (
-    <button onClick={() => setDebug(prev => !prev)} className={className}>
+    <button
+      onClick={() => setDebug(prev => !prev)}
+      className={clsx(
+        "hljs rounded-full p-2",
+        className,
+      )}
+    >
       <label>
         <input
           className="sr-only"

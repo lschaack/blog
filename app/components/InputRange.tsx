@@ -30,6 +30,7 @@ export const InputRange: FC<InputRangeProps> = ({
   const [isDragging, setIsDragging] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
+  const pad = Math.max(max.toString().length, min.toString().length);
 
   const percentage = ((value - min) / (max - min)) * 100;
 
@@ -44,6 +45,7 @@ export const InputRange: FC<InputRangeProps> = ({
     <LabelledValue
       id={id}
       label={label}
+      pad={pad}
       value={value.toString()}
       className={className}
     >

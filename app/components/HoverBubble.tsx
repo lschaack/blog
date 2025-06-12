@@ -17,9 +17,9 @@ import {
   getDecay,
   VELOCITY_ANIMATION_THRESHOLD,
   BUBBLE_STIFFNESS,
-  SPRING_STIFFNESS,
   OFFSET_ANIMATION_THRESHOLD,
   BUBBLE_OVERKILL,
+  SPRING_STIFFNESS,
 } from "@/app/utils/physicsConsts";
 import {
   addVec2,
@@ -33,6 +33,7 @@ import {
   Vec2,
 } from "@/app/utils/vector";
 import { DebugContext } from "@/app/components/DebugContext";
+import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
@@ -45,17 +46,17 @@ const INSET_OPTIONS = {
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
 
-const getSpringForceVec = (offset: Vec2) => {
+const getSpringForceVec = (offset: Vec2, stiffness: number) => {
   const length = magnitude(offset);
-  const forceVal = length * SPRING_STIFFNESS;
+  const forceVal = length * stiffness;
   const direction = normalize(offset.map(negate));
   const force = direction.map(multiplyBy(forceVal));
 
   return force as Vec2;
 }
 
-const getSpringForce = (length: number, target = 0) => {
-  return (target - length) * SPRING_STIFFNESS;
+const getSpringForce = (length: number, stiffness: number, target = 0) => {
+  return (target - length) * stiffness;
 }
 
 const applyForcesVec = (velocity: Vec2, forces: Vec2[], delta: number) => {
@@ -151,18 +152,15 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   seed,
   moveOnMount = false,
 }) => {
-  const { debug, debugMenuOptions } = useContext(DebugContext);
+  const { debug } = useContext(DebugContext);
   const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
   const lerpedOffset = useRef<Vec2>([0, 0]);
   const impulses = useRef<Vec2[]>([]);
   const containerElement = useRef<HTMLDivElement>(null);
   const bubbleElement = useRef<HTMLDivElement>(null);
-  const overkill = debug
-    ? debugMenuOptions.bubbleOverkill as number ?? BUBBLE_OVERKILL
-    : BUBBLE_OVERKILL
-  const boundaryWidth = debug
-    ? debugMenuOptions.bubbleBorder as number ?? _boundaryWidth
-    : _boundaryWidth;
+  const overkill = useDebuggableValue('bubbleOverkill', BUBBLE_OVERKILL);
+  const boundaryWidth = useDebuggableValue('bubbleBorder', _boundaryWidth);
+  const springStiffness = useDebuggableValue('springStiffness', SPRING_STIFFNESS);
   const doubleBoundaryWidth = 2 * boundaryWidth;
   const [, forceUpdate] = useReducer(x => x + 1, 0);
 
@@ -231,7 +229,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
   const applySpringForce = useCallback((delta: number) => {
     // apply spring physicvelocitys
-    const springForce = getSpringForceVec(physicsState.current.offset);
+    const springForce = getSpringForceVec(physicsState.current.offset, springStiffness);
 
     impulses.current.push(springForce);
 
@@ -246,7 +244,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     // apply spring physics to inset
     for (const property in physicsState.current.inset) {
       const key = property as keyof Inset; // TODO: this is stupid
-      const springForce = getSpringForce(physicsState.current.inset[key]);
+      const springForce = getSpringForce(physicsState.current.inset[key], springStiffness);
 
       physicsState.current.insetVelocity[key] = applyForces(
         physicsState.current.insetVelocity[key],
@@ -280,7 +278,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     }
 
     forceUpdate();
-  }, [bubbleSluggishness, seed]);
+  }, [bubbleSluggishness, seed, springStiffness]);
 
   useAnimationFrames(applySpringForce, doAnimate);
 
