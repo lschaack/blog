@@ -6,7 +6,7 @@ import { InputRange } from "@/app/components/InputRange";
 import { DebugContext } from "@/app/components/DebugContext";
 
 export const BubbleConfigurator = () => {
-  const { setDebugMenuOptions } = useContext(DebugContext);
+  const { debugMenuOptions, setDebugMenuOptions } = useContext(DebugContext);
 
   return (
     <>
@@ -18,7 +18,7 @@ export const BubbleConfigurator = () => {
           min={1}
           max={20}
           step={1}
-          defaultValue={3}
+          defaultValue={debugMenuOptions.bubbleOverkill as number ?? 3}
           onChange={value => setDebugMenuOptions(prev => ({
             ...prev,
             bubbleOverkill: value,
@@ -33,7 +33,7 @@ export const BubbleConfigurator = () => {
           min={1}
           max={32}
           step={1}
-          defaultValue={8}
+          defaultValue={debugMenuOptions.bubbleBorder as number ?? 8}
           onChange={value => setDebugMenuOptions(prev => ({
             ...prev,
             bubbleBorder: value,

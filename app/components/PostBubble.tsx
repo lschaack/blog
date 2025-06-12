@@ -8,14 +8,15 @@ import { HoverBubble } from "@/app/components/HoverBubble";
 type PostBubbleProps = {
   post: DeepPartial<BlogPost>;
   fake?: boolean;
+  moveOnMount?: boolean;
 };
-export const PostBubble = ({ post, fake = false }: PostBubbleProps) => {
+export const PostBubble = ({ post, fake = false, moveOnMount }: PostBubbleProps) => {
   return (
     <Link
       href={fake ? post.slug! : `/posts/${post.slug}`}
       key={post.sys?.id}
     >
-      <HoverBubble boundaryWidth={8} showBubble>
+      <HoverBubble boundaryWidth={8} moveOnMount={moveOnMount}>
         <li className="w-full max-w-96 relative overflow-hidden">
           <div className="relative w-full aspect-2/1">
             {post.heroImage && (

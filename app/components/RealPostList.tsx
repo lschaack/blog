@@ -26,10 +26,11 @@ export const RealPostList = async () => {
 
   return (
     <>
-      {realPosts.map(post => post?.slug && (
+      {realPosts.map((post, index) => post?.slug && (
         <PostBubble
           post={post}
           key={post.sys.id}
+          seed={index}
         />
       ))}
     </>

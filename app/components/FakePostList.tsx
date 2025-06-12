@@ -59,14 +59,15 @@ export const FakePostList = () => {
         <BubbleConfigurator />
       </DebugMenu>
       {howMany === 0 ? (
-        <HoverBubble>
-          <button
-            className="p-16 font-bold text-3xl"
-            onClick={handleAddPosts}
-          >
-            MORE!!!!!!!
-          </button>
-        </HoverBubble>
+        <div onClick={handleAddPosts}>
+          <HoverBubble>
+            <button
+              className="p-16 font-bold text-3xl max-w-96"
+            >
+              I wanna see more bubbles, fake me some posts
+            </button>
+          </HoverBubble>
+        </div>
       ) : (
         <>
           {fakePosts.map(post => post!.slug && (
@@ -74,6 +75,7 @@ export const FakePostList = () => {
               post={post}
               key={post.sys!.id}
               fake
+              moveOnMount
             />
           ))}
         </>

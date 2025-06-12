@@ -42,8 +42,6 @@ const INSET_OPTIONS = {
   max: INITIAL_OFFSET_RANGE,
 };
 
-const faker = new SimpleFaker({ seed: 0 });
-
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
 
@@ -94,7 +92,9 @@ type PhysicsState = {
   insetVelocity: Inset;
 }
 
-const getInitialPhysicsState = (randomize = false): PhysicsState => {
+const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState => {
+  const faker = new SimpleFaker({ seed });
+
   if (randomize) {
     return {
       offset: [
@@ -138,19 +138,21 @@ const getInitialPhysicsState = (randomize = false): PhysicsState => {
 type HoverBubbleProps = {
   children?: ReactNode;
   boundaryWidth?: number;
-  showBubble?: boolean;
   bubbleClassname?: boolean;
   bubbleSluggishness?: number;
+  seed?: number;
+  moveOnMount?: boolean;
 }
 export const HoverBubble: FC<HoverBubbleProps> = ({
   children,
   boundaryWidth: _boundaryWidth = DEFAULT_BOUNDARY_WIDTH,
   bubbleSluggishness: bubbleSluggishness = DEFAULT_OFFSET_LERP_AMOUNT,
-  showBubble = true,
   bubbleClassname: indicatorClassname,
+  seed,
+  moveOnMount = false,
 }) => {
   const { debug, debugMenuOptions } = useContext(DebugContext);
-  const physicsState = useRef<PhysicsState>(getInitialPhysicsState(true));
+  const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
   const lerpedOffset = useRef<Vec2>([0, 0]);
   const impulses = useRef<Vec2[]>([]);
   const containerElement = useRef<HTMLDivElement>(null);
@@ -263,7 +265,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     );
 
     if (shouldStop) {
-      physicsState.current = getInitialPhysicsState();
+      physicsState.current = getInitialPhysicsState(false, seed);
     } else {
       const nextOffset = addVec2(physicsState.current.offset, physicsState.current.velocity) as Vec2;
 
@@ -278,7 +280,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     }
 
     forceUpdate();
-  }, [bubbleSluggishness]);
+  }, [bubbleSluggishness, seed]);
 
   useAnimationFrames(applySpringForce, doAnimate);
 
@@ -317,7 +319,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           "absolute",
           "bg-stone-50/80",
           "transition-colors duration-500 ease-out",
-          showBubble ? "border-stone-900/30 rounded-4xl overflow-hidden" : "border-transparent",
+          "border-stone-900/30 rounded-4xl overflow-hidden",
           doAnimate && "border-blue-200/75!",
         )}
         style={{
