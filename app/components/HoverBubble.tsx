@@ -2,7 +2,6 @@
 
 import { FC, ReactNode, useCallback, useContext, useEffect, useReducer, useRef } from "react";
 import clsx from "clsx";
-import { add } from "lodash";
 import { SimpleFaker } from '@faker-js/faker';
 
 import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
@@ -14,21 +13,21 @@ import {
 } from "@/app/utils/findVectorSegmentsInShape";
 import { lerp } from "@/app/utils/lerp";
 import {
-  getDecay,
   VELOCITY_ANIMATION_THRESHOLD,
   BUBBLE_STIFFNESS,
   OFFSET_ANIMATION_THRESHOLD,
   BUBBLE_OVERKILL,
   SPRING_STIFFNESS,
+  getSpringForceVec,
+  applyForcesVec,
+  getSpringForce,
+  applyForces,
 } from "@/app/utils/physicsConsts";
 import {
   addVec2,
   clampVec,
   magnitude,
-  multiplyBy,
   multiplyVec,
-  negate,
-  normalize,
   segmentToVec2,
   Vec2,
 } from "@/app/utils/vector";
@@ -45,39 +44,6 @@ const INSET_OPTIONS = {
 
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
-
-const getSpringForceVec = (offset: Vec2, stiffness: number) => {
-  const length = magnitude(offset);
-  const forceVal = length * stiffness;
-  const direction = normalize(offset.map(negate));
-  const force = direction.map(multiplyBy(forceVal));
-
-  return force as Vec2;
-}
-
-const getSpringForce = (length: number, stiffness: number, target = 0) => {
-  return (target - length) * stiffness;
-}
-
-const applyForcesVec = (velocity: Vec2, forces: Vec2[], delta: number) => {
-  const decay = getDecay(delta);
-  const force = multiplyVec(forces.reduce(addVec2), delta);
-
-  const decayed = multiplyVec(velocity, decay);
-  const applied = addVec2(decayed, force);
-
-  return applied;
-}
-
-const applyForces = (velocity: number, forces: number[], delta: number) => {
-  const decay = getDecay(delta);
-  const force = forces.reduce(add) * delta;
-
-  const decayed = velocity * decay;
-  const applied = decayed + force;
-
-  return applied;
-}
 
 type Inset = {
   top: number;
@@ -228,7 +194,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   }, [boundaryWidth, doubleBoundaryWidth]);
 
   const applySpringForce = useCallback((delta: number) => {
-    // apply spring physicvelocitys
+    // apply spring physics
     const springForce = getSpringForceVec(physicsState.current.offset, springStiffness);
 
     impulses.current.push(springForce);
@@ -282,14 +248,16 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
   useAnimationFrames(applySpringForce, doAnimate);
 
+  const effectiveOffset = physicsState.current.offset.map(x => x / 2) as Vec2;
+
   const bubbleTop = overkill * asymmetricFilter(lerpedOffset.current[1]) + physicsState.current.inset.top;
   const bubbleRight = overkill * asymmetricFilter(-lerpedOffset.current[0]) + physicsState.current.inset.right;
   const bubbleBottom = overkill * asymmetricFilter(-lerpedOffset.current[1]) + physicsState.current.inset.bottom;
   const bubbleLeft = overkill * asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left;
   // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
   // FIXME: at max border, there are rare frames where the clipWidth and clipHeight seem to be slightly too large
-  const clipX = bubbleLeft - physicsState.current.offset[0];
-  const clipY = bubbleTop - physicsState.current.offset[1];
+  const clipX = bubbleLeft - effectiveOffset[0];
+  const clipY = bubbleTop - effectiveOffset[1];
   const clipWidth = bubbleElement.current
     ? `${bubbleElement.current.offsetWidth - doubleBoundaryWidth}px`
     : '100%';
@@ -333,8 +301,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         className="relative"
         style={{
           clipPath: `xywh(${clipX}px ${clipY}px ${clipWidth} ${clipHeight} round ${clipRounding}px)`,
-          left: physicsState.current.offset[0],
-          top: physicsState.current.offset[1],
+          left: effectiveOffset[0],
+          top: effectiveOffset[1],
         }}
       >
         {children}

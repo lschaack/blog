@@ -10,7 +10,8 @@ type InputRangeProps = {
   min: number;
   max: number;
   step: number;
-  defaultValue: number;
+  defaultValue?: number;
+  value?: number;
   onChange: (value: number) => void;
   className?: string;
 }
@@ -23,10 +24,13 @@ export const InputRange: FC<InputRangeProps> = ({
   max,
   step,
   defaultValue,
+  value: managedValue,
   onChange,
   className,
 }) => {
-  const [value, setValue] = useState(defaultValue);
+  const [_value, _setValue] = useState(defaultValue ?? min);
+  const value = managedValue ?? _value;
+
   const [isDragging, setIsDragging] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -37,7 +41,7 @@ export const InputRange: FC<InputRangeProps> = ({
   // Handle slider change
   const handleChange: ChangeEventHandler<HTMLInputElement> = ({ target: { value } }) => {
     const newValue = Number(value);
-    setValue(newValue);
+    _setValue(newValue);
     if (onChange) onChange(newValue);
   };
 

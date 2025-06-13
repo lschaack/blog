@@ -5,6 +5,13 @@ import { useContext } from "react";
 import { InputRange } from "@/app/components/InputRange";
 import { DebugContext } from "@/app/components/DebugContext";
 import { BUBBLE_OVERKILL, SPRING_STIFFNESS } from "@/app/utils/physicsConsts";
+import { Button } from "@/app/components/Button";
+
+const INIT_STATE = {
+  springStiffness: SPRING_STIFFNESS,
+  bubbleOverkill: BUBBLE_OVERKILL,
+  bubbleBorder: 8,
+}
 
 export const BubbleConfigurator = () => {
   const { debugMenuOptions, setDebugMenuOptions } = useContext(DebugContext);
@@ -19,7 +26,7 @@ export const BubbleConfigurator = () => {
           min={0.0001}
           max={0.01}
           step={0.0001}
-          defaultValue={debugMenuOptions.springStiffness as number ?? SPRING_STIFFNESS}
+          value={debugMenuOptions.springStiffness as number ?? INIT_STATE.springStiffness}
           onChange={value => setDebugMenuOptions(prev => ({
             ...prev,
             springStiffness: value,
@@ -31,10 +38,10 @@ export const BubbleConfigurator = () => {
           label="Overkill"
           color="rose"
           id="overkill"
-          min={1}
+          min={0.1}
           max={5}
-          step={1}
-          defaultValue={debugMenuOptions.bubbleOverkill as number ?? BUBBLE_OVERKILL}
+          step={0.1}
+          value={debugMenuOptions.bubbleOverkill as number ?? INIT_STATE.bubbleOverkill}
           onChange={value => setDebugMenuOptions(prev => ({
             ...prev,
             bubbleOverkill: value,
@@ -49,11 +56,23 @@ export const BubbleConfigurator = () => {
           min={1}
           max={32}
           step={1}
-          defaultValue={debugMenuOptions.bubbleBorder as number ?? 8}
+          value={debugMenuOptions.bubbleBorder as number ?? INIT_STATE.bubbleBorder}
           onChange={value => setDebugMenuOptions(prev => ({
             ...prev,
             bubbleBorder: value,
           }))}
+        />
+      </li>
+      <li>
+        <Button
+          label="reset"
+          color="emerald"
+          onClick={() => setDebugMenuOptions(
+            prev => ({
+              ...prev,
+              ...INIT_STATE
+            })
+          )}
         />
       </li>
     </>

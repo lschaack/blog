@@ -4,7 +4,6 @@ import typescript from "highlight.js/lib/languages/typescript";
 import "highlight.js/styles/monokai.css";
 
 import { SignPost } from "@/app/components/SignPost";
-import { DebugToggle } from "@/app/components/DebugToggle";
 
 hljs.registerLanguage("typescript", typescript);
 
@@ -25,9 +24,11 @@ export const Header = () => {
           </h1>
         </SignPost>
       </Link>
-      <div className="absolute top-4 right-4 flex flex-col">
-        <DebugToggle className="self-end mb-4 ml-auto" />
-        <div id="debug-menu-surface" />
+      <div className="absolute top-4 right-4 h-full">
+        <div
+          id="debug-menu-surface"
+          className="sticky top-4 right-4 z-50"
+        />
       </div>
     </header>
   )

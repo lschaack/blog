@@ -19,7 +19,7 @@ import { clamp, throttle } from "lodash";
 import { useEaseUpDown } from "@/app/hooks/useEaseUpDown";
 import { AnimatedVariablesContext } from "@/app/components/AnimatedVariables";
 import { EasingDirection } from "@/app/utils/requestEasingFrames";
-import { useForceRenderOnResize } from "@/app/hooks/useForceRenderOnResize";
+import { useMediaQuery } from "@/app/hooks/useMediaQuery";
 
 const EASING_MS = 200;
 const DRAG_MODIFIER = 1000;
@@ -80,7 +80,7 @@ export type ShiftStrategy = 'elegant' | 'elegantAndWrong' | 'accurate' | 'disabl
 
 export type CardMagnifierProps = {
   children?: ReactNode;
-  direction?: 'horizontal' | 'vertical';
+  vertical?: boolean;
   // The size of each element when unscaled
   basis: number;
   gap: number;
@@ -105,10 +105,12 @@ const roundToPrecision = (num: number, places = 1) => {
   return Math.round(num * multiplier) / multiplier;
 }
 
+const MEDIA_QUERY = '(max-width: 600px)';
+
 // TODO: change "size" to "length"
 export const CardMagnifier: FC<CardMagnifierProps> = ({
   children,
-  direction,
+  vertical,
   basis,
   gap,
   className,
@@ -118,11 +120,9 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
   scale = 3,
 }) => {
   const animatedVariables = useContext(AnimatedVariablesContext);
-  useForceRenderOnResize(direction === undefined);
-  // FIXME: document undefined on server
-  const isVertical = direction === undefined
-    ? document.documentElement.clientWidth < 600
-    : direction === 'vertical';
+  // FIXME: Avoid the blink of horizontal state that happens on mobile load if possible
+  const isMediaQuery = useMediaQuery(MEDIA_QUERY);
+  const isVertical = vertical ?? isMediaQuery;
 
   const containerElement = useRef<HTMLUListElement>(null);
 
