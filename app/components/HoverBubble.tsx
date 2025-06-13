@@ -126,9 +126,9 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   const impulses = useRef<Vec2[]>([]);
   const containerElement = useRef<HTMLDivElement>(null);
   const bubbleElement = useRef<HTMLDivElement>(null);
-  const overkill = useDebuggableValue('bubbleOverkill', BUBBLE_OVERKILL);
-  const boundaryWidth = useDebuggableValue('bubbleBorder', _boundaryWidth);
-  const springStiffness = useDebuggableValue('springStiffness', SPRING_STIFFNESS);
+  const overkill = useDebuggableValue('bubbleOverkill', BUBBLE_OVERKILL, true);
+  const boundaryWidth = useDebuggableValue('bubbleBorder', _boundaryWidth, true);
+  const springStiffness = useDebuggableValue('springStiffness', SPRING_STIFFNESS, true);
   const doubleBoundaryWidth = 2 * boundaryWidth;
   const [, forceUpdate] = useReducer(x => x + 1, 0);
 

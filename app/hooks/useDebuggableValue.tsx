@@ -2,10 +2,10 @@ import { useContext } from "react";
 
 import { DebugContext, DebugOption } from "@/app/components/DebugContext";
 
-export const useDebuggableValue = <T extends DebugOption>(key: string, defaultVal: T): T => {
+export const useDebuggableValue = <T extends DebugOption>(key: string, defaultVal: T, preferDebugVal = false): T => {
   const { debug, debugMenuOptions } = useContext(DebugContext);
 
-  if (debug) {
+  if (debug || preferDebugVal) {
     return debugMenuOptions[key] as T ?? defaultVal;
   } else {
     return defaultVal;

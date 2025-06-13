@@ -24,6 +24,7 @@ export const PostBubble = ({ post, fake = false, moveOnMount }: PostBubbleProps)
                 src={post.heroImage.url!}
                 alt={post.heroImage.description!}
                 className="object-cover"
+                sizes="384px"
                 fill
               />
             )}

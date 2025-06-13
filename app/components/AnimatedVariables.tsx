@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, FC, useContext, useEffect, useReducer, useState } from "react";
+import { createContext, FC, useContext, useEffect, useMemo, useReducer, useState } from "react";
 import { throttle } from "lodash";
 import { createNoise2D } from "simplex-noise";
 
@@ -44,8 +44,12 @@ type AnimatedVariableProps = {
 
 export const AnimatedVariableValue: FC<AnimatedVariableProps> = ({ varName, displayName }) => {
   const value = useAnimatedVariable(varName);
+  const [showValue, setShowValue] = useState(false);
 
-  return <p>{displayName ?? varName}: {value}</p>;
+  // Nextjs hydration hack...only show value after initial render to avoid rerendering entire page
+  useEffect(() => setShowValue(true), []);
+
+  return <p>{displayName ?? varName}: {showValue && value}</p>;
 }
 
 type AnimatedVariableMeterProps = AnimatedVariableProps & {
@@ -61,9 +65,6 @@ const MAX_OFFSET_X = 5;
 const MAX_OFFSET_Y = 3;
 const MAX_ROT = 1.5;
 
-const noiseX = createNoise2D();
-const noiseY = createNoise2D();
-const noiseRot = createNoise2D();
 // https://github.com/jwagner/simplex-noise.js/blob/main/simplex-noise.ts#L99
 // Add a safe margin to max, cause Math.pow(2, 31) does actually break sometimes
 const maxNoiseInput = Math.pow(2, 30);
@@ -74,6 +75,10 @@ export const AnimatedVariableMeter: FC<AnimatedVariableMeterProps> = ({
   color,
   defaultValue
 }) => {
+  const noiseX = useMemo(() => createNoise2D(), []);
+  const noiseY = useMemo(() => createNoise2D(), []);
+  const noiseRot = useMemo(() => createNoise2D(), []);
+
   // default value avoids hydration error
   const value = useAnimatedVariable(
     varName,
