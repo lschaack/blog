@@ -45,7 +45,7 @@ export const bounceInPlace = curry(
   (bounces: number, time: number) => Math.abs(springInPlace(bounces, time))
 );
 
-export const easify = (value: number, max: number, min: number, ease: (raw: number) => number) => {
+export const easify = (value: number, min: number, max: number, ease: (raw: number) => number) => {
   const range = max - min;
   const norm = (value - min) / range;
 

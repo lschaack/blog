@@ -25,3 +25,13 @@ export const clampRangeSymmetric = (input: number, constraint: number) => {
 
   return Math.max(lowerBoundary, (Math.min(input, upperBoundary)));
 }
+
+export const normalize = (value: number, min: number, max: number) => {
+  return (value - min) / (max - min);
+}
+
+export const denormalize = (norm: number, min: number, max: number) => {
+  const range = max - min;
+
+  return min + norm * range;
+}

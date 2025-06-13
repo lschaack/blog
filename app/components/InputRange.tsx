@@ -5,6 +5,7 @@ import { inputColorClasses } from "@/app/utils/colors";
 import { LabelledValue } from "@/app/components/LabelledValue";
 import { easify, EASING_STRATEGY, EasingStrategy } from "@/app/utils/easingFunctions";
 import { roundToPrecision } from "@/app/utils/roundToPrecision";
+import { normalize } from "@/app/utils/range";
 
 type InputRangeProps = {
   label: string;
@@ -43,16 +44,26 @@ export const InputRange: FC<InputRangeProps> = ({
 
   // Handle slider change
   const handleChange: ChangeEventHandler<HTMLInputElement> = ({ target: { value } }) => {
-    const rawValue = Number(value);
-    const newValue = easing
-      ? roundToPrecision(easify(rawValue, max, min, EASING_STRATEGY[easing].ease), 4)
-      : rawValue;
+    // This is kind of a hack to use browser logic for the underlying input element
+    // When dragging, this handler fires with the target value at the point on the track
+    // where the cursor is positioned. On mouse up, it fires again with the actual value
+    // passed to the input element.
+    //
+    // That probably means this implementation is vulnerable to changes in browser
+    // implementation of the input element, so at some point I should really make this
+    // fully custom with an sr-only input...TODO: I guess
+    if (isDragging) {
+      const rawValue = Number(value);
+      const newValue = easing
+        ? easify(rawValue, min, max, EASING_STRATEGY[easing].ease)
+        : rawValue;
 
-    _setValue(newValue);
-    if (onChange) onChange(newValue);
+      _setValue(newValue);
+      if (onChange) onChange(newValue);
+    }
   };
 
-  const rawNorm = ((value - min) / (max - min));
+  const rawNorm = normalize(value, min, max);
   // If value is eased, we need to "undo" the easing for the thumb to move linearly
   // in the visual presentation
   const norm = easing
@@ -65,7 +76,7 @@ export const InputRange: FC<InputRangeProps> = ({
       id={id}
       label={label}
       pad={pad}
-      value={value.toString()}
+      value={roundToPrecision(value, 4).toString()}
       className={className}
     >
       <input

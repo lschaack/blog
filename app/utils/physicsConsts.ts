@@ -5,7 +5,7 @@ import {
   multiplyBy,
   multiplyVec,
   negate,
-  normalize,
+  normalizeVec,
   Vec2
 } from "@/app/utils/vector";
 
@@ -22,7 +22,7 @@ export const getDecay = (delta: number) => Math.pow(DECAY, delta);
 export const getSpringForceVec = (offset: Vec2, stiffness: number) => {
   const length = magnitude(offset);
   const forceVal = length * stiffness;
-  const direction = normalize(offset.map(negate));
+  const direction = normalizeVec(offset.map(negate));
   const force = direction.map(multiplyBy(forceVal));
 
   return force as Vec2;

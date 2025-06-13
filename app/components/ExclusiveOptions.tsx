@@ -16,6 +16,7 @@ type ExclusiveOptionsContextType = {
 }
 const ExclusiveOptionsContext = createContext<ExclusiveOptionsContextType | null>(null);
 
+// FIXME: This is broken on firefox
 type OptionProps<T extends OptionValue> = {
   value: T;
   label: string;

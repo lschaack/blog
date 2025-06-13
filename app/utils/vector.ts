@@ -25,7 +25,7 @@ export const magnitude = <T extends number[]>(vector: T) => {
   )
 }
 
-export const normalize = <T extends number[]>(vector: T) => {
+export const normalizeVec = <T extends number[]>(vector: T) => {
   const mag = magnitude(vector);
 
   // TODO: should I be more explicit in warning about this?
@@ -39,7 +39,7 @@ export const clampVec = <T extends number[]>(vector: T, min: number, max: number
 
   if (length >= min && length <= max) return vector;
 
-  const direction = normalize(vector);
+  const direction = normalizeVec(vector);
 
   return multiplyVec(direction, clamp(length, min, max));
 }
