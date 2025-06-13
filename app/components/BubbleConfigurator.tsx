@@ -26,6 +26,7 @@ export const BubbleConfigurator = () => {
           min={0.0001}
           max={0.01}
           step={0.0001}
+          easing="easeIn"
           value={debugMenuOptions.springStiffness as number ?? INIT_STATE.springStiffness}
           onChange={value => setDebugMenuOptions(prev => ({
             ...prev,

@@ -29,6 +29,8 @@ const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
       if (heading) setIsPassed(midScreen > heading.offsetTop);
     }
 
+    handleScroll();
+
     window.addEventListener('scroll', handleScroll);
 
     return () => window.removeEventListener('scroll', handleScroll);
@@ -39,7 +41,7 @@ const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
       href={`#${anchor}`}
       className={clsx(
         "transition-colors duration-75",
-        "-ml-px border-l-1 py-1",
+        "-ml-[2px] border-l-2 py-1 pr-2",
         isPassed
           ? "passed border-stone-50 bg-stone-500/10"
           : "passed border-l-transparent bg-transparent",
@@ -66,7 +68,7 @@ export const Navigator: FC<{ body: BlogPostBody; className?: string }> = ({ body
 
   return (
     <ul className={clsx('p-6 bg-stone-50/70', className)}>
-      <div className="flex flex-col border-stone-800/70 border-l">
+      <div className="flex flex-col border-stone-800/70 border-l-2">
         {headings.map((heading, i) => (
           <NavigatorEntry
             key={`heading-${i}`}

@@ -1,11 +1,19 @@
 "use client";
 
-import { FC, ReactNode, useState } from "react";
+import { FC, ReactNode, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import clsx from 'clsx';
 
 export const SignPost: FC<{ children?: ReactNode }> = ({ children }) => {
   const [animate, setAnimate] = useState(false);
   const [enableHover, setEnableHover] = useState(true);
+  const pathname = usePathname();
+  const isHomepage = pathname === '/';
+  const [useLongerAnimation, setUseLongerAnimation] = useState(isHomepage);
+
+  useEffect(() => {
+    if (!animate) setUseLongerAnimation(isHomepage);
+  }, [isHomepage, animate]);
 
   return (
     <div
@@ -28,7 +36,7 @@ export const SignPost: FC<{ children?: ReactNode }> = ({ children }) => {
           "rotate-x-[8deg] -rotate-y-20",
           "transition-transform",
           enableHover && "group-hover:-rotate-y-30",
-          animate && "animate-twist",
+          animate && (useLongerAnimation ? "animate-twist" : "animate-quicktwist"),
         )}
         onAnimationEnd={() => setAnimate(false)}
       >

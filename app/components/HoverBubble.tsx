@@ -33,13 +33,14 @@ import {
 } from "@/app/utils/vector";
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
+import { useForceRenderOnResize } from "@/app/hooks/useForceRenderOnResize";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
-const INITIAL_OFFSET_RANGE = 30;
+const INITIAL_OFFSET_RANGE = 60;
 const INSET_OPTIONS = {
   min: -INITIAL_OFFSET_RANGE,
-  max: INITIAL_OFFSET_RANGE,
+  max: INITIAL_OFFSET_RANGE
 };
 
 // TODO: name this something more descriptive...
@@ -118,6 +119,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   seed,
   moveOnMount = false,
 }) => {
+  useForceRenderOnResize(); // avoid weird offset w/extreme resizing, not really necessary
   const { debug } = useContext(DebugContext);
   const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
   const lerpedOffset = useRef<Vec2>([0, 0]);
@@ -286,7 +288,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           "bg-stone-50/80",
           "transition-colors duration-500 ease-out",
           "border-stone-900/30 rounded-4xl overflow-hidden",
-          doAnimate && "border-blue-200/75!",
+          doAnimate && debug && "border-blue-200/75!",
         )}
         style={{
           borderWidth: `${boundaryWidth}px`,

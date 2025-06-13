@@ -20,6 +20,7 @@ import { useEaseUpDown } from "@/app/hooks/useEaseUpDown";
 import { AnimatedVariablesContext } from "@/app/components/AnimatedVariables";
 import { EasingDirection } from "@/app/utils/requestEasingFrames";
 import { useMediaQuery } from "@/app/hooks/useMediaQuery";
+import { roundToPrecision } from "@/app/utils/roundToPrecision";
 
 const EASING_MS = 200;
 const DRAG_MODIFIER = 1000;
@@ -98,12 +99,6 @@ const logFalloffWarning = throttle(
   () => console.warn('Carousel must contain at least `falloff * 2` children'),
   5000,
 )
-
-const roundToPrecision = (num: number, places = 1) => {
-  const multiplier = 10 ** places;
-
-  return Math.round(num * multiplier) / multiplier;
-}
 
 const MEDIA_QUERY = '(max-width: 600px)';
 

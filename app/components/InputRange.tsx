@@ -1,7 +1,10 @@
 import { clsx } from "clsx";
 import { ChangeEventHandler, FC, useRef, useState } from "react";
+
 import { inputColorClasses } from "@/app/utils/colors";
 import { LabelledValue } from "@/app/components/LabelledValue";
+import { easify, EASING_STRATEGY, EasingStrategy } from "@/app/utils/easingFunctions";
+import { roundToPrecision } from "@/app/utils/roundToPrecision";
 
 type InputRangeProps = {
   label: string;
@@ -14,6 +17,7 @@ type InputRangeProps = {
   value?: number;
   onChange: (value: number) => void;
   className?: string;
+  easing?: EasingStrategy;
 }
 
 export const InputRange: FC<InputRangeProps> = ({
@@ -27,6 +31,7 @@ export const InputRange: FC<InputRangeProps> = ({
   value: managedValue,
   onChange,
   className,
+  easing,
 }) => {
   const [_value, _setValue] = useState(defaultValue ?? min);
   const value = managedValue ?? _value;
@@ -36,14 +41,24 @@ export const InputRange: FC<InputRangeProps> = ({
   const trackRef = useRef<HTMLDivElement>(null);
   const pad = Math.max(max.toString().length, min.toString().length);
 
-  const percentage = ((value - min) / (max - min)) * 100;
-
   // Handle slider change
   const handleChange: ChangeEventHandler<HTMLInputElement> = ({ target: { value } }) => {
-    const newValue = Number(value);
+    const rawValue = Number(value);
+    const newValue = easing
+      ? roundToPrecision(easify(rawValue, max, min, EASING_STRATEGY[easing].ease), 4)
+      : rawValue;
+
     _setValue(newValue);
     if (onChange) onChange(newValue);
   };
+
+  const rawNorm = ((value - min) / (max - min));
+  // If value is eased, we need to "undo" the easing for the thumb to move linearly
+  // in the visual presentation
+  const norm = easing
+    ? EASING_STRATEGY[easing].inverse(rawNorm)
+    : rawNorm;
+  const percentage = norm * 100;
 
   return (
     <LabelledValue

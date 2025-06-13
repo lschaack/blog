@@ -23,6 +23,20 @@ export const inverseEaseInOut = curry(
   (elbow: number, factor: number) => easeInOut(1 / elbow, factor)
 );
 
+// the pows are ease in with elbow in range (0, 1), ease out over 1
+// TODO: replace all ease ins, ease outs with these since I can integrate them
+export const easeOutPow = curry(
+  (elbow: number, time: number) => 1 - Math.pow(1 - time, elbow)
+);
+
+export const easeOutPowIntegral = curry(
+  (elbow: number, time: number) => time + Math.pow(1 - time, elbow + 1) / (elbow + 1)
+)
+
+export const easeOutPowInverse = curry(
+  (elbow: number, factor: number) => 1 - Math.pow(1 - factor, 1 / elbow)
+)
+
 export const springInPlace = curry(
   (bounces: number, time: number) => (1 - time) * Math.sin(bounces * Math.PI * time)
 );
@@ -30,6 +44,13 @@ export const springInPlace = curry(
 export const bounceInPlace = curry(
   (bounces: number, time: number) => Math.abs(springInPlace(bounces, time))
 );
+
+export const easify = (value: number, max: number, min: number, ease: (raw: number) => number) => {
+  const range = max - min;
+  const norm = (value - min) / range;
+
+  return min + ease(norm) * range;
+}
 
 // kind of vague, but lower results in a tighter elbow - higher differential
 // between the fastest and the slowest phases of the animation
