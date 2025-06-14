@@ -306,7 +306,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
       className={clsx(
         "relative",
         // TODO: measure effect & test different values
-        "contain-layout",
+        "contain-layout contain-style",
         indicatorClassname,
       )}
       style={{

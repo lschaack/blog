@@ -11,7 +11,7 @@ const FrameRateDisplay = () => {
   const frameRate = useAnimationFrames(forceUpdate, true);
 
   return (
-    <div className="fixed hljs top-0 left-0 p-2 font-geist-mono">
+    <div className="sticky hljs top-0 left-0 p-2 font-geist-mono">
       {frameRate.current.toFixed(2)}
     </div>
   );

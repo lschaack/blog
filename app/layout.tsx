@@ -7,7 +7,6 @@ import clsx from 'clsx';
 
 import { Header } from "@/app/components/Header";
 import { DebugProvider } from "@/app/components/DebugContext";
-import { FrameRateChecker } from "@/app/components/FrameRateChecker";
 
 export const metadata: Metadata = {
   title: "let something = ",
@@ -44,7 +43,6 @@ export default function RootLayout({
           <main className="w-full flex justify-center">
             {children}
           </main>
-          <FrameRateChecker />
         </DebugProvider>
         <Analytics />
       </body>
