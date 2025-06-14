@@ -34,8 +34,11 @@ export const SignPost: FC<{ children?: ReactNode }> = ({ children }) => {
         className={clsx(
           "perspective-normal",
           "rotate-x-[8deg] -rotate-y-20",
-          "transition-transform",
-          enableHover && "group-hover:-rotate-y-30",
+          // Including transition during twist animation makes safari performance
+          // choppy and causes visible reset after the last keyframe
+          !animate && "transition-transform",
+          animate && "will-change-transform",
+          enableHover && "group-hover:-rotate-y-30 group-hover:will-change-transform",
           animate && (useLongerAnimation ? "animate-twist" : "animate-quicktwist"),
         )}
         onAnimationEnd={() => setAnimate(false)}

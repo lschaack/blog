@@ -33,7 +33,6 @@ import {
 } from "@/app/utils/vector";
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
-import { useForceRenderOnResize } from "@/app/hooks/useForceRenderOnResize";
 import { useResizeValue } from "@/app/hooks/useResizeValue";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
@@ -125,8 +124,10 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   uuid,
   moveOnMount = false,
 }) => {
-  useForceRenderOnResize(); // avoid weird offset w/extreme resizing, not really necessary
   const { debug } = useContext(DebugContext);
+
+  const [doAnimate, setDoAnimate] = useState(moveOnMount);
+
   const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
   const lerpedOffset = useRef<Vec2>([0, 0]);
   const impulses = useRef<Vec2[]>([]);
@@ -135,11 +136,11 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   const contentElement = useRef<HTMLDivElement>(null);
   const offsetIndicatorElement = useRef<HTMLDivElement>(null);
   const lerpedOffsetIndicatorElement = useRef<HTMLDivElement>(null);
+
   const overkill = useDebuggableValue('bubbleOverkill', BUBBLE_OVERKILL, true);
-  const boundaryWidth = useDebuggableValue('bubbleBorder', _boundaryWidth, true);
   const springStiffness = useDebuggableValue('springStiffness', SPRING_STIFFNESS, true);
+  const boundaryWidth = useDebuggableValue('bubbleBorder', _boundaryWidth, true);
   const doubleBoundaryWidth = 2 * boundaryWidth;
-  const [doAnimate, setDoAnimate] = useState(moveOnMount);
 
   const bubbleOffsetWidth = useResizeValue(() => bubbleElement.current?.offsetWidth ?? 0, 0);
   const bubbleOffsetHeight = useResizeValue(() => bubbleElement.current?.offsetHeight ?? 0, 0);
@@ -159,12 +160,12 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     const bubbleRight = overkill * asymmetricFilter(-lerpedOffset.current[0]) + physicsState.current.inset.right;
     const bubbleBottom = overkill * asymmetricFilter(-lerpedOffset.current[1]) + physicsState.current.inset.bottom;
     const bubbleLeft = overkill * asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left;
+
     // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
     const clipX = bubbleLeft - effectiveOffset[0];
     const clipY = bubbleTop - effectiveOffset[1];
     const clipRounding = Math.max(32 - boundaryWidth, 0);
 
-    // get bubble scaleX, scaleY, translateX, translateY
     const scaledBubbleWidth = bubbleOffsetWidth - bubbleLeft - bubbleRight;
     const scaledBubbleHeight = bubbleOffsetHeight - bubbleTop - bubbleBottom;
 
@@ -379,7 +380,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
       className={clsx(
         "relative",
         // TODO: measure effect & test different values
-        "contain-layout contain-style",
+        //"contain-layout",
         indicatorClassname,
       )}
       style={{ padding: `${boundaryWidth}px`, }}
@@ -389,22 +390,22 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
       <div
         ref={bubbleElement}
         className={clsx(
-          "absolute",
-          "bg-stone-50/80",
+          "absolute rounded-4xl overflow-hidden",
           "transition-colors duration-500 ease-out",
-          "border-stone-900/30 rounded-4xl overflow-hidden",
           "inset-0",
-          doAnimate && debug && "border-blue-200/75!",
+          "bg-stone-300/25",
+          doAnimate && debug && "bg-blue-300/75!",
         )}
-        style={{ borderWidth: `${boundaryWidth}px` }}
-      />
+      >
+        <div className="absolute rounded-3xl bg-stone-50/95 mix-blend-lighten" style={{ inset: `${boundaryWidth}px` }} />
+      </div>
       <div ref={contentElement} className="relative">
         {children}
       </div>
       {debug && (
-        <div className="absolute rounded-full w-2 h-2 bg-black left-1/2 top-1/2 overflow-visible">
-          <div ref={offsetIndicatorElement} className="absolute rounded-full w-2 h-2 bg-emerald-300 contain-layout" />
-          <div ref={lerpedOffsetIndicatorElement} className="absolute rounded-full w-2 h-2 bg-rose-300 contain-layout" />
+        <div className="absolute rounded-full w-4 h-4 left-1/2 top-1/2 overflow-visible mix-blend-lighten bg-blue-300/100">
+          <div ref={offsetIndicatorElement} className="absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-green-300/100" />
+          <div ref={lerpedOffsetIndicatorElement} className="absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-red-300/100" />
         </div>
       )}
     </div>

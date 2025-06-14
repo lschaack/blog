@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { fill, startCase } from "lodash";
+import startCase from "lodash/startCase";
 import { faker } from '@faker-js/faker';
 import { DeepPartial } from "@apollo/client/utilities";
 
@@ -9,7 +9,7 @@ import { BlogPost } from "@/app/graphql/graphql";
 import { PostBubble } from "@/app/components/PostBubble";
 import { HoverBubble } from "@/app/components/HoverBubble";
 import { BubbleConfigurator } from "@/app/components/BubbleConfigurator";
-import { DebugMenu } from "./DebugMenu";
+import { DebugMenu } from "@/app/components/DebugMenu";
 
 const MAX_FAKE_POSTS = 8;
 
@@ -39,7 +39,7 @@ const getMockPost = (seed: number): DeepPartial<BlogPost> => {
 
 export const FakePostList = () => {
   const [howMany, setHowMany] = useState(0);
-  const fakePosts = fill(Array(howMany), undefined).map((_, i) => getMockPost(i));
+  const fakePosts = Array.from({ length: howMany }).map((_, i) => getMockPost(i));
 
   const handleAddPosts = useCallback(() => {
     const intervalId = setInterval(() => {

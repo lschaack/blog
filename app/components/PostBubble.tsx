@@ -1,10 +1,11 @@
+import { memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { DeepPartial } from "@apollo/client/utilities";
+import { simpleFaker } from '@faker-js/faker';
 
 import { BlogPost } from "@/app/graphql/graphql";
 import { HoverBubble } from "@/app/components/HoverBubble";
-import { memo } from "react";
 
 type PostBubbleContentsProps = {
   post: DeepPartial<BlogPost>;
@@ -16,8 +17,6 @@ const PostBubbleContents = memo(function PostBubbleContents({ post }: PostBubble
     <li className="w-full max-w-96 relative overflow-hidden">
       <div className="relative w-full aspect-2/1">
         {post.heroImage && (
-          //null
-          // FIXME:
           <Image
             src={post.heroImage.url!}
             alt={post.heroImage.description!}
@@ -52,7 +51,7 @@ type PostBubbleProps = {
   moveOnMount?: boolean;
 };
 export const PostBubble = memo(function PostBubble({ post, fake = false, moveOnMount }: PostBubbleProps) {
-  const uuid = crypto.randomUUID();
+  const uuid = simpleFaker.string.uuid();
 
   return (
     <Link
