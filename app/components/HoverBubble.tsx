@@ -198,13 +198,11 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     }
 
     if (offsetIndicatorElement.current) {
-      offsetIndicatorElement.current.style.left = `${physicsState.current.offset[0]}px`;
-      offsetIndicatorElement.current.style.top = `${physicsState.current.offset[1]}px`;
+      offsetIndicatorElement.current.style.transform = `translate(${physicsState.current.offset[0]}px, ${physicsState.current.offset[1]}px)`;
     }
 
     if (lerpedOffsetIndicatorElement.current) {
-      lerpedOffsetIndicatorElement.current.style.left = `${lerpedOffset.current[0]}px`;
-      lerpedOffsetIndicatorElement.current.style.top = `${lerpedOffset.current[1]}px`;
+      lerpedOffsetIndicatorElement.current.style.transform = `translate(${lerpedOffset.current[0]}px, ${lerpedOffset.current[1]}px)`;
     }
   }, [boundaryWidth, doubleBoundaryWidth, overkill]);
 
@@ -360,8 +358,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
       </div>
       {debug && (
         <div className="absolute rounded-full w-2 h-2 bg-black left-1/2 top-1/2 overflow-visible">
-          <div ref={offsetIndicatorElement} className="absolute rounded-full w-2 h-2 bg-emerald-300" />
-          <div ref={lerpedOffsetIndicatorElement} className="absolute rounded-full w-2 h-2 bg-rose-300" />
+          <div ref={offsetIndicatorElement} className="absolute rounded-full w-2 h-2 bg-emerald-300 contain-layout" />
+          <div ref={lerpedOffsetIndicatorElement} className="absolute rounded-full w-2 h-2 bg-rose-300 contain-layout" />
         </div>
       )}
     </div>
