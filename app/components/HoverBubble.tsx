@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, ReactNode, useCallback, useContext, useEffect, useReducer, useRef, useState } from "react";
+import { FC, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { SimpleFaker } from '@faker-js/faker';
 
@@ -34,6 +34,7 @@ import {
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
 import { useForceRenderOnResize } from "@/app/hooks/useForceRenderOnResize";
+import { useResizeValue } from "@/app/hooks/useResizeValue";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
@@ -140,6 +141,16 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   const doubleBoundaryWidth = 2 * boundaryWidth;
   const [doAnimate, setDoAnimate] = useState(moveOnMount);
 
+  const bubbleOffsetWidth = useResizeValue(() => bubbleElement.current?.offsetWidth ?? 0, 0);
+  const bubbleOffsetHeight = useResizeValue(() => bubbleElement.current?.offsetHeight ?? 0, 0);
+  const bubbleOffsetTop = useResizeValue(() => bubbleElement.current?.offsetTop ?? 0, 0);
+  const bubbleOffsetLeft = useResizeValue(() => bubbleElement.current?.offsetLeft ?? 0, 0);
+
+  const containerOffsetWidth = useResizeValue(() => containerElement.current?.offsetWidth ?? 0, 0);
+  const containerOffsetHeight = useResizeValue(() => containerElement.current?.offsetHeight ?? 0, 0);
+  const containerOffsetTop = useResizeValue(() => containerElement.current?.offsetTop ?? 0, 0);
+  const containerOffsetLeft = useResizeValue(() => containerElement.current?.offsetLeft ?? 0, 0);
+
   const updateStyles = useCallback(() => {
     const effectiveOffset = physicsState.current.offset.map(x => x / 2) as Vec2;
 
@@ -153,23 +164,20 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     const clipRounding = Math.max(32 - boundaryWidth, 0);
 
     // get bubble scaleX, scaleY, translateX, translateY
-    const unscaledBubbleWidth = bubbleElement.current?.offsetWidth ?? 0;
-    const scaledBubbleWidth = unscaledBubbleWidth - bubbleLeft - bubbleRight;
+    const scaledBubbleWidth = bubbleOffsetWidth - bubbleLeft - bubbleRight;
+    const scaledBubbleHeight = bubbleOffsetHeight - bubbleTop - bubbleBottom;
 
-    const unscaledBubbleHeight = bubbleElement.current?.offsetHeight ?? 0;
-    const scaledBubbleHeight = unscaledBubbleHeight - bubbleTop - bubbleBottom;
-
-    const scaleX = scaledBubbleWidth / unscaledBubbleWidth;
-    const scaleY = scaledBubbleHeight / unscaledBubbleHeight;
+    const scaleX = scaledBubbleWidth / bubbleOffsetWidth;
+    const scaleY = scaledBubbleHeight / bubbleOffsetHeight;
     const translateX = (bubbleLeft - bubbleRight) / 2;
     const translateY = (bubbleTop - bubbleBottom) / 2;
 
     const bubbleWidth = USE_TRANSFORM
       ? scaledBubbleWidth
-      : bubbleElement.current?.offsetWidth ?? 0;
+      : bubbleOffsetWidth;
     const bubbleHeight = USE_TRANSFORM
       ? scaledBubbleHeight
-      : bubbleElement.current?.offsetHeight ?? 0;
+      : bubbleOffsetHeight;
 
     const clipWidth = bubbleElement.current
       ? `${bubbleWidth - doubleBoundaryWidth}px`
@@ -204,7 +212,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     if (lerpedOffsetIndicatorElement.current) {
       lerpedOffsetIndicatorElement.current.style.transform = `translate(${lerpedOffset.current[0]}px, ${lerpedOffset.current[1]}px)`;
     }
-  }, [boundaryWidth, doubleBoundaryWidth, overkill]);
+  }, [boundaryWidth, doubleBoundaryWidth, overkill, bubbleOffsetWidth, bubbleOffsetHeight]);
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -224,10 +232,10 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         };
 
         const outerRectangle: Rectangle = {
-          x: containerElement.current.offsetLeft + bubbleElement.current.offsetLeft,
-          y: containerElement.current.offsetTop + bubbleElement.current.offsetTop,
-          width: containerElement.current.offsetWidth,
-          height: containerElement.current.offsetHeight,
+          x: containerOffsetLeft + bubbleOffsetLeft,
+          y: containerOffsetTop + bubbleOffsetTop,
+          width: containerOffsetWidth,
+          height: containerOffsetHeight,
         }
 
         const innerRectangle: Rectangle = {
@@ -270,7 +278,18 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     document.addEventListener('mousemove', handleMouseMove);
 
     return () => document.removeEventListener('mousemove', handleMouseMove);
-  }, [boundaryWidth, doubleBoundaryWidth, uuid, doAnimate]);
+  }, [
+    boundaryWidth,
+    doubleBoundaryWidth,
+    uuid,
+    doAnimate,
+    containerOffsetLeft,
+    bubbleOffsetLeft,
+    containerOffsetTop,
+    bubbleOffsetTop,
+    containerOffsetWidth,
+    containerOffsetHeight
+  ]);
 
   const applySpringForce = useCallback((delta: number) => {
     // apply spring physics
