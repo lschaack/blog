@@ -4,19 +4,23 @@ import { DeepPartial } from "@apollo/client/utilities";
 
 import { BlogPost } from "@/app/graphql/graphql";
 import { HoverBubble } from "@/app/components/HoverBubble";
+import { memo } from "react";
 
 type PostBubbleProps = {
   post: DeepPartial<BlogPost>;
   fake?: boolean;
   moveOnMount?: boolean;
 };
-export const PostBubble = ({ post, fake = false, moveOnMount }: PostBubbleProps) => {
+export const PostBubble = memo(function PostBubble({ post, fake = false, moveOnMount }: PostBubbleProps) {
+  const uuid = crypto.randomUUID();
+  console.log('rendering post bubble');
+
   return (
     <Link
       href={fake ? post.slug! : `/posts/${post.slug}`}
       key={post.sys?.id}
     >
-      <HoverBubble boundaryWidth={8} moveOnMount={moveOnMount}>
+      <HoverBubble boundaryWidth={8} moveOnMount={moveOnMount} uuid={uuid}>
         <li className="w-full max-w-96 relative overflow-hidden">
           <div className="relative w-full aspect-2/1">
             {post.heroImage && (
@@ -48,5 +52,5 @@ export const PostBubble = ({ post, fake = false, moveOnMount }: PostBubbleProps)
       </HoverBubble>
     </Link>
   );
-}
+});
 

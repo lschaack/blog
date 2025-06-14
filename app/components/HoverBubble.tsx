@@ -43,6 +43,9 @@ const INSET_OPTIONS = {
   max: INITIAL_OFFSET_RANGE
 };
 
+const BUBBLE_ANIMATION_STRATEGY: 'inset' | 'transform' = 'transform';
+const USE_TRANSFORM = BUBBLE_ANIMATION_STRATEGY as string === 'transform';
+
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
 
@@ -110,6 +113,7 @@ type HoverBubbleProps = {
   bubbleSluggishness?: number;
   seed?: number;
   moveOnMount?: boolean;
+  uuid?: string;
 }
 export const HoverBubble: FC<HoverBubbleProps> = ({
   children,
@@ -117,6 +121,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   bubbleSluggishness: bubbleSluggishness = DEFAULT_OFFSET_LERP_AMOUNT,
   bubbleClassname: indicatorClassname,
   seed,
+  uuid,
   moveOnMount = false,
 }) => {
   useForceRenderOnResize(); // avoid weird offset w/extreme resizing, not really necessary
@@ -140,6 +145,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
+      performance.mark('handler-start', { detail: { uuid } });
+
       if (containerElement.current && bubbleElement.current) {
         const { pageX, pageY } = event;
 
@@ -167,11 +174,13 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           height: outerRectangle.height - doubleBoundaryWidth,
         }
 
+        performance.mark('segment-finder-start', { detail: { uuid } });
         const intersectingSegments = findVectorSegmentsInShape(
           currMousePos,
           prevMousePos,
           new ShapeWithHole(outerRectangle, innerRectangle)
         );
+        performance.mark('segment-finder-end', { detail: { uuid } });
 
         if (intersectingSegments.length) {
           const intersection = intersectingSegments.reduce(
@@ -188,12 +197,16 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           forceUpdate();
         }
       }
+
+      performance.mark('handler-end', { detail: { uuid } });
+      performance.measure('handler-duration', 'handler-start', 'handler-end');
+      performance.measure('segment-finder-duration', 'segment-finder-start', 'segment-finder-end');
     };
 
     document.addEventListener('mousemove', handleMouseMove);
 
     return () => document.removeEventListener('mousemove', handleMouseMove);
-  }, [boundaryWidth, doubleBoundaryWidth]);
+  }, [boundaryWidth, doubleBoundaryWidth, uuid]);
 
   const applySpringForce = useCallback((delta: number) => {
     // apply spring physics
@@ -257,22 +270,43 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   const bubbleBottom = overkill * asymmetricFilter(-lerpedOffset.current[1]) + physicsState.current.inset.bottom;
   const bubbleLeft = overkill * asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left;
   // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
-  // FIXME: at max border, there are rare frames where the clipWidth and clipHeight seem to be slightly too large
   const clipX = bubbleLeft - effectiveOffset[0];
   const clipY = bubbleTop - effectiveOffset[1];
+  const clipRounding = Math.max(32 - boundaryWidth, 0);
+
+  // get bubble scaleX, scaleY, translateX, translateY
+  const unscaledBubbleWidth = bubbleElement.current?.offsetWidth ?? 0;
+  const scaledBubbleWidth = unscaledBubbleWidth - bubbleLeft - bubbleRight;
+
+  const unscaledBubbleHeight = bubbleElement.current?.offsetHeight ?? 0;
+  const scaledBubbleHeight = unscaledBubbleHeight - bubbleTop - bubbleBottom;
+
+  const scaleX = scaledBubbleWidth / unscaledBubbleWidth;
+  const scaleY = scaledBubbleHeight / unscaledBubbleHeight;
+  const translateX = (bubbleLeft - bubbleRight) / 2;
+  const translateY = (bubbleTop - bubbleBottom) / 2;
+
+  const bubbleWidth = USE_TRANSFORM
+    ? scaledBubbleWidth
+    : bubbleElement.current?.offsetWidth ?? 0;
+  const bubbleHeight = USE_TRANSFORM
+    ? scaledBubbleHeight
+    : bubbleElement.current?.offsetHeight ?? 0;
+
   const clipWidth = bubbleElement.current
-    ? `${bubbleElement.current.offsetWidth - doubleBoundaryWidth}px`
+    ? `${bubbleWidth - doubleBoundaryWidth}px`
     : '100%';
   const clipHeight = bubbleElement.current
-    ? `${bubbleElement.current.offsetHeight - doubleBoundaryWidth}px`
+    ? `${bubbleHeight - doubleBoundaryWidth}px`
     : '100%';
-  const clipRounding = Math.max(32 - boundaryWidth, 0);
 
   return (
     <div
       ref={containerElement}
       className={clsx(
         "relative",
+        // TODO: measure effect & test different values
+        "contain-layout",
         indicatorClassname,
       )}
       style={{
@@ -288,23 +322,29 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           "bg-stone-50/80",
           "transition-colors duration-500 ease-out",
           "border-stone-900/30 rounded-4xl overflow-hidden",
+          "inset-0",
           doAnimate && debug && "border-blue-200/75!",
         )}
         style={{
           borderWidth: `${boundaryWidth}px`,
-          willChange: doAnimate ? 'inset' : 'unset',
-          top: bubbleTop,
-          right: bubbleRight,
-          bottom: bubbleBottom,
-          left: bubbleLeft,
+          ...(USE_TRANSFORM ? {
+            willChange: doAnimate ? 'transform' : 'unset',
+            transform: `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`,
+          } : {
+            willChange: doAnimate ? 'inset' : 'unset',
+            top: bubbleTop,
+            right: bubbleRight,
+            bottom: bubbleBottom,
+            left: bubbleLeft,
+          })
         }}
       />
       <div
         className="relative"
         style={{
+          willChange: 'transform, clip-path',
           clipPath: `xywh(${clipX}px ${clipY}px ${clipWidth} ${clipHeight} round ${clipRounding}px)`,
-          left: effectiveOffset[0],
-          top: effectiveOffset[1],
+          transform: `translate(${effectiveOffset[0]}px, ${effectiveOffset[1]}px)`,
         }}
       >
         {children}
