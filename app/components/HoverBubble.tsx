@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, ReactNode, useCallback, useContext, useEffect, useReducer, useRef } from "react";
+import { FC, ReactNode, useCallback, useContext, useEffect, useReducer, useRef, useState } from "react";
 import clsx from "clsx";
 import { SimpleFaker } from '@faker-js/faker';
 
@@ -131,17 +131,82 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   const impulses = useRef<Vec2[]>([]);
   const containerElement = useRef<HTMLDivElement>(null);
   const bubbleElement = useRef<HTMLDivElement>(null);
+  const contentElement = useRef<HTMLDivElement>(null);
+  const offsetIndicatorElement = useRef<HTMLDivElement>(null);
+  const lerpedOffsetIndicatorElement = useRef<HTMLDivElement>(null);
   const overkill = useDebuggableValue('bubbleOverkill', BUBBLE_OVERKILL, true);
   const boundaryWidth = useDebuggableValue('bubbleBorder', _boundaryWidth, true);
   const springStiffness = useDebuggableValue('springStiffness', SPRING_STIFFNESS, true);
   const doubleBoundaryWidth = 2 * boundaryWidth;
-  const [, forceUpdate] = useReducer(x => x + 1, 0);
+  const [doAnimate, setDoAnimate] = useState(moveOnMount);
 
-  const doAnimate = (
-    !physicsState.current.offset.every(component => component === 0)
-    || impulses.current.length > 0
-    || !Object.values(physicsState.current.insetVelocity).every(component => component === 0)
-  );
+  const updateStyles = useCallback(() => {
+    const effectiveOffset = physicsState.current.offset.map(x => x / 2) as Vec2;
+
+    const bubbleTop = overkill * asymmetricFilter(lerpedOffset.current[1]) + physicsState.current.inset.top;
+    const bubbleRight = overkill * asymmetricFilter(-lerpedOffset.current[0]) + physicsState.current.inset.right;
+    const bubbleBottom = overkill * asymmetricFilter(-lerpedOffset.current[1]) + physicsState.current.inset.bottom;
+    const bubbleLeft = overkill * asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left;
+    // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
+    const clipX = bubbleLeft - effectiveOffset[0];
+    const clipY = bubbleTop - effectiveOffset[1];
+    const clipRounding = Math.max(32 - boundaryWidth, 0);
+
+    // get bubble scaleX, scaleY, translateX, translateY
+    const unscaledBubbleWidth = bubbleElement.current?.offsetWidth ?? 0;
+    const scaledBubbleWidth = unscaledBubbleWidth - bubbleLeft - bubbleRight;
+
+    const unscaledBubbleHeight = bubbleElement.current?.offsetHeight ?? 0;
+    const scaledBubbleHeight = unscaledBubbleHeight - bubbleTop - bubbleBottom;
+
+    const scaleX = scaledBubbleWidth / unscaledBubbleWidth;
+    const scaleY = scaledBubbleHeight / unscaledBubbleHeight;
+    const translateX = (bubbleLeft - bubbleRight) / 2;
+    const translateY = (bubbleTop - bubbleBottom) / 2;
+
+    const bubbleWidth = USE_TRANSFORM
+      ? scaledBubbleWidth
+      : bubbleElement.current?.offsetWidth ?? 0;
+    const bubbleHeight = USE_TRANSFORM
+      ? scaledBubbleHeight
+      : bubbleElement.current?.offsetHeight ?? 0;
+
+    const clipWidth = bubbleElement.current
+      ? `${bubbleWidth - doubleBoundaryWidth}px`
+      : '100%';
+    const clipHeight = bubbleElement.current
+      ? `${bubbleHeight - doubleBoundaryWidth}px`
+      : '100%';
+
+    if (bubbleElement.current) {
+      if (USE_TRANSFORM) {
+        bubbleElement.current.style.willChange = 'transform';
+        bubbleElement.current.style.transform = `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`;
+      } else {
+        bubbleElement.current.style.willChange = 'inset';
+        bubbleElement.current.style.top = `${bubbleTop}px`;
+        bubbleElement.current.style.right = `${bubbleRight}px`;
+        bubbleElement.current.style.bottom = `${bubbleBottom}px`;
+        bubbleElement.current.style.left = `${bubbleLeft}px`;
+      }
+    }
+
+    if (contentElement.current) {
+      contentElement.current.style.willChange = 'transform, clip-path';
+      contentElement.current.style.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth} ${clipHeight} round ${clipRounding}px)`;
+      contentElement.current.style.transform = `translate(${effectiveOffset[0]}px, ${effectiveOffset[1]}px)`;
+    }
+
+    if (offsetIndicatorElement.current) {
+      offsetIndicatorElement.current.style.left = `${physicsState.current.offset[0]}px`;
+      offsetIndicatorElement.current.style.top = `${physicsState.current.offset[1]}px`;
+    }
+
+    if (lerpedOffsetIndicatorElement.current) {
+      lerpedOffsetIndicatorElement.current.style.left = `${lerpedOffset.current[0]}px`;
+      lerpedOffsetIndicatorElement.current.style.top = `${lerpedOffset.current[1]}px`;
+    }
+  }, [boundaryWidth, doubleBoundaryWidth, overkill]);
 
   useEffect(() => {
     const handleMouseMove = (event: MouseEvent) => {
@@ -194,7 +259,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           const force = multiplyVec(normed, BUBBLE_STIFFNESS);
 
           impulses.current.push(force);
-          forceUpdate();
+
+          if (!doAnimate) setDoAnimate(true);
         }
       }
 
@@ -206,7 +272,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     document.addEventListener('mousemove', handleMouseMove);
 
     return () => document.removeEventListener('mousemove', handleMouseMove);
-  }, [boundaryWidth, doubleBoundaryWidth, uuid]);
+  }, [boundaryWidth, doubleBoundaryWidth, uuid, doAnimate]);
 
   const applySpringForce = useCallback((delta: number) => {
     // apply spring physics
@@ -245,6 +311,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
     if (shouldStop) {
       physicsState.current = getInitialPhysicsState(false, seed);
+      setDoAnimate(false);
     } else {
       const nextOffset = addVec2(physicsState.current.offset, physicsState.current.velocity) as Vec2;
 
@@ -258,47 +325,10 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
       ) as Vec2;
     }
 
-    forceUpdate();
-  }, [bubbleSluggishness, seed, springStiffness]);
+    updateStyles();
+  }, [bubbleSluggishness, seed, springStiffness, updateStyles]);
 
   useAnimationFrames(applySpringForce, doAnimate);
-
-  const effectiveOffset = physicsState.current.offset.map(x => x / 2) as Vec2;
-
-  const bubbleTop = overkill * asymmetricFilter(lerpedOffset.current[1]) + physicsState.current.inset.top;
-  const bubbleRight = overkill * asymmetricFilter(-lerpedOffset.current[0]) + physicsState.current.inset.right;
-  const bubbleBottom = overkill * asymmetricFilter(-lerpedOffset.current[1]) + physicsState.current.inset.bottom;
-  const bubbleLeft = overkill * asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left;
-  // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
-  const clipX = bubbleLeft - effectiveOffset[0];
-  const clipY = bubbleTop - effectiveOffset[1];
-  const clipRounding = Math.max(32 - boundaryWidth, 0);
-
-  // get bubble scaleX, scaleY, translateX, translateY
-  const unscaledBubbleWidth = bubbleElement.current?.offsetWidth ?? 0;
-  const scaledBubbleWidth = unscaledBubbleWidth - bubbleLeft - bubbleRight;
-
-  const unscaledBubbleHeight = bubbleElement.current?.offsetHeight ?? 0;
-  const scaledBubbleHeight = unscaledBubbleHeight - bubbleTop - bubbleBottom;
-
-  const scaleX = scaledBubbleWidth / unscaledBubbleWidth;
-  const scaleY = scaledBubbleHeight / unscaledBubbleHeight;
-  const translateX = (bubbleLeft - bubbleRight) / 2;
-  const translateY = (bubbleTop - bubbleBottom) / 2;
-
-  const bubbleWidth = USE_TRANSFORM
-    ? scaledBubbleWidth
-    : bubbleElement.current?.offsetWidth ?? 0;
-  const bubbleHeight = USE_TRANSFORM
-    ? scaledBubbleHeight
-    : bubbleElement.current?.offsetHeight ?? 0;
-
-  const clipWidth = bubbleElement.current
-    ? `${bubbleWidth - doubleBoundaryWidth}px`
-    : '100%';
-  const clipHeight = bubbleElement.current
-    ? `${bubbleHeight - doubleBoundaryWidth}px`
-    : '100%';
 
   return (
     <div
@@ -309,9 +339,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
         "contain-layout contain-style",
         indicatorClassname,
       )}
-      style={{
-        padding: `${boundaryWidth}px`,
-      }}
+      style={{ padding: `${boundaryWidth}px`, }}
     >
       {/* NOTE: Separate, absolutely-positioned bubble is necessary to allow separate values for
         * left/right, top/bottom, creating the particular bounciness of the bubble effect. */}
@@ -325,46 +353,15 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           "inset-0",
           doAnimate && debug && "border-blue-200/75!",
         )}
-        style={{
-          borderWidth: `${boundaryWidth}px`,
-          ...(USE_TRANSFORM ? {
-            willChange: doAnimate ? 'transform' : 'unset',
-            transform: `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`,
-          } : {
-            willChange: doAnimate ? 'inset' : 'unset',
-            top: bubbleTop,
-            right: bubbleRight,
-            bottom: bubbleBottom,
-            left: bubbleLeft,
-          })
-        }}
+        style={{ borderWidth: `${boundaryWidth}px` }}
       />
-      <div
-        className="relative"
-        style={{
-          willChange: 'transform, clip-path',
-          clipPath: `xywh(${clipX}px ${clipY}px ${clipWidth} ${clipHeight} round ${clipRounding}px)`,
-          transform: `translate(${effectiveOffset[0]}px, ${effectiveOffset[1]}px)`,
-        }}
-      >
+      <div ref={contentElement} className="relative">
         {children}
       </div>
       {debug && (
         <div className="absolute rounded-full w-2 h-2 bg-black left-1/2 top-1/2 overflow-visible">
-          <div
-            className="absolute rounded-full w-2 h-2 bg-emerald-300"
-            style={{
-              left: physicsState.current.offset[0],
-              top: physicsState.current.offset[1],
-            }}
-          />
-          <div
-            className="absolute rounded-full w-2 h-2 bg-rose-300"
-            style={{
-              left: lerpedOffset.current[0],
-              top: lerpedOffset.current[1],
-            }}
-          />
+          <div ref={offsetIndicatorElement} className="absolute rounded-full w-2 h-2 bg-emerald-300" />
+          <div ref={lerpedOffsetIndicatorElement} className="absolute rounded-full w-2 h-2 bg-rose-300" />
         </div>
       )}
     </div>
