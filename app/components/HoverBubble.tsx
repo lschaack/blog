@@ -152,6 +152,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   const containerOffsetLeft = useResizeValue(() => containerElement.current?.offsetLeft ?? 0, 0);
 
   const updateStyles = useCallback(() => {
+    performance.mark('update-styles-start')
     const effectiveOffset = physicsState.current.offset.map(x => x / 2) as Vec2;
 
     const bubbleTop = overkill * asymmetricFilter(lerpedOffset.current[1]) + physicsState.current.inset.top;
@@ -186,16 +187,14 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
       ? `${bubbleHeight - doubleBoundaryWidth}px`
       : '100%';
 
+    performance.mark('setting-styles-start');
     if (bubbleElement.current) {
       if (USE_TRANSFORM) {
         bubbleElement.current.style.willChange = 'transform';
         bubbleElement.current.style.transform = `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`;
       } else {
         bubbleElement.current.style.willChange = 'inset';
-        bubbleElement.current.style.top = `${bubbleTop}px`;
-        bubbleElement.current.style.right = `${bubbleRight}px`;
-        bubbleElement.current.style.bottom = `${bubbleBottom}px`;
-        bubbleElement.current.style.left = `${bubbleLeft}px`;
+        bubbleElement.current.style.inset = `${bubbleTop}px ${bubbleRight}px ${bubbleBottom}px ${bubbleLeft}px`;
       }
     }
 
@@ -212,6 +211,10 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     if (lerpedOffsetIndicatorElement.current) {
       lerpedOffsetIndicatorElement.current.style.transform = `translate(${lerpedOffset.current[0]}px, ${lerpedOffset.current[1]}px)`;
     }
+    performance.mark('setting-styles-end');
+    performance.measure('setting-styles-duration', 'setting-styles-start', 'setting-styles-end');
+    performance.mark('update-styles-end');
+    performance.measure('update-styles-duration', 'update-styles-start', 'update-styles-end');
   }, [boundaryWidth, doubleBoundaryWidth, overkill, bubbleOffsetWidth, bubbleOffsetHeight]);
 
   useEffect(() => {
@@ -231,11 +234,29 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
           y: pageY - event.movementY
         };
 
+        // FIXME: Find a way to share these with updateStyles for a given cycle
+        const bubbleTop = overkill * asymmetricFilter(lerpedOffset.current[1]) + physicsState.current.inset.top;
+        const bubbleRight = overkill * asymmetricFilter(-lerpedOffset.current[0]) + physicsState.current.inset.right;
+        const bubbleBottom = overkill * asymmetricFilter(-lerpedOffset.current[1]) + physicsState.current.inset.bottom;
+        const bubbleLeft = overkill * asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left;
+
+        // get bubble scaleX, scaleY, translateX, translateY
+        const scaledBubbleWidth = bubbleOffsetWidth - bubbleLeft - bubbleRight;
+        const scaledBubbleHeight = bubbleOffsetHeight - bubbleTop - bubbleBottom;
+
+        const bubbleWidth = USE_TRANSFORM
+          ? scaledBubbleWidth
+          : bubbleOffsetWidth;
+        const bubbleHeight = USE_TRANSFORM
+          ? scaledBubbleHeight
+          : bubbleOffsetHeight;
+        // FIXME: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
         const outerRectangle: Rectangle = {
-          x: containerOffsetLeft + bubbleOffsetLeft,
-          y: containerOffsetTop + bubbleOffsetTop,
-          width: containerOffsetWidth,
-          height: containerOffsetHeight,
+          x: containerOffsetLeft + bubbleLeft,
+          y: containerOffsetTop + bubbleTop,
+          width: bubbleWidth,
+          height: bubbleHeight,
         }
 
         const innerRectangle: Rectangle = {
@@ -279,16 +300,19 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
     return () => document.removeEventListener('mousemove', handleMouseMove);
   }, [
+    uuid,
     boundaryWidth,
     doubleBoundaryWidth,
-    uuid,
     doAnimate,
     containerOffsetLeft,
     bubbleOffsetLeft,
     containerOffsetTop,
     bubbleOffsetTop,
     containerOffsetWidth,
-    containerOffsetHeight
+    containerOffsetHeight,
+    overkill,
+    bubbleOffsetWidth,
+    bubbleOffsetHeight
   ]);
 
   const applySpringForce = useCallback((delta: number) => {
@@ -328,6 +352,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
     if (shouldStop) {
       physicsState.current = getInitialPhysicsState(false, seed);
+      if (bubbleElement.current) bubbleElement.current.style.willChange = 'unset';
+      if (contentElement.current) contentElement.current.style.willChange = 'unset';
       setDoAnimate(false);
     } else {
       const nextOffset = addVec2(physicsState.current.offset, physicsState.current.velocity) as Vec2;
