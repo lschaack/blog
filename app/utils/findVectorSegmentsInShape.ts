@@ -100,19 +100,17 @@ export function findVectorSegmentsInShape(
   // Get all intersection points with hole
   const holeIntersections = lineRectangleIntersections(start, end, shape.hole);
 
-  if (!outerIntersections.length && !holeIntersections.length) return segments;
-
   // Combine all points including start and end
   const allPoints: Point[] = [start, ...outerIntersections, ...holeIntersections, end];
 
   // Sort points along the vector direction
   const dx = end.x - start.x;
   const dy = end.y - start.y;
-  const length = Math.sqrt(dx * dx + dy * dy);
+  const lengthSquared = dx * dx + dy * dy;
 
   allPoints.sort((a, b) => {
-    const ta = ((a.x - start.x) * dx + (a.y - start.y) * dy) / (length * length);
-    const tb = ((b.x - start.x) * dx + (b.y - start.y) * dy) / (length * length);
+    const ta = ((a.x - start.x) * dx + (a.y - start.y) * dy) / lengthSquared;
+    const tb = ((b.x - start.x) * dx + (b.y - start.y) * dy) / lengthSquared;
     return ta - tb;
   });
 

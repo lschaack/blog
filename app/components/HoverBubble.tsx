@@ -125,8 +125,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   moveOnMount = false,
 }) => {
   const { debug } = useContext(DebugContext);
-
-  const [doAnimate, setDoAnimate] = useState(moveOnMount);
+  // always start with at least one frame of animation to set clipPath
+  const [doAnimate, setDoAnimate] = useState(true);
 
   const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
   const lerpedOffset = useRef<Vec2>([0, 0]);
@@ -154,7 +154,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
   const updateStyles = useCallback(() => {
     performance.mark('update-styles-start')
-    const effectiveOffset = physicsState.current.offset.map(x => x / 2) as Vec2;
+    // Avoid shifting the text content too much since it still needs to be readable
+    const contentOffset = physicsState.current.offset.map(x => x / 2) as Vec2;
 
     const bubbleTop = overkill * asymmetricFilter(lerpedOffset.current[1]) + physicsState.current.inset.top;
     const bubbleRight = overkill * asymmetricFilter(-lerpedOffset.current[0]) + physicsState.current.inset.right;
@@ -162,8 +163,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     const bubbleLeft = overkill * asymmetricFilter(lerpedOffset.current[0]) + physicsState.current.inset.left;
 
     // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
-    const clipX = bubbleLeft - effectiveOffset[0];
-    const clipY = bubbleTop - effectiveOffset[1];
+    const clipX = bubbleLeft - contentOffset[0];
+    const clipY = bubbleTop - contentOffset[1];
     const clipRounding = Math.max(32 - boundaryWidth, 0);
 
     const scaledBubbleWidth = bubbleOffsetWidth - bubbleLeft - bubbleRight;
@@ -202,7 +203,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     if (contentElement.current) {
       contentElement.current.style.willChange = 'transform, clip-path';
       contentElement.current.style.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth} ${clipHeight} round ${clipRounding}px)`;
-      contentElement.current.style.transform = `translate(${effectiveOffset[0]}px, ${effectiveOffset[1]}px)`;
+      contentElement.current.style.transform = `translate(${contentOffset[0]}px, ${contentOffset[1]}px)`;
     }
 
     if (offsetIndicatorElement.current) {

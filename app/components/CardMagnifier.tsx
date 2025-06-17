@@ -351,7 +351,7 @@ export const CardMagnifier: FC<CardMagnifierProps> = ({
         setIsMouseOver(false);
       }}
       onTouchMove={handleTouchMove}
-      className={clsx('relative touch-none', className)}
+      className={clsx('relative touch-none contain-layout', className)}
       style={{
         [isVertical ? 'maxHeight' : 'maxWidth']: unscaledLength,
         justifySelf: isVertical ? 'center' : 'unset',

@@ -1,6 +1,15 @@
 'use client';
 
-import { createContext, FC, useContext, useEffect, useMemo, useReducer, useState } from "react";
+import {
+  createContext,
+  FC,
+  useContext,
+  useEffect,
+  useMemo,
+  useReducer,
+  useState,
+  useCallback
+} from "react";
 import { throttle } from "lodash";
 import { createNoise2D } from "simplex-noise";
 
@@ -10,9 +19,12 @@ import { LabelledValue } from "@/app/components/LabelledValue";
 type AnimatedVariableValue = string | number | boolean;
 export const AnimatedVariablesContext = createContext(new Map<string, AnimatedVariableValue>());
 
+type ForceContinuousAnimation = (value: AnimatedVariableValue | undefined) => boolean;
+
 const useAnimatedVariable = (
   varName: string,
-  forceContinuousAnimation?: (value: AnimatedVariableValue | undefined) => boolean
+  // NOTE: should be memoized to avoid persistent frame cancellation
+  forceContinuousAnimation?: ForceContinuousAnimation,
 ) => {
   const animatedVariables = useContext(AnimatedVariablesContext);
   const [value, setValue] = useState(animatedVariables.get(varName));
@@ -32,7 +44,7 @@ const useAnimatedVariable = (
     let frame = requestAnimationFrame(displayNextValue);
 
     return () => cancelAnimationFrame(frame);
-  });
+  }, [animatedVariables, forceContinuousAnimation, varName]);
 
   return value;
 }
@@ -79,12 +91,14 @@ export const AnimatedVariableMeter: FC<AnimatedVariableMeterProps> = ({
   const noiseY = useMemo(() => createNoise2D(), []);
   const noiseRot = useMemo(() => createNoise2D(), []);
 
+  // avoid unnecessary animation frames when screenshake is 0
+  const getDoAnimate = useCallback<ForceContinuousAnimation>(
+    val => typeof val === 'number' && val > 1,
+    []
+  );
+
   // default value avoids hydration error
-  const value = useAnimatedVariable(
-    varName,
-    // avoid unnecessary animation frames when screenshake is 0
-    val => typeof val === 'number' && val > 1
-  ) ?? defaultValue;
+  const value = useAnimatedVariable(varName, getDoAnimate) ?? defaultValue;
 
   if (value && typeof value !== 'number') {
     logMeterTypeError(varName, value);
