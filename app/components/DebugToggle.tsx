@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useContext } from "react";
+import { FC, memo, useContext } from "react";
 import { Bug, BugOff } from "lucide-react";
 import clsx from 'clsx';
 
@@ -9,7 +9,7 @@ import { DebugContext } from "@/app/components/DebugContext";
 type DebugToggleProps = {
   className?: string;
 }
-export const DebugToggle: FC<DebugToggleProps> = ({ className }) => {
+export const DebugToggle: FC<DebugToggleProps> = memo(function DebugToggle({ className }) {
   const { debug, setDebug } = useContext(DebugContext);
 
   return (
@@ -38,4 +38,4 @@ export const DebugToggle: FC<DebugToggleProps> = ({ className }) => {
       </label>
     </button>
   );
-}
+});

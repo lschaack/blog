@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import startCase from "lodash/startCase";
 import { faker } from '@faker-js/faker';
 import { DeepPartial } from "@apollo/client/utilities";
@@ -9,9 +9,10 @@ import { BlogPost } from "@/app/graphql/graphql";
 import { PostBubble } from "@/app/components/PostBubble";
 import { HoverBubble } from "@/app/components/HoverBubble";
 import { BubbleConfigurator } from "@/app/components/BubbleConfigurator";
-import { DebugMenu } from "@/app/components/DebugMenu";
 
 const MAX_FAKE_POSTS = 8;
+
+const THREE_FRAMES = 3000 / 60;
 
 const pregenerated = new Map<number, DeepPartial<BlogPost>>();
 
@@ -39,7 +40,11 @@ const getMockPost = (seed: number): DeepPartial<BlogPost> => {
 
 export const FakePostList = () => {
   const [howMany, setHowMany] = useState(0);
-  const fakePosts = Array.from({ length: howMany }).map((_, i) => getMockPost(i));
+  const fakePosts = useMemo(() => (
+    Array
+      .from({ length: MAX_FAKE_POSTS })
+      .map((_, i) => getMockPost(i))
+  ), []);
 
   const handleAddPosts = useCallback(() => {
     const intervalId = setInterval(() => {
@@ -50,14 +55,13 @@ export const FakePostList = () => {
 
         return next;
       });
-    }, 50);
+    }, THREE_FRAMES);
   }, []);
 
   return (
     <>
-      <DebugMenu>
-        <BubbleConfigurator />
-      </DebugMenu>
+      <BubbleConfigurator />
+
       {howMany === 0 ? (
         <div onClick={handleAddPosts}>
           <HoverBubble>
@@ -70,7 +74,7 @@ export const FakePostList = () => {
         </div>
       ) : (
         <>
-          {fakePosts.map(post => post!.slug && (
+          {fakePosts.slice(0, howMany).map(post => post!.slug && (
             <PostBubble
               post={post}
               key={post.sys!.id}

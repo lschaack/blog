@@ -11,8 +11,6 @@ type PostBubbleContentsProps = {
   post: DeepPartial<BlogPost>;
 }
 const PostBubbleContents = memo(function PostBubbleContents({ post }: PostBubbleContentsProps) {
-  console.log('rendering PostBubbleContents');
-
   return (
     <li className="w-full max-w-96 relative overflow-hidden">
       <div className="relative w-full aspect-2/1">
@@ -49,14 +47,21 @@ type PostBubbleProps = {
   post: DeepPartial<BlogPost>;
   fake?: boolean;
   moveOnMount?: boolean;
+  className?: string;
 };
-export const PostBubble = memo(function PostBubble({ post, fake = false, moveOnMount }: PostBubbleProps) {
+export const PostBubble = memo(function PostBubble({
+  post,
+  fake = false,
+  moveOnMount,
+  className
+}: PostBubbleProps) {
   const uuid = simpleFaker.string.uuid();
 
   return (
     <Link
       href={fake ? post.slug! : `/posts/${post.slug}`}
       key={post.sys?.id}
+      className={className}
     >
       <HoverBubble boundaryWidth={8} moveOnMount={moveOnMount} uuid={uuid}>
         <PostBubbleContents post={post} />

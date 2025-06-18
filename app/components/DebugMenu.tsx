@@ -1,4 +1,4 @@
-import { FC, ReactNode, useContext, useEffect, useState } from "react";
+import { FC, memo, ReactNode, useContext, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { DebugContext } from "@/app/components/DebugContext";
@@ -7,7 +7,7 @@ import { DebugToggle } from "@/app/components/DebugToggle";
 type DebugMenuProps = {
   children?: ReactNode;
 }
-export const DebugMenu: FC<DebugMenuProps> = ({ children }) => {
+export const DebugMenu: FC<DebugMenuProps> = memo(function DebugMenu({ children }) {
   const { debug } = useContext(DebugContext);
   const [menuElement, setMenuElement] = useState<HTMLElement | null>(null);
 
@@ -30,4 +30,4 @@ export const DebugMenu: FC<DebugMenuProps> = ({ children }) => {
   } else {
     return null;
   }
-}
+});

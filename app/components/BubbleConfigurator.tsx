@@ -1,11 +1,12 @@
 "use client"
 
-import { useContext } from "react";
+import { memo, useContext } from "react";
 
 import { InputRange } from "@/app/components/InputRange";
 import { DebugContext } from "@/app/components/DebugContext";
 import { BUBBLE_OVERKILL, SPRING_STIFFNESS } from "@/app/utils/physicsConsts";
 import { Button } from "@/app/components/Button";
+import { DebugMenu } from "@/app/components/DebugMenu";
 
 const INIT_STATE = {
   springStiffness: SPRING_STIFFNESS,
@@ -13,11 +14,11 @@ const INIT_STATE = {
   bubbleBorder: 8,
 }
 
-export const BubbleConfigurator = () => {
+export const BubbleConfigurator = memo(function BubbleConfigurator() {
   const { debugMenuOptions, setDebugMenuOptions } = useContext(DebugContext);
 
   return (
-    <>
+    <DebugMenu>
       <li>
         <InputRange
           label="Stiffness"
@@ -76,7 +77,6 @@ export const BubbleConfigurator = () => {
           )}
         />
       </li>
-    </>
+    </DebugMenu>
   );
-}
-
+});
