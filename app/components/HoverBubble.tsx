@@ -8,7 +8,6 @@ import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
 import {
   findVectorSegmentsInShape,
   Point,
-  Rectangle,
   ShapeWithHole
 } from "@/app/utils/findVectorSegmentsInShapeOptimized";
 import { lerp } from "@/app/utils/lerp";
@@ -137,6 +136,17 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   const offsetIndicatorElement = useRef<HTMLDivElement>(null);
   const lerpedOffsetIndicatorElement = useRef<HTMLDivElement>(null);
 
+  const bubbleTop = useRef(0);
+  const bubbleRight = useRef(0);
+  const bubbleBottom = useRef(0);
+  const bubbleLeft = useRef(0);
+
+  const scaledBubbleWidth = useRef(0);
+  const scaledBubbleHeight = useRef(0);
+
+  const bubbleWidth = useRef(0);
+  const bubbleHeight = useRef(0);
+
   const overkill = useDebuggableValue('bubbleOverkill', BUBBLE_OVERKILL, true);
   const springStiffness = useDebuggableValue('springStiffness', SPRING_STIFFNESS, true);
   const boundaryWidth = useDebuggableValue('bubbleBorder', _boundaryWidth, true);
@@ -144,16 +154,9 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
 
   const bubbleOffsetWidth = useResizeValue(() => bubbleElement.current?.offsetWidth ?? 0, 0);
   const bubbleOffsetHeight = useResizeValue(() => bubbleElement.current?.offsetHeight ?? 0, 0);
-  const bubbleOffsetTop = useResizeValue(() => bubbleElement.current?.offsetTop ?? 0, 0);
-  const bubbleOffsetLeft = useResizeValue(() => bubbleElement.current?.offsetLeft ?? 0, 0);
 
-  const containerOffsetWidth = useResizeValue(() => containerElement.current?.offsetWidth ?? 0, 0);
-  const containerOffsetHeight = useResizeValue(() => containerElement.current?.offsetHeight ?? 0, 0);
   const containerOffsetTop = useResizeValue(() => containerElement.current?.offsetTop ?? 0, 0);
   const containerOffsetLeft = useResizeValue(() => containerElement.current?.offsetLeft ?? 0, 0);
-
-  const windowInnerWidth = useResizeValue(() => window.innerWidth ?? 0, 0);
-  const windowInnerHeight = useResizeValue(() => window.innerHeight ?? 0, 0);
 
   const updateStyles = useCallback(() => {
     performance.mark('update-styles-start');
@@ -171,49 +174,48 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     } = physicsState.current;
 
     const [lerpedOffsetX, lerpedOffsetY] = lerpedOffset.current;
-    const bubble = bubbleElement.current;
 
     // Avoid shifting the text content too much since it still needs to be readable
     const contentOffsetX = offsetX / 2;
     const contentOffsetY = offsetY / 2;
 
-    const bubbleTop = overkill * asymmetricFilter(lerpedOffsetY) + top;
-    const bubbleRight = overkill * asymmetricFilter(-lerpedOffsetX) + right;
-    const bubbleBottom = overkill * asymmetricFilter(-lerpedOffsetY) + bottom;
-    const bubbleLeft = overkill * asymmetricFilter(lerpedOffsetX) + left;
+    bubbleTop.current = overkill * asymmetricFilter(lerpedOffsetY) + top;
+    bubbleRight.current = overkill * asymmetricFilter(-lerpedOffsetX) + right;
+    bubbleBottom.current = overkill * asymmetricFilter(-lerpedOffsetY) + bottom;
+    bubbleLeft.current = overkill * asymmetricFilter(lerpedOffsetX) + left;
 
-    const scaledBubbleWidth = bubbleOffsetWidth - bubbleLeft - bubbleRight;
-    const scaledBubbleHeight = bubbleOffsetHeight - bubbleTop - bubbleBottom;
+    scaledBubbleWidth.current = bubbleOffsetWidth - bubbleLeft.current - bubbleRight.current;
+    scaledBubbleHeight.current = bubbleOffsetHeight - bubbleTop.current - bubbleBottom.current;
 
-    const bubbleWidth = USE_TRANSFORM
-      ? scaledBubbleWidth
+    bubbleWidth.current = USE_TRANSFORM
+      ? scaledBubbleWidth.current
       : bubbleOffsetWidth;
-    const bubbleHeight = USE_TRANSFORM
-      ? scaledBubbleHeight
+    bubbleHeight.current = USE_TRANSFORM
+      ? scaledBubbleHeight.current
       : bubbleOffsetHeight;
 
     // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
-    const clipX = bubbleLeft - contentOffsetX;
-    const clipY = bubbleTop - contentOffsetY;
+    const clipX = bubbleLeft.current - contentOffsetX;
+    const clipY = bubbleTop.current - contentOffsetY;
     const clipRounding = Math.max(32 - boundaryWidth, 0);
 
-    const scaleX = scaledBubbleWidth / bubbleOffsetWidth;
-    const scaleY = scaledBubbleHeight / bubbleOffsetHeight;
-    const translateX = (bubbleLeft - bubbleRight) / 2;
-    const translateY = (bubbleTop - bubbleBottom) / 2;
+    const scaleX = scaledBubbleWidth.current / bubbleOffsetWidth;
+    const scaleY = scaledBubbleHeight.current / bubbleOffsetHeight;
+    const translateX = (bubbleLeft.current - bubbleRight.current) / 2;
+    const translateY = (bubbleTop.current - bubbleBottom.current) / 2;
 
-    const clipWidth = bubble
-      ? `${bubbleWidth - doubleBoundaryWidth}px`
+    const clipWidth = bubbleElement.current
+      ? `${bubbleWidth.current - doubleBoundaryWidth}px`
       : '100%';
-    const clipHeight = bubble
-      ? `${bubbleHeight - doubleBoundaryWidth}px`
+    const clipHeight = bubbleElement.current
+      ? `${bubbleHeight.current - doubleBoundaryWidth}px`
       : '100%';
 
-    if (bubble) {
+    if (bubbleElement.current) {
       if (USE_TRANSFORM) {
-        bubble.style.transform = `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`;
+        bubbleElement.current.style.transform = `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`;
       } else {
-        bubble.style.inset = `${bubbleTop}px ${bubbleRight}px ${bubbleBottom}px ${bubbleLeft}px`;
+        bubbleElement.current.style.inset = `${bubbleTop}px ${bubbleRight}px ${bubbleBottom}px ${bubbleLeft}px`;
       }
     }
 
@@ -234,54 +236,42 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
   }, [boundaryWidth, doubleBoundaryWidth, overkill, bubbleOffsetWidth, bubbleOffsetHeight]);
 
   useEffect(() => {
+    const currMousePos: Point = { x: 0, y: 0 };
+    const prevMousePos: Point = { x: 0, y: 0 };
+    const outerRectangle = {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    };
+    const innerRectangle = {
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+    };
+
     const handleMouseMove = (event: MouseEvent) => {
       performance.mark('handler-start')
 
       if (containerElement.current && bubbleElement.current) {
         const { pageX, pageY, movementX, movementY } = event;
-        const { top, right, bottom, left } = physicsState.current.inset;
-        const [lerpedOffsetX, lerpedOffsetY] = lerpedOffset.current;
 
-        const currMousePos: Point = {
-          x: pageX,
-          y: pageY
-        };
+        currMousePos.x = pageX;
+        currMousePos.y = pageY;
 
-        const prevMousePos: Point = {
-          x: pageX - movementX,
-          y: pageY - movementY
-        };
+        prevMousePos.x = pageX - movementX;
+        prevMousePos.y = pageY - movementY;
 
-        // FIXME: Find a way to avoid repeating this is updateStyles
-        const bubbleTop = overkill * asymmetricFilter(lerpedOffsetY) + top;
-        const bubbleRight = overkill * asymmetricFilter(-lerpedOffsetX) + right;
-        const bubbleBottom = overkill * asymmetricFilter(-lerpedOffsetY) + bottom;
-        const bubbleLeft = overkill * asymmetricFilter(lerpedOffsetX) + left;
+        outerRectangle.x = containerOffsetLeft + bubbleLeft.current;
+        outerRectangle.y = containerOffsetTop + bubbleTop.current;
+        outerRectangle.width = bubbleWidth.current;
+        outerRectangle.height = bubbleHeight.current;
 
-        const scaledBubbleWidth = bubbleOffsetWidth - bubbleLeft - bubbleRight;
-        const scaledBubbleHeight = bubbleOffsetHeight - bubbleTop - bubbleBottom;
-
-        const bubbleWidth = USE_TRANSFORM
-          ? scaledBubbleWidth
-          : bubbleOffsetWidth;
-        const bubbleHeight = USE_TRANSFORM
-          ? scaledBubbleHeight
-          : bubbleOffsetHeight;
-        // FIXME: ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-        const outerRectangle: Rectangle = {
-          x: containerOffsetLeft + bubbleLeft,
-          y: containerOffsetTop + bubbleTop,
-          width: bubbleWidth,
-          height: bubbleHeight,
-        }
-
-        const innerRectangle: Rectangle = {
-          x: outerRectangle.x + boundaryWidth,
-          y: outerRectangle.y + boundaryWidth,
-          width: outerRectangle.width - doubleBoundaryWidth,
-          height: outerRectangle.height - doubleBoundaryWidth,
-        }
+        innerRectangle.x = outerRectangle.x + boundaryWidth;
+        innerRectangle.y = outerRectangle.y + boundaryWidth;
+        innerRectangle.width = outerRectangle.width - doubleBoundaryWidth;
+        innerRectangle.height = outerRectangle.height - doubleBoundaryWidth;
 
         const intersectingSegments = findVectorSegmentsInShape(
           currMousePos,
@@ -316,16 +306,8 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
     doubleBoundaryWidth,
     doAnimate,
     containerOffsetLeft,
-    bubbleOffsetLeft,
     containerOffsetTop,
-    bubbleOffsetTop,
-    containerOffsetWidth,
-    containerOffsetHeight,
     overkill,
-    bubbleOffsetWidth,
-    bubbleOffsetHeight,
-    windowInnerWidth,
-    windowInnerHeight
   ]);
 
   const applySpringForce = useCallback((delta: number) => {
