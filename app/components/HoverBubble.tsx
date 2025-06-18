@@ -295,9 +295,7 @@ export const HoverBubble: FC<HoverBubbleProps> = ({
             [0, 0] as Vec2
           );
           const clamped = clampVec(intersection, -doubleBoundaryWidth, doubleBoundaryWidth);
-          const normed: Vec2 = [clamped[0] / windowInnerWidth, clamped[1] / windowInnerHeight];
-
-          const force = multiplyVec(normed, BUBBLE_STIFFNESS);
+          const force = multiplyVec(clamped, BUBBLE_STIFFNESS);
 
           impulses.current.push(force);
 
