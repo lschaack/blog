@@ -1,8 +1,8 @@
 "use client";
 
-import { FC, memo, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { FC, memo, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import { SimpleFaker } from '@faker-js/faker';
+import { SimpleFaker } from "@faker-js/faker";
 
 import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
 import {
@@ -19,8 +19,6 @@ import {
   SPRING_STIFFNESS,
   getSpringForceVec,
   applyForcesVec,
-  getSpringForce,
-  applyForces,
 } from "@/app/utils/physicsConsts";
 import {
   addVec2,
@@ -32,10 +30,11 @@ import {
 } from "@/app/utils/vector";
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
-import { useResizeValue } from "@/app/hooks/useResizeValue";
+import { useResizeEffect, useResizeValue } from "@/app/hooks/useResizeValue";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
+const INDICATOR_AMPLIFICATION = 5;
 const INITIAL_OFFSET_RANGE = 60;
 const INSET_OPTIONS = {
   min: -INITIAL_OFFSET_RANGE,
@@ -44,22 +43,19 @@ const INSET_OPTIONS = {
 
 const BUBBLE_ANIMATION_STRATEGY: 'inset' | 'transform' = 'transform';
 const USE_TRANSFORM = BUBBLE_ANIMATION_STRATEGY as string === 'transform';
+const INIT_DOM_MEASUREMENTS = {
+  bubbleOffsetWidth: 0,
+  bubbleOffsetHeight: 0,
+  containerOffsetTop: 0,
+  containerOffsetLeft: 0,
+}
 
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
 
-type Inset = {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
-
 type PhysicsState = {
   offset: Vec2;
   velocity: Vec2;
-  inset: Inset;
-  insetVelocity: Inset;
 }
 
 const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState => {
@@ -72,35 +68,11 @@ const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState 
         faker.number.int(INSET_OPTIONS)
       ],
       velocity: [0, 0],
-      inset: {
-        top: faker.number.int(INSET_OPTIONS),
-        right: faker.number.int(INSET_OPTIONS),
-        bottom: faker.number.int(INSET_OPTIONS),
-        left: faker.number.int(INSET_OPTIONS),
-      },
-      insetVelocity: {
-        top: 0,
-        right: 0,
-        bottom: 0,
-        left: 0,
-      },
     }
   } else {
     return {
       offset: [0, 0],
       velocity: [0, 0],
-      inset: {
-        top: 0,
-        right: 0,
-        bottom: 0,
-        left: 0,
-      },
-      insetVelocity: {
-        top: 0,
-        right: 0,
-        bottom: 0,
-        left: 0,
-      },
     }
   }
 };
@@ -114,7 +86,6 @@ type HoverBubbleProps = {
   moveOnMount?: boolean;
   uuid?: string;
 }
-// TODO: I dunno if this memo is actually doing anything...
 export const HoverBubble: FC<HoverBubbleProps> = memo(
   function HoverBubble({
     children,
@@ -154,24 +125,32 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const boundaryWidth = useDebuggableValue('bubbleBorder', _boundaryWidth, true);
     const doubleBoundaryWidth = 2 * boundaryWidth;
 
-    const getBubbleOffsetWidth = useCallback(() => bubbleElement.current?.offsetWidth ?? 0, []);
-    const getBubbleOffsetHeight = useCallback(() => bubbleElement.current?.offsetHeight ?? 0, []);
-    const bubbleOffsetWidth = useResizeValue(getBubbleOffsetWidth, 0);
-    const bubbleOffsetHeight = useResizeValue(getBubbleOffsetHeight, 0);
+    const updateDomMeasurements = useCallback(() => ({
+      bubbleOffsetWidth: bubbleElement.current?.offsetWidth ?? 0,
+      bubbleOffsetHeight: bubbleElement.current?.offsetHeight ?? 0,
+      containerOffsetTop: containerElement.current?.offsetTop ?? 0,
+      containerOffsetLeft: containerElement.current?.offsetLeft ?? 0,
+    }), []);
 
-    const getContainerOffsetTop = useCallback(() => containerElement.current?.offsetTop ?? 0, []);
-    const getContainerOffsetLeft = useCallback(() => containerElement.current?.offsetLeft ?? 0, []);
-    const containerOffsetTop = useResizeValue(getContainerOffsetTop, 0);
-    const containerOffsetLeft = useResizeValue(getContainerOffsetLeft, 0);
+    const getElementsToObserve = useCallback(() => [
+      containerElement.current?.parentElement,
+      window?.document.documentElement
+    ], []);
+
+    const {
+      bubbleOffsetWidth,
+      bubbleOffsetHeight,
+      containerOffsetTop,
+      containerOffsetLeft,
+    } = useResizeValue(
+      updateDomMeasurements,
+      INIT_DOM_MEASUREMENTS,
+      getElementsToObserve,
+      50,
+    );
 
     const updateStyles = useCallback(() => {
       const {
-        inset: {
-          top,
-          right,
-          bottom,
-          left,
-        },
         offset: [
           offsetX,
           offsetY,
@@ -184,10 +163,10 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       const contentOffsetX = offsetX / 2;
       const contentOffsetY = offsetY / 2;
 
-      bubbleTop.current = overkill * asymmetricFilter(lerpedOffsetY) + top;
-      bubbleRight.current = overkill * asymmetricFilter(-lerpedOffsetX) + right;
-      bubbleBottom.current = overkill * asymmetricFilter(-lerpedOffsetY) + bottom;
-      bubbleLeft.current = overkill * asymmetricFilter(lerpedOffsetX) + left;
+      bubbleTop.current = overkill * asymmetricFilter(lerpedOffsetY);
+      bubbleRight.current = overkill * asymmetricFilter(-lerpedOffsetX);
+      bubbleBottom.current = overkill * asymmetricFilter(-lerpedOffsetY);
+      bubbleLeft.current = overkill * asymmetricFilter(lerpedOffsetX);
 
       scaledBubbleWidth.current = bubbleOffsetWidth - bubbleLeft.current - bubbleRight.current;
       scaledBubbleHeight.current = bubbleOffsetHeight - bubbleTop.current - bubbleBottom.current;
@@ -230,11 +209,11 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       }
 
       if (offsetIndicatorElement.current) {
-        offsetIndicatorElement.current.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+        offsetIndicatorElement.current.style.transform = `translate(${offsetX * INDICATOR_AMPLIFICATION}px, ${offsetY * INDICATOR_AMPLIFICATION}px)`;
       }
 
       if (lerpedOffsetIndicatorElement.current) {
-        lerpedOffsetIndicatorElement.current.style.transform = `translate(${lerpedOffsetX}px, ${lerpedOffsetY}px)`;
+        lerpedOffsetIndicatorElement.current.style.transform = `translate(${lerpedOffsetX * INDICATOR_AMPLIFICATION}px, ${lerpedOffsetY * INDICATOR_AMPLIFICATION}px)`;
       }
     }, [boundaryWidth, doubleBoundaryWidth, overkill, bubbleOffsetWidth, bubbleOffsetHeight]);
 
@@ -285,6 +264,9 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
               (total, segment) => addVec2(total, segmentToVec2(segment)),
               [0, 0] as Vec2
             );
+            // Minimize literal edge case where moving perfectly along the boundary causes
+            // an absolutely massive force to be imparted on the bubble. This is essentially
+            // true to the idealized physics, but it definitely looks wrong
             const clamped = clampVec(intersection, -doubleBoundaryWidth, doubleBoundaryWidth);
             const force = multiplyVec(clamped, BUBBLE_STIFFNESS);
 
@@ -322,25 +304,10 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
       impulses.current = [];
 
-      // apply spring physics to inset
-      for (const property in physicsState.current.inset) {
-        const key = property as keyof Inset; // TODO: this is stupid
-        const springForce = getSpringForce(physicsState.current.inset[key], springStiffness);
-
-        physicsState.current.insetVelocity[key] = applyForces(
-          physicsState.current.insetVelocity[key],
-          [springForce],
-          delta
-        );
-
-        physicsState.current.inset[key] += physicsState.current.insetVelocity[key];
-      }
-
       // jump to still at low values or else this will basically never end
       const shouldStop = (
         Math.abs(magnitude(physicsState.current.velocity)) < VELOCITY_ANIMATION_THRESHOLD
         && physicsState.current.offset.every(component => Math.abs(component) < OFFSET_ANIMATION_THRESHOLD)
-        && Object.values(physicsState.current.insetVelocity).every(component => Math.abs(component) < VELOCITY_ANIMATION_THRESHOLD)
       );
 
       if (shouldStop) {
@@ -361,6 +328,9 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
       updateStyles();
     }, [bubbleSluggishness, seed, springStiffness, updateStyles]);
+
+    // NOTE: Very important line that doesn't have a great place to go
+    useResizeEffect(updateStyles, getElementsToObserve, false, 50);
 
     useAnimationFrames(
       applySpringForce,

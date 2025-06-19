@@ -38,7 +38,7 @@ const RealPostList = async () => {
 export default async function Home() {
   return (
     <div>
-      <ul className="flex flex-wrap justify-center gap-4 max-w-7xl">
+      <ul className="grid sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 justify-center items-center gap-4 max-w-7xl">
         <RealPostList />
         <FakePostList />
       </ul>
