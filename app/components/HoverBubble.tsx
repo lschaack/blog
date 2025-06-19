@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, memo, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { FC, memo, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { SimpleFaker } from "@faker-js/faker";
 
@@ -17,8 +17,8 @@ import {
   OFFSET_ANIMATION_THRESHOLD,
   BUBBLE_OVERKILL,
   SPRING_STIFFNESS,
-  getSpringForceVec,
-  applyForcesVec,
+  getSpringForceVec2,
+  getDecay,
 } from "@/app/utils/physicsConsts";
 import {
   addVec2,
@@ -31,10 +31,11 @@ import {
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
 import { useResizeEffect, useResizeValue } from "@/app/hooks/useResizeValue";
+import { zipWith } from "lodash";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
-const INDICATOR_AMPLIFICATION = 5;
+const INDICATOR_AMPLIFICATION = 3;
 const INITIAL_OFFSET_RANGE = 60;
 const INSET_OPTIONS = {
   min: -INITIAL_OFFSET_RANGE,
@@ -55,6 +56,7 @@ const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
 
 type PhysicsState = {
   offset: Vec2;
+  lerpedOffset: Vec2;
   velocity: Vec2;
 }
 
@@ -67,15 +69,34 @@ const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState 
         faker.number.int(INSET_OPTIONS),
         faker.number.int(INSET_OPTIONS)
       ],
+      lerpedOffset: [0, 0],
       velocity: [0, 0],
     }
   } else {
     return {
       offset: [0, 0],
+      lerpedOffset: [0, 0],
       velocity: [0, 0],
     }
   }
 };
+
+export const consumeForces = (velocity: Vec2, forces: Vec2[], delta: number) => {
+  const decay = getDecay(delta);
+
+  const totalForce: Vec2 = [0, 0];
+  while (forces.length) {
+    const [x, y] = forces.pop()!;
+    totalForce[0] += x;
+    totalForce[1] += y;
+  }
+  const integratedForce = multiplyVec(totalForce, delta);
+
+  const decayed = multiplyVec(velocity, decay);
+  const applied = addVec2(decayed, integratedForce);
+
+  return applied;
+}
 
 type HoverBubbleProps = {
   children?: ReactNode;
@@ -101,7 +122,6 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const [doAnimate, setDoAnimate] = useState(true);
 
     const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
-    const lerpedOffset = useRef<Vec2>([0, 0]);
     const impulses = useRef<Vec2[]>([]);
     const containerElement = useRef<HTMLDivElement>(null);
     const bubbleElement = useRef<HTMLDivElement>(null);
@@ -155,9 +175,11 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
           offsetX,
           offsetY,
         ],
+        lerpedOffset: [
+          lerpedOffsetX,
+          lerpedOffsetY
+        ],
       } = physicsState.current;
-
-      const [lerpedOffsetX, lerpedOffsetY] = lerpedOffset.current;
 
       // Avoid shifting the text content too much since it still needs to be readable
       const contentOffsetX = offsetX / 2;
@@ -292,17 +314,15 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
     const applySpringForce = useCallback((delta: number) => {
       // apply spring physics
-      const springForce = getSpringForceVec(physicsState.current.offset, springStiffness);
+      const springForce = getSpringForceVec2(physicsState.current.offset, springStiffness);
 
       impulses.current.push(springForce);
 
-      physicsState.current.velocity = applyForcesVec(
+      physicsState.current.velocity = consumeForces(
         physicsState.current.velocity,
         impulses.current,
         delta
       );
-
-      impulses.current = [];
 
       // jump to still at low values or else this will basically never end
       const shouldStop = (
@@ -311,23 +331,22 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       );
 
       if (shouldStop) {
-        physicsState.current = getInitialPhysicsState(false, seed);
         setDoAnimate(false);
+        physicsState.current = getInitialPhysicsState();
       } else {
         const nextOffset = addVec2(physicsState.current.offset, physicsState.current.velocity) as Vec2;
+        const nextLerpedOffset = zipWith(
+          physicsState.current.lerpedOffset,
+          physicsState.current.offset,
+          (a, b) => lerp(a, b, bubbleSluggishness)
+        ) as Vec2;
 
         physicsState.current.offset = nextOffset;
-        lerpedOffset.current = lerpedOffset.current.map(
-          (component, i) => lerp(
-            component,
-            physicsState.current.offset[i],
-            bubbleSluggishness,
-          )
-        ) as Vec2;
+        physicsState.current.lerpedOffset = nextLerpedOffset;
       }
 
       updateStyles();
-    }, [bubbleSluggishness, seed, springStiffness, updateStyles]);
+    }, [bubbleSluggishness, springStiffness, updateStyles]);
 
     // NOTE: Very important line that doesn't have a great place to go
     useResizeEffect(updateStyles, getElementsToObserve, false, 50);
