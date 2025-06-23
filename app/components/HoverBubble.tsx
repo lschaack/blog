@@ -43,8 +43,6 @@ const INSET_OPTIONS = {
   max: INITIAL_OFFSET_RANGE
 };
 
-const BUBBLE_ANIMATION_STRATEGY: 'inset' | 'transform' = 'transform';
-const USE_TRANSFORM = BUBBLE_ANIMATION_STRATEGY as string === 'transform';
 const INIT_DOM_MEASUREMENTS = {
   bubbleOffsetWidth: 0,
   bubbleOffsetHeight: 0,
@@ -59,6 +57,18 @@ type PhysicsState = {
   offset: Vec2;
   lerpedOffset: Vec2;
   velocity: Vec2;
+}
+
+type Inset = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+}
+
+type BubbleMeta = Inset & {
+  width: number;
+  height: number;
 }
 
 const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState => {
@@ -119,33 +129,32 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     moveOnMount = false,
   }) {
     const { debug } = useContext(DebugContext);
+
+    const overkill = useDebuggableValue('bubbleOverkill', BUBBLE_OVERKILL, true);
+    const springStiffness = useDebuggableValue('springStiffness', SPRING_STIFFNESS, true);
+    const boundaryWidth = useDebuggableValue('bubbleBorder', _boundaryWidth, true);
+    const doubleBoundaryWidth = 2 * boundaryWidth;
+
     // always start with at least one frame of animation to set clipPath
-    const [doAnimate, setDoAnimate] = useState(true);
+    const [isUpdatePending, setIsUpdatePending] = useState(true);
     const isVisible = useIsVisible();
 
-    const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
-    const impulses = useRef<Vec2[]>([]);
     const containerElement = useRef<HTMLDivElement>(null);
     const bubbleElement = useRef<HTMLDivElement>(null);
     const contentElement = useRef<HTMLDivElement>(null);
     const offsetIndicatorElement = useRef<HTMLDivElement>(null);
     const lerpedOffsetIndicatorElement = useRef<HTMLDivElement>(null);
 
-    const bubbleTop = useRef(0);
-    const bubbleRight = useRef(0);
-    const bubbleBottom = useRef(0);
-    const bubbleLeft = useRef(0);
-
-    const scaledBubbleWidth = useRef(0);
-    const scaledBubbleHeight = useRef(0);
-
-    const bubbleWidth = useRef(0);
-    const bubbleHeight = useRef(0);
-
-    const overkill = useDebuggableValue('bubbleOverkill', BUBBLE_OVERKILL, true);
-    const springStiffness = useDebuggableValue('springStiffness', SPRING_STIFFNESS, true);
-    const boundaryWidth = useDebuggableValue('bubbleBorder', _boundaryWidth, true);
-    const doubleBoundaryWidth = 2 * boundaryWidth;
+    const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
+    const impulses = useRef<Vec2[]>([]);
+    const bubbleMeta = useRef<BubbleMeta>({
+      top: 0,
+      right: 0,
+      bottom: 0,
+      left: 0,
+      width: 0,
+      height: 0,
+    })
 
     const updateDomMeasurements = useCallback(() => ({
       bubbleOffsetWidth: bubbleElement.current?.offsetWidth ?? 0,
@@ -183,52 +192,37 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         ],
       } = physicsState.current;
 
-      // Avoid shifting the text content too much since it still needs to be readable
-      const contentOffsetX = offsetX / 2;
-      const contentOffsetY = offsetY / 2;
-
-      bubbleTop.current = overkill * asymmetricFilter(lerpedOffsetY);
-      bubbleRight.current = overkill * asymmetricFilter(-lerpedOffsetX);
-      bubbleBottom.current = overkill * asymmetricFilter(-lerpedOffsetY);
-      bubbleLeft.current = overkill * asymmetricFilter(lerpedOffsetX);
-
-      scaledBubbleWidth.current = bubbleOffsetWidth - bubbleLeft.current - bubbleRight.current;
-      scaledBubbleHeight.current = bubbleOffsetHeight - bubbleTop.current - bubbleBottom.current;
-
-      bubbleWidth.current = USE_TRANSFORM
-        ? scaledBubbleWidth.current
-        : bubbleOffsetWidth;
-      bubbleHeight.current = USE_TRANSFORM
-        ? scaledBubbleHeight.current
-        : bubbleOffsetHeight;
-
-      // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
-      const clipX = bubbleLeft.current - contentOffsetX;
-      const clipY = bubbleTop.current - contentOffsetY;
-      const clipRounding = Math.max(32 - boundaryWidth, 0);
-
-      const scaleX = scaledBubbleWidth.current / bubbleOffsetWidth;
-      const scaleY = scaledBubbleHeight.current / bubbleOffsetHeight;
-      const translateX = (bubbleLeft.current - bubbleRight.current) / 2;
-      const translateY = (bubbleTop.current - bubbleBottom.current) / 2;
-
-      const clipWidth = bubbleElement.current
-        ? `${bubbleWidth.current - doubleBoundaryWidth}px`
-        : '100%';
-      const clipHeight = bubbleElement.current
-        ? `${bubbleHeight.current - doubleBoundaryWidth}px`
-        : '100%';
+      const {
+        top: bubbleTop,
+        right: bubbleRight,
+        bottom: bubbleBottom,
+        left: bubbleLeft,
+        width: bubbleWidth,
+        height: bubbleHeight,
+      } = bubbleMeta.current;
 
       if (bubbleElement.current) {
-        if (USE_TRANSFORM) {
-          bubbleElement.current.style.transform = `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`;
-        } else {
-          bubbleElement.current.style.inset = `${bubbleTop}px ${bubbleRight}px ${bubbleBottom}px ${bubbleLeft}px`;
-        }
+        const scaleX = bubbleWidth / bubbleOffsetWidth;
+        const scaleY = bubbleHeight / bubbleOffsetHeight;
+        const translateX = (bubbleLeft - bubbleRight) / 2;
+        const translateY = (bubbleTop - bubbleBottom) / 2;
+
+        bubbleElement.current.style.transform = `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`;
       }
 
       if (contentElement.current) {
-        contentElement.current.style.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth} ${clipHeight} round ${clipRounding}px)`;
+        // Avoid shifting the text content too much since it still needs to be readable
+        const contentOffsetX = offsetX / 2;
+        const contentOffsetY = offsetY / 2;
+
+        // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
+        const clipX = bubbleLeft - contentOffsetX;
+        const clipY = bubbleTop - contentOffsetY;
+        const clipWidth = bubbleWidth - doubleBoundaryWidth;
+        const clipHeight = bubbleHeight - doubleBoundaryWidth;
+        const clipRounding = Math.max(32 - boundaryWidth, 0);
+
+        contentElement.current.style.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
         contentElement.current.style.transform = `translate(${contentOffsetX}px, ${contentOffsetY}px)`;
       }
 
@@ -239,7 +233,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       if (lerpedOffsetIndicatorElement.current) {
         lerpedOffsetIndicatorElement.current.style.transform = `translate(${lerpedOffsetX * INDICATOR_AMPLIFICATION}px, ${lerpedOffsetY * INDICATOR_AMPLIFICATION}px)`;
       }
-    }, [boundaryWidth, doubleBoundaryWidth, overkill, bubbleOffsetWidth, bubbleOffsetHeight]);
+    }, [boundaryWidth, doubleBoundaryWidth, bubbleOffsetWidth, bubbleOffsetHeight]);
 
     useEffect(() => {
       const currMousePos: Point = { x: 0, y: 0 };
@@ -258,46 +252,51 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       };
 
       const handleMouseMove = (event: MouseEvent) => {
-        if (containerElement.current && bubbleElement.current) {
-          const { pageX, pageY, movementX, movementY } = event;
+        const { pageX, pageY, movementX, movementY } = event;
 
-          currMousePos.x = pageX;
-          currMousePos.y = pageY;
+        currMousePos.x = pageX;
+        currMousePos.y = pageY;
 
-          prevMousePos.x = pageX - movementX;
-          prevMousePos.y = pageY - movementY;
+        prevMousePos.x = pageX - movementX;
+        prevMousePos.y = pageY - movementY;
 
-          outerRectangle.x = containerOffsetLeft + bubbleLeft.current;
-          outerRectangle.y = containerOffsetTop + bubbleTop.current;
-          outerRectangle.width = bubbleWidth.current;
-          outerRectangle.height = bubbleHeight.current;
+        const {
+          top: bubbleTop,
+          left: bubbleLeft,
+          width: bubbleWidth,
+          height: bubbleHeight,
+        } = bubbleMeta.current;
 
-          innerRectangle.x = outerRectangle.x + boundaryWidth;
-          innerRectangle.y = outerRectangle.y + boundaryWidth;
-          innerRectangle.width = outerRectangle.width - doubleBoundaryWidth;
-          innerRectangle.height = outerRectangle.height - doubleBoundaryWidth;
+        outerRectangle.x = containerOffsetLeft + bubbleLeft;
+        outerRectangle.y = containerOffsetTop + bubbleTop;
+        outerRectangle.width = bubbleWidth;
+        outerRectangle.height = bubbleHeight;
 
-          const intersectingSegments = findVectorSegmentsInShape(
-            currMousePos,
-            prevMousePos,
-            new ShapeWithHole(outerRectangle, innerRectangle)
+        innerRectangle.x = outerRectangle.x + boundaryWidth;
+        innerRectangle.y = outerRectangle.y + boundaryWidth;
+        innerRectangle.width = outerRectangle.width - doubleBoundaryWidth;
+        innerRectangle.height = outerRectangle.height - doubleBoundaryWidth;
+
+        const intersectingSegments = findVectorSegmentsInShape(
+          currMousePos,
+          prevMousePos,
+          new ShapeWithHole(outerRectangle, innerRectangle)
+        );
+
+        if (intersectingSegments.length) {
+          const intersection = intersectingSegments.reduce(
+            (total, segment) => addVec2(total, segmentToVec2(segment)),
+            [0, 0] as Vec2
           );
+          // Minimize literal edge case where moving perfectly along the boundary causes
+          // an absolutely massive force to be imparted on the bubble. This is essentially
+          // true to the idealized physics, but it definitely looks wrong
+          const clamped = clampVec(intersection, -doubleBoundaryWidth, doubleBoundaryWidth);
+          const force = multiplyVec(clamped, BUBBLE_STIFFNESS);
 
-          if (intersectingSegments.length) {
-            const intersection = intersectingSegments.reduce(
-              (total, segment) => addVec2(total, segmentToVec2(segment)),
-              [0, 0] as Vec2
-            );
-            // Minimize literal edge case where moving perfectly along the boundary causes
-            // an absolutely massive force to be imparted on the bubble. This is essentially
-            // true to the idealized physics, but it definitely looks wrong
-            const clamped = clampVec(intersection, -doubleBoundaryWidth, doubleBoundaryWidth);
-            const force = multiplyVec(clamped, BUBBLE_STIFFNESS);
+          impulses.current.push(force);
 
-            impulses.current.push(force);
-
-            if (!doAnimate) setDoAnimate(true);
-          }
+          if (!isUpdatePending) setIsUpdatePending(true);
         }
       };
 
@@ -308,13 +307,13 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       uuid,
       boundaryWidth,
       doubleBoundaryWidth,
-      doAnimate,
+      isUpdatePending,
       containerOffsetLeft,
       containerOffsetTop,
       overkill,
     ]);
 
-    const applySpringForce = useCallback((delta: number) => {
+    const updatePhysicsState = useCallback((delta: number) => {
       // apply spring physics
       const springForce = getSpringForceVec2(physicsState.current.offset, springStiffness);
 
@@ -333,7 +332,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       );
 
       if (shouldStop) {
-        setDoAnimate(false);
+        setIsUpdatePending(false);
         physicsState.current = getInitialPhysicsState();
       } else {
         const nextOffset = addVec2(physicsState.current.offset, physicsState.current.velocity) as Vec2;
@@ -346,21 +345,44 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         physicsState.current.offset = nextOffset;
         physicsState.current.lerpedOffset = nextLerpedOffset;
       }
+    }, [bubbleSluggishness, springStiffness]);
 
-      updateStyles();
-    }, [bubbleSluggishness, springStiffness, updateStyles]);
+    const updateBubbleMeta = useCallback(() => {
+      const [lerpedOffsetX, lerpedOffsetY] = physicsState.current.lerpedOffset;
 
-    // NOTE: Very important line that doesn't have a great place to go
+      const nextTop = overkill * asymmetricFilter(lerpedOffsetY);
+      const nextRight = overkill * asymmetricFilter(-lerpedOffsetX);
+      const nextBottom = overkill * asymmetricFilter(-lerpedOffsetY);
+      const nextLeft = overkill * asymmetricFilter(lerpedOffsetX);
+
+      bubbleMeta.current.top = nextTop;
+      bubbleMeta.current.right = nextRight;
+      bubbleMeta.current.bottom = nextBottom;
+      bubbleMeta.current.left = nextLeft;
+
+      bubbleMeta.current.width = bubbleOffsetWidth - nextLeft - nextRight;
+      bubbleMeta.current.height = bubbleOffsetHeight - nextTop - nextBottom;
+
+    }, [bubbleOffsetHeight, bubbleOffsetWidth, overkill]);
+
+    // Call updateStyles on resize even when not currently animating
+    // since resize can affect things like clip path
     useResizeEffect(updateStyles, getElementsToObserve, false, 50);
 
-    useAnimationFrames(
-      applySpringForce,
-      // Offset values are always undefined on first render, and shouldn't be accessed directly
-      // in applySpringForce since DOM property access is so slow. This avoids essentially all
-      // animation frame cancellations, which are expensive during my ridiculous FakePostList
-      // pop-in effect. Kinda weird, but makes a sizeable difference on slow CPUs
-      doAnimate && Boolean(bubbleOffsetWidth) && Boolean(bubbleOffsetHeight) && isVisible
-    );
+    // NOTE: All ref state updates are performed in their corresponding update_ method
+    const update = useCallback((delta: number) => {
+      updatePhysicsState(delta);
+      updateBubbleMeta();
+      updateStyles();
+    }, [updatePhysicsState, updateBubbleMeta, updateStyles]);
+
+    // Offset values are always undefined on first render, and shouldn't be accessed directly
+    // in applySpringForce since DOM property access is so slow. This avoids essentially all
+    // animation frame cancellations, which are expensive during my ridiculous FakePostList
+    // pop-in effect. Kinda weird, but makes a sizeable difference on slow CPUs
+    const doAnimate = isUpdatePending && Boolean(bubbleOffsetWidth) && Boolean(bubbleOffsetHeight) && isVisible;
+
+    useAnimationFrames(update, doAnimate);
 
     return (
       <div
@@ -382,15 +404,15 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
             "transition-colors duration-500 ease-out",
             "inset-0",
             "bg-stone-300/25",
-            doAnimate && debug && "bg-blue-300/75!",
-            doAnimate && "will-change-transform",
+            isUpdatePending && debug && "bg-blue-300/75!",
+            isUpdatePending && "will-change-transform",
           )}
         >
           <div className="absolute rounded-3xl bg-stone-50/95 mix-blend-lighten" style={{ inset: `${boundaryWidth}px` }} />
         </div>
         <div
           ref={contentElement}
-          className={clsx("relative", doAnimate && "will-change-transform")}
+          className={clsx("relative", isUpdatePending && "will-change-transform")}
         >
           {children}
         </div>
