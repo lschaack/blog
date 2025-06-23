@@ -3,6 +3,7 @@
 import { FC, memo, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { SimpleFaker } from "@faker-js/faker";
+import { zipWith } from "lodash";
 
 import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
 import {
@@ -31,7 +32,7 @@ import {
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
 import { useResizeEffect, useResizeValue } from "@/app/hooks/useResizeValue";
-import { zipWith } from "lodash";
+import { useIsVisible } from "@/app/hooks/useIsVisible";
 
 const DEFAULT_BOUNDARY_WIDTH = 8;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
@@ -120,6 +121,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const { debug } = useContext(DebugContext);
     // always start with at least one frame of animation to set clipPath
     const [doAnimate, setDoAnimate] = useState(true);
+    const isVisible = useIsVisible();
 
     const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
     const impulses = useRef<Vec2[]>([]);
@@ -357,7 +359,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       // in applySpringForce since DOM property access is so slow. This avoids essentially all
       // animation frame cancellations, which are expensive during my ridiculous FakePostList
       // pop-in effect. Kinda weird, but makes a sizeable difference on slow CPUs
-      doAnimate && Boolean(bubbleOffsetWidth) && Boolean(bubbleOffsetHeight)
+      doAnimate && Boolean(bubbleOffsetWidth) && Boolean(bubbleOffsetHeight) && isVisible
     );
 
     return (

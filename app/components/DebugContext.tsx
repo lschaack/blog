@@ -18,8 +18,6 @@ export const DebugContext = createContext<TDebugContext>({
   setDebugMenuOptions: () => undefined,
 });
 
-const isDev = process.env.NODE_ENV === 'development';
-
 export const DebugProvider: FC<{ children?: ReactNode }> = ({ children }) => {
   const [debug, setDebug] = useState(false);
   const [debugMenuOptions, setDebugMenuOptions] = useState<DebugOptions>({});
