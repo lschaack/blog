@@ -7,10 +7,11 @@ import { zipWith } from "lodash";
 
 import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
 import {
-  findVectorSegmentsInShape,
+  findVectorSegmentsInRoundedShape,
   Point,
-  ShapeWithHole
-} from "@/app/utils/findVectorSegmentsInShapeOptimized";
+  RoundedRectangle,
+  RoundedShapeWithHole,
+} from "@/app/utils/findVectorSegmentsInShape";
 import { lerp } from "@/app/utils/lerp";
 import {
   VELOCITY_ANIMATION_THRESHOLD,
@@ -83,7 +84,10 @@ const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState 
         faker.number.int(INSET_OPTIONS),
         faker.number.int(INSET_OPTIONS)
       ],
-      lerpedOffset: [0, 0],
+      lerpedOffset: [
+        faker.number.int(INSET_OPTIONS),
+        faker.number.int(INSET_OPTIONS)
+      ],
       velocity: [0, 0],
     }
   } else {
@@ -116,20 +120,31 @@ type HoverBubbleProps = {
   children?: ReactNode;
   boundary?: number;
   rounding?: number;
-  bubbleSluggishness?: number;
+  sluggishness?: number;
   seed?: number;
   moveOnMount?: boolean;
   uuid?: string;
+  className?: string;
+  bubbleClassname?: string;
+  innerBubbleClassname?: string;
+  insetFilter?: (direction: number) => number;
+  // TODO: This property is pretty hacked together for the demos
+  showIndicators?: boolean;
 }
 export const HoverBubble: FC<HoverBubbleProps> = memo(
   function HoverBubble({
     children,
     boundary: _boundary = BUBBLE_BOUNDARY,
     rounding = DEFAULT_ROUNDING,
-    bubbleSluggishness: bubbleSluggishness = DEFAULT_OFFSET_LERP_AMOUNT,
+    sluggishness = DEFAULT_OFFSET_LERP_AMOUNT,
     seed,
     uuid,
     moveOnMount = false,
+    className,
+    bubbleClassname,
+    innerBubbleClassname,
+    insetFilter = asymmetricFilter,
+    showIndicators = false,
   }) {
     const { debug } = useContext(DebugContext);
 
@@ -245,17 +260,19 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     useEffect(() => {
       const currMousePos: Point = { x: 0, y: 0 };
       const prevMousePos: Point = { x: 0, y: 0 };
-      const outerRectangle = {
+      const outerRectangle: RoundedRectangle = {
         x: 0,
         y: 0,
         width: 0,
         height: 0,
+        radius: 0,
       };
-      const innerRectangle = {
+      const innerRectangle: RoundedRectangle = {
         x: 0,
         y: 0,
         width: 0,
         height: 0,
+        radius: 0,
       };
 
       const handleMouseMove = (event: MouseEvent) => {
@@ -278,16 +295,18 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         outerRectangle.y = containerOffsetTop + bubbleTop;
         outerRectangle.width = bubbleWidth;
         outerRectangle.height = bubbleHeight;
+        outerRectangle.radius = rounding + boundary;
 
         innerRectangle.x = outerRectangle.x + boundary;
         innerRectangle.y = outerRectangle.y + boundary;
         innerRectangle.width = outerRectangle.width - doubleBoundary;
         innerRectangle.height = outerRectangle.height - doubleBoundary;
+        innerRectangle.radius = rounding;
 
-        const intersectingSegments = findVectorSegmentsInShape(
+        const intersectingSegments = findVectorSegmentsInRoundedShape(
           currMousePos,
           prevMousePos,
-          new ShapeWithHole(outerRectangle, innerRectangle)
+          new RoundedShapeWithHole(outerRectangle, innerRectangle)
         );
 
         if (intersectingSegments.length) {
@@ -318,6 +337,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       containerOffsetLeft,
       containerOffsetTop,
       overkill,
+      rounding
     ]);
 
     const updatePhysicsState = useCallback((delta: number) => {
@@ -346,21 +366,21 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         const nextLerpedOffset = zipWith(
           physicsState.current.lerpedOffset,
           physicsState.current.offset,
-          (a, b) => lerp(a, b, bubbleSluggishness)
+          (a, b) => lerp(a, b, sluggishness)
         ) as Vec2;
 
         physicsState.current.offset = nextOffset;
         physicsState.current.lerpedOffset = nextLerpedOffset;
       }
-    }, [bubbleSluggishness, springStiffness]);
+    }, [sluggishness, springStiffness]);
 
     const updateBubbleMeta = useCallback(() => {
       const [lerpedOffsetX, lerpedOffsetY] = physicsState.current.lerpedOffset;
 
-      const nextTop = overkill * asymmetricFilter(lerpedOffsetY);
-      const nextRight = overkill * asymmetricFilter(-lerpedOffsetX);
-      const nextBottom = overkill * asymmetricFilter(-lerpedOffsetY);
-      const nextLeft = overkill * asymmetricFilter(lerpedOffsetX);
+      const nextTop = overkill * insetFilter(lerpedOffsetY);
+      const nextRight = overkill * insetFilter(-lerpedOffsetX);
+      const nextBottom = overkill * insetFilter(-lerpedOffsetY);
+      const nextLeft = overkill * insetFilter(lerpedOffsetX);
 
       bubbleMeta.current.top = nextTop;
       bubbleMeta.current.right = nextRight;
@@ -370,7 +390,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       bubbleMeta.current.width = bubbleOffsetWidth - nextLeft - nextRight;
       bubbleMeta.current.height = bubbleOffsetHeight - nextTop - nextBottom;
 
-    }, [bubbleOffsetHeight, bubbleOffsetWidth, overkill]);
+    }, [bubbleOffsetHeight, bubbleOffsetWidth, insetFilter, overkill]);
 
     // NOTE: All ref state updates are performed in their corresponding update_ method
     const update = useCallback((delta: number) => {
@@ -398,7 +418,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     return (
       <div
         ref={containerElement}
-        className="relative"
+        className={clsx("relative", className)}
         style={{ padding: boundary }}
       >
         {/* NOTE: Separate, absolutely-positioned bubble is necessary to allow separate values for
@@ -406,16 +426,23 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         <div
           ref={bubbleElement}
           className={clsx(
-            "absolute rounded-4xl overflow-hidden",
+            "absolute overflow-hidden",
             "transition-colors duration-500 ease-out",
             "inset-0",
             "bg-stone-300/25",
             isUpdatePending && debug && "bg-blue-300/75!",
             isUpdatePending && "will-change-transform",
+            bubbleClassname,
           )}
+          style={{
+            borderRadius: rounding + boundary
+          }}
         >
           <div
-            className="absolute rounded-3xl bg-stone-50/95 mix-blend-lighten"
+            className={clsx(
+              "absolute bg-stone-50/95 mix-blend-lighten",
+              innerBubbleClassname
+            )}
             style={{
               inset: boundary,
               borderRadius: rounding,
@@ -428,10 +455,12 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         >
           {children}
         </div>
-        {debug && (
-          <div className="absolute rounded-full w-4 h-4 left-1/2 top-1/2 overflow-visible mix-blend-lighten bg-blue-300/100">
-            <div ref={offsetIndicatorElement} className="absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-green-300/100" />
-            <div ref={lerpedOffsetIndicatorElement} className="absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-red-300/100" />
+        {(debug || showIndicators) && (
+          <div className="absolute w-4 h-4 top-1/2 left-1/2">
+            <div className="relative rounded-full w-4 h-4 -left-1/2 -top-1/2 overflow-visible mix-blend-lighten bg-blue-300/100">
+              <div ref={offsetIndicatorElement} className="absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-green-300/100" />
+              <div ref={lerpedOffsetIndicatorElement} className="absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-red-300/100" />
+            </div>
           </div>
         )}
       </div>

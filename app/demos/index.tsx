@@ -9,6 +9,10 @@ export const DEMOS = {
   'dock-magnification-accurate-shift': lazy(() => import('./dock-magnification/accurate-shift')),
   'dock-magnification-elegant-shift': lazy(() => import('./dock-magnification/elegant-shift')),
   'dock-magnification-size-diff-wrong': lazy(() => import('./dock-magnification/size-diff-wrong')),
+  'bubble-basic': lazy(() => import('./bubble/basic')),
+  'bubble-with-hole': lazy(() => import('./bubble/with-hole')),
+  'bubble-with-lerp': lazy(() => import('./bubble/with-lerp')),
+  'bubble-complete': lazy(() => import('./bubble/complete')),
   'test': lazy(() => import('./test')),
 }
 
