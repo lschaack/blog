@@ -5,7 +5,6 @@ import clsx from "clsx";
 import { SimpleFaker } from "@faker-js/faker";
 import { zipWith } from "lodash";
 
-import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
 import {
   findVectorSegmentsInRoundedShape,
   Point,
@@ -35,6 +34,7 @@ import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
 import { useResizeValue } from "@/app/hooks/useResizeValue";
 import { useIsVisible } from "@/app/hooks/useIsVisible";
+import { useBatchedAnimation } from "@/app/hooks/useBatchedAnimation";
 
 const faker = new SimpleFaker();
 
@@ -405,7 +405,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     // pop-in effect. Kinda weird, but makes a sizeable difference on slow CPUs
     const doAnimate = isUpdatePending && Boolean(bubbleOffsetWidth) && Boolean(bubbleOffsetHeight) && isVisible;
 
-    useAnimationFrames(update, doAnimate);
+    useBatchedAnimation(update, doAnimate);
 
     // NOTE: This is kind of a dirty hack to update at least once per render
     useEffect(() => {

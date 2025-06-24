@@ -3,6 +3,7 @@ import { getAllPosts } from "@/app/queries/getAllPosts";
 import { GetAllPostsQuery } from "@/app/graphql/graphql";
 import { PostBubble } from "@/app/components/PostBubble";
 import { FakePostList } from "@/app/components/FakePostList";
+import { BatchedAnimationContextProvider } from "@/app/hooks/useBatchedAnimation";
 
 // TODO: Basic pagination logic, not gonna matter for a super long time
 const LIMIT = 20;
@@ -39,8 +40,10 @@ export default async function Home() {
   return (
     <div>
       <ul className="grid sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 justify-center items-center gap-4 max-w-7xl">
-        <RealPostList />
-        <FakePostList />
+        <BatchedAnimationContextProvider>
+          <RealPostList />
+          <FakePostList />
+        </BatchedAnimationContextProvider>
       </ul>
     </div>
   );
