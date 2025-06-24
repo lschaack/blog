@@ -4,14 +4,14 @@ import { memo, useContext } from "react";
 
 import { InputRange } from "@/app/components/InputRange";
 import { DebugContext } from "@/app/components/DebugContext";
-import { BUBBLE_OVERKILL, SPRING_STIFFNESS } from "@/app/utils/physicsConsts";
+import { BUBBLE_BOUNDARY, BUBBLE_OVERKILL, SPRING_STIFFNESS } from "@/app/utils/physicsConsts";
 import { Button } from "@/app/components/Button";
 import { DebugMenu } from "@/app/components/DebugMenu";
 
 const INIT_STATE = {
   springStiffness: SPRING_STIFFNESS,
   bubbleOverkill: BUBBLE_OVERKILL,
-  bubbleBorder: 8,
+  bubbleBoundary: BUBBLE_BOUNDARY,
 }
 
 export const BubbleConfigurator = memo(function BubbleConfigurator() {
@@ -41,7 +41,7 @@ export const BubbleConfigurator = memo(function BubbleConfigurator() {
           color="rose"
           id="overkill"
           min={0.1}
-          max={5}
+          max={3}
           step={0.1}
           value={debugMenuOptions.bubbleOverkill as number ?? INIT_STATE.bubbleOverkill}
           onChange={value => setDebugMenuOptions(prev => ({
@@ -58,10 +58,10 @@ export const BubbleConfigurator = memo(function BubbleConfigurator() {
           min={1}
           max={32}
           step={1}
-          value={debugMenuOptions.bubbleBorder as number ?? INIT_STATE.bubbleBorder}
+          value={debugMenuOptions.bubbleBoundary as number ?? INIT_STATE.bubbleBoundary}
           onChange={value => setDebugMenuOptions(prev => ({
             ...prev,
-            bubbleBorder: value,
+            bubbleBoundary: value,
           }))}
         />
       </li>

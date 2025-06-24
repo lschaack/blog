@@ -6,6 +6,7 @@ import { simpleFaker } from '@faker-js/faker';
 
 import { BlogPost } from "@/app/graphql/graphql";
 import { HoverBubble } from "@/app/components/HoverBubble";
+import clsx from "clsx";
 
 type PostBubbleContentsProps = {
   post: DeepPartial<BlogPost>;
@@ -61,9 +62,9 @@ export const PostBubble = memo(function PostBubble({
     <Link
       href={fake ? post.slug! : `/posts/${post.slug}`}
       key={post.sys?.id}
-      className={className}
+      className={clsx(fake && 'pointer-events-none', className)}
     >
-      <HoverBubble boundaryWidth={8} moveOnMount={moveOnMount} uuid={uuid}>
+      <HoverBubble moveOnMount={moveOnMount} uuid={uuid}>
         <PostBubbleContents post={post} />
       </HoverBubble>
     </Link>

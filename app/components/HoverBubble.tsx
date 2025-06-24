@@ -20,6 +20,7 @@ import {
   SPRING_STIFFNESS,
   getSpringForceVec2,
   getDecay,
+  BUBBLE_BOUNDARY,
 } from "@/app/utils/physicsConsts";
 import {
   addVec2,
@@ -31,12 +32,14 @@ import {
 } from "@/app/utils/vector";
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
-import { useResizeEffect, useResizeValue } from "@/app/hooks/useResizeValue";
+import { useResizeValue } from "@/app/hooks/useResizeValue";
 import { useIsVisible } from "@/app/hooks/useIsVisible";
 
-const DEFAULT_BOUNDARY_WIDTH = 8;
+const faker = new SimpleFaker();
+
+const DEFAULT_ROUNDING = 24;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
-const INDICATOR_AMPLIFICATION = 3;
+const INDICATOR_AMPLIFICATION = 2;
 const INITIAL_OFFSET_RANGE = 60;
 const INSET_OPTIONS = {
   min: -INITIAL_OFFSET_RANGE,
@@ -72,9 +75,9 @@ type BubbleMeta = Inset & {
 }
 
 const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState => {
-  const faker = new SimpleFaker({ seed });
-
   if (randomize) {
+    if (seed) faker.seed(seed);
+
     return {
       offset: [
         faker.number.int(INSET_OPTIONS),
@@ -111,8 +114,8 @@ export const consumeForces = (velocity: Vec2, forces: Vec2[], delta: number) => 
 
 type HoverBubbleProps = {
   children?: ReactNode;
-  boundaryWidth?: number;
-  bubbleClassname?: boolean;
+  boundary?: number;
+  rounding?: number;
   bubbleSluggishness?: number;
   seed?: number;
   moveOnMount?: boolean;
@@ -121,9 +124,9 @@ type HoverBubbleProps = {
 export const HoverBubble: FC<HoverBubbleProps> = memo(
   function HoverBubble({
     children,
-    boundaryWidth: _boundaryWidth = DEFAULT_BOUNDARY_WIDTH,
+    boundary: _boundary = BUBBLE_BOUNDARY,
+    rounding = DEFAULT_ROUNDING,
     bubbleSluggishness: bubbleSluggishness = DEFAULT_OFFSET_LERP_AMOUNT,
-    bubbleClassname: indicatorClassname,
     seed,
     uuid,
     moveOnMount = false,
@@ -132,8 +135,8 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
     const overkill = useDebuggableValue('bubbleOverkill', BUBBLE_OVERKILL, true);
     const springStiffness = useDebuggableValue('springStiffness', SPRING_STIFFNESS, true);
-    const boundaryWidth = useDebuggableValue('bubbleBorder', _boundaryWidth, true);
-    const doubleBoundaryWidth = 2 * boundaryWidth;
+    const boundary = useDebuggableValue('bubbleBoundary', _boundary, true);
+    const doubleBoundary = 2 * boundary;
 
     // always start with at least one frame of animation to set clipPath
     const [isUpdatePending, setIsUpdatePending] = useState(true);
@@ -201,12 +204,12 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         height: bubbleHeight,
       } = bubbleMeta.current;
 
-      if (bubbleElement.current) {
-        const scaleX = bubbleWidth / bubbleOffsetWidth;
-        const scaleY = bubbleHeight / bubbleOffsetHeight;
-        const translateX = (bubbleLeft - bubbleRight) / 2;
-        const translateY = (bubbleTop - bubbleBottom) / 2;
+      const scaleX = bubbleWidth / bubbleOffsetWidth;
+      const scaleY = bubbleHeight / bubbleOffsetHeight;
+      const translateX = (bubbleLeft - bubbleRight) / 2;
+      const translateY = (bubbleTop - bubbleBottom) / 2;
 
+      if (bubbleElement.current) {
         bubbleElement.current.style.transform = `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`;
       }
 
@@ -215,12 +218,16 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         const contentOffsetX = offsetX / 2;
         const contentOffsetY = offsetY / 2;
 
+        const distortionX = scaleX - 1;
+        const distortionY = scaleY - 1;
+        const scaleAvg = (scaleX + scaleY) / 2;
+
         // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
-        const clipX = bubbleLeft - contentOffsetX;
-        const clipY = bubbleTop - contentOffsetY;
-        const clipWidth = bubbleWidth - doubleBoundaryWidth;
-        const clipHeight = bubbleHeight - doubleBoundaryWidth;
-        const clipRounding = Math.max(32 - boundaryWidth, 0);
+        const clipX = bubbleLeft - contentOffsetX + boundary * distortionX;
+        const clipY = bubbleTop - contentOffsetY + boundary * distortionY;
+        const clipWidth = Math.max(bubbleWidth - doubleBoundary * scaleX, 0);
+        const clipHeight = Math.max(bubbleHeight - doubleBoundary * scaleY, 0);
+        const clipRounding = rounding * scaleAvg;
 
         contentElement.current.style.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
         contentElement.current.style.transform = `translate(${contentOffsetX}px, ${contentOffsetY}px)`;
@@ -233,7 +240,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       if (lerpedOffsetIndicatorElement.current) {
         lerpedOffsetIndicatorElement.current.style.transform = `translate(${lerpedOffsetX * INDICATOR_AMPLIFICATION}px, ${lerpedOffsetY * INDICATOR_AMPLIFICATION}px)`;
       }
-    }, [boundaryWidth, doubleBoundaryWidth, bubbleOffsetWidth, bubbleOffsetHeight]);
+    }, [bubbleOffsetWidth, bubbleOffsetHeight, doubleBoundary, rounding, boundary]);
 
     useEffect(() => {
       const currMousePos: Point = { x: 0, y: 0 };
@@ -272,10 +279,10 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         outerRectangle.width = bubbleWidth;
         outerRectangle.height = bubbleHeight;
 
-        innerRectangle.x = outerRectangle.x + boundaryWidth;
-        innerRectangle.y = outerRectangle.y + boundaryWidth;
-        innerRectangle.width = outerRectangle.width - doubleBoundaryWidth;
-        innerRectangle.height = outerRectangle.height - doubleBoundaryWidth;
+        innerRectangle.x = outerRectangle.x + boundary;
+        innerRectangle.y = outerRectangle.y + boundary;
+        innerRectangle.width = outerRectangle.width - doubleBoundary;
+        innerRectangle.height = outerRectangle.height - doubleBoundary;
 
         const intersectingSegments = findVectorSegmentsInShape(
           currMousePos,
@@ -291,7 +298,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
           // Minimize literal edge case where moving perfectly along the boundary causes
           // an absolutely massive force to be imparted on the bubble. This is essentially
           // true to the idealized physics, but it definitely looks wrong
-          const clamped = clampVec(intersection, -doubleBoundaryWidth, doubleBoundaryWidth);
+          const clamped = clampVec(intersection, -doubleBoundary, doubleBoundary);
           const force = multiplyVec(clamped, BUBBLE_STIFFNESS);
 
           impulses.current.push(force);
@@ -305,8 +312,8 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       return () => document.removeEventListener('mousemove', handleMouseMove);
     }, [
       uuid,
-      boundaryWidth,
-      doubleBoundaryWidth,
+      boundary,
+      doubleBoundary,
       isUpdatePending,
       containerOffsetLeft,
       containerOffsetTop,
@@ -365,10 +372,6 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
     }, [bubbleOffsetHeight, bubbleOffsetWidth, overkill]);
 
-    // Call updateStyles on resize even when not currently animating
-    // since resize can affect things like clip path
-    useResizeEffect(updateStyles, getElementsToObserve, false, 50);
-
     // NOTE: All ref state updates are performed in their corresponding update_ method
     const update = useCallback((delta: number) => {
       updatePhysicsState(delta);
@@ -384,16 +387,19 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
     useAnimationFrames(update, doAnimate);
 
+    // NOTE: This is kind of a dirty hack to update at least once per render
+    useEffect(() => {
+      if (!doAnimate) {
+        updateBubbleMeta();
+        updateStyles();
+      }
+    });
+
     return (
       <div
         ref={containerElement}
-        className={clsx(
-          "relative",
-          // TODO: measure effect & test different values
-          //"contain-layout",
-          indicatorClassname,
-        )}
-        style={{ padding: `${boundaryWidth}px`, }}
+        className="relative"
+        style={{ padding: boundary }}
       >
         {/* NOTE: Separate, absolutely-positioned bubble is necessary to allow separate values for
         * left/right, top/bottom, creating the particular bounciness of the bubble effect. */}
@@ -408,7 +414,13 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
             isUpdatePending && "will-change-transform",
           )}
         >
-          <div className="absolute rounded-3xl bg-stone-50/95 mix-blend-lighten" style={{ inset: `${boundaryWidth}px` }} />
+          <div
+            className="absolute rounded-3xl bg-stone-50/95 mix-blend-lighten"
+            style={{
+              inset: boundary,
+              borderRadius: rounding,
+            }}
+          />
         </div>
         <div
           ref={contentElement}
