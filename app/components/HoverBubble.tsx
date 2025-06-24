@@ -99,19 +99,18 @@ const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState 
   }
 };
 
-export const consumeForces = (velocity: Vec2, forces: Vec2[], delta: number) => {
-  const decay = getDecay(delta);
-
+export const applyForces = (velocity: Vec2, forces: Vec2[], delta: number) => {
   const totalForce: Vec2 = [0, 0];
-  while (forces.length) {
-    const [x, y] = forces.pop()!;
+
+  for (const [x, y] of forces) {
     totalForce[0] += x;
     totalForce[1] += y;
   }
-  const integratedForce = multiplyVec(totalForce, delta);
 
-  const decayed = multiplyVec(velocity, decay);
-  const applied = addVec2(decayed, integratedForce);
+  const acceleration = multiplyVec(totalForce, delta);
+  const decayedVelocity = multiplyVec(velocity, getDecay(delta));
+
+  const applied = addVec2(decayedVelocity, acceleration);
 
   return applied;
 }
@@ -340,17 +339,21 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       rounding
     ]);
 
-    const updatePhysicsState = useCallback((delta: number) => {
+    const populateSpringForce = useCallback(() => {
       // apply spring physics
       const springForce = getSpringForceVec2(physicsState.current.offset, springStiffness);
 
       impulses.current.push(springForce);
+    }, [springStiffness]);
 
-      physicsState.current.velocity = consumeForces(
+    const consumeForces = useCallback((delta: number) => {
+      physicsState.current.velocity = applyForces(
         physicsState.current.velocity,
         impulses.current,
         delta
       );
+
+      impulses.current.length = 0;
 
       // jump to still at low values or else this will basically never end
       const shouldStop = (
@@ -372,7 +375,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         physicsState.current.offset = nextOffset;
         physicsState.current.lerpedOffset = nextLerpedOffset;
       }
-    }, [sluggishness, springStiffness]);
+    }, [sluggishness]);
 
     const updateBubbleMeta = useCallback(() => {
       const [lerpedOffsetX, lerpedOffsetY] = physicsState.current.lerpedOffset;
@@ -394,10 +397,17 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
     // NOTE: All ref state updates are performed in their corresponding update_ method
     const update = useCallback((delta: number) => {
-      updatePhysicsState(delta);
-      updateBubbleMeta();
-      updateStyles();
-    }, [updatePhysicsState, updateBubbleMeta, updateStyles]);
+      populateSpringForce();
+
+      const shouldUpdate = Boolean(impulses.current.length);
+
+      consumeForces(delta);
+
+      if (shouldUpdate) {
+        updateBubbleMeta();
+        updateStyles();
+      }
+    }, [consumeForces, populateSpringForce, updateBubbleMeta, updateStyles]);
 
     // Offset values are always undefined on first render, and shouldn't be accessed directly
     // in applySpringForce since DOM property access is so slow. This avoids essentially all
@@ -431,7 +441,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
             "inset-0",
             "bg-stone-300/25",
             isUpdatePending && debug && "bg-blue-300/75!",
-            isUpdatePending && "will-change-transform",
+            doAnimate && "will-change-transform",
             bubbleClassname,
           )}
           style={{
@@ -451,15 +461,27 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         </div>
         <div
           ref={contentElement}
-          className={clsx("relative", isUpdatePending && "will-change-transform")}
+          className={clsx("relative", doAnimate && "will-change-transform")}
         >
           {children}
         </div>
         {(debug || showIndicators) && (
           <div className="absolute w-4 h-4 top-1/2 left-1/2">
             <div className="relative rounded-full w-4 h-4 -left-1/2 -top-1/2 overflow-visible mix-blend-lighten bg-blue-300/100">
-              <div ref={offsetIndicatorElement} className="absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-green-300/100" />
-              <div ref={lerpedOffsetIndicatorElement} className="absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-red-300/100" />
+              <div
+                ref={offsetIndicatorElement}
+                className={clsx(
+                  "absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-green-300/100",
+                  doAnimate && "will-change-transform"
+                )}
+              />
+              <div
+                ref={lerpedOffsetIndicatorElement}
+                className={clsx(
+                  "absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-red-300/100",
+                  doAnimate && "will-change-transform"
+                )}
+              />
             </div>
           </div>
         )}

@@ -4,7 +4,7 @@ export interface Point {
   y: number;
 }
 
-interface LineSegment {
+export interface LineSegment {
   start: Point;
   end: Point;
 }
