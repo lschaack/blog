@@ -11,15 +11,9 @@ export const BatchedAnimationContextProvider: FC<{ children?: ReactNode }> = ({ 
   const [queue] = useState<AnimationCallbackQueue>(new Set());
 
   const animate = useCallback((delta: number) => {
-    performance.mark('batch-start');
     for (const callback of queue) {
-      performance.mark('callback-start');
       callback(delta);
-      performance.mark('callback-end');
-      performance.measure('callback-duration', 'callback-start', 'callback-end');
     }
-    performance.mark('batch-end');
-    performance.measure('batch-duration', 'batch-start', 'batch-end');
   }, [queue]);
 
   // TODO: Enable/disable

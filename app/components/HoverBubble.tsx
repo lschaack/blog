@@ -171,6 +171,14 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const tempVec = useRef<Vec2>(createVec2());
     const intersectionVec = useRef<Vec2>(createVec2());
     const clampTempVec = useRef<Vec2>(createVec2());
+    
+    // Cache DOM element styles for performance
+    const cachedStyles = useRef<{
+      bubble?: CSSStyleDeclaration;
+      content?: CSSStyleDeclaration;
+      offsetIndicator?: CSSStyleDeclaration;
+      lerpedOffsetIndicator?: CSSStyleDeclaration;
+    }>({});
 
     const updateDomMeasurements = useCallback(() => ({
       bubbleOffsetWidth: bubbleElement.current?.offsetWidth ?? 0,
@@ -197,6 +205,20 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     );
 
     const updateStyles = useCallback(() => {
+      // Cache style references to avoid repeated property access
+      if (!cachedStyles.current.bubble && bubbleElement.current) {
+        cachedStyles.current.bubble = bubbleElement.current.style;
+      }
+      if (!cachedStyles.current.content && contentElement.current) {
+        cachedStyles.current.content = contentElement.current.style;
+      }
+      if (!cachedStyles.current.offsetIndicator && offsetIndicatorElement.current) {
+        cachedStyles.current.offsetIndicator = offsetIndicatorElement.current.style;
+      }
+      if (!cachedStyles.current.lerpedOffsetIndicator && lerpedOffsetIndicatorElement.current) {
+        cachedStyles.current.lerpedOffsetIndicator = lerpedOffsetIndicatorElement.current.style;
+      }
+      
       const {
         offset: [
           offsetX,
@@ -219,16 +241,15 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
       const scaleX = bubbleWidth / bubbleOffsetWidth;
       const scaleY = bubbleHeight / bubbleOffsetHeight;
-      const translateX = (bubbleLeft - bubbleRight) / 2;
-      const translateY = (bubbleTop - bubbleBottom) / 2;
+      const translateX = (bubbleLeft - bubbleRight) * 0.5;
+      const translateY = (bubbleTop - bubbleBottom) * 0.5;
 
-      // Optimize transform by setting transform properties directly
-      if (bubbleElement.current) {
-        const style = bubbleElement.current.style;
-        style.transform = `matrix(${scaleX},0,0,${scaleY},${translateX},${translateY})`;
+      // Use cached style reference
+      if (cachedStyles.current.bubble) {
+        cachedStyles.current.bubble.transform = `matrix(${scaleX},0,0,${scaleY},${translateX},${translateY})`;
       }
 
-      if (contentElement.current) {
+      if (cachedStyles.current.content) {
         // Avoid shifting the text content too much since it still needs to be readable
         const contentOffsetX = offsetX * 0.5;
         const contentOffsetY = offsetY * 0.5;
@@ -244,21 +265,20 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         const clipHeight = Math.max(bubbleHeight - doubleBoundary * scaleY, 0);
         const clipRounding = rounding * scaleAvg;
 
-        const style = contentElement.current.style;
-        style.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
-        style.transform = `translate(${contentOffsetX}px,${contentOffsetY}px)`;
+        cachedStyles.current.content.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
+        cachedStyles.current.content.transform = `translate(${contentOffsetX}px,${contentOffsetY}px)`;
       }
 
-      if (offsetIndicatorElement.current) {
+      if (cachedStyles.current.offsetIndicator) {
         const offsetTransformX = offsetX * INDICATOR_AMPLIFICATION;
         const offsetTransformY = offsetY * INDICATOR_AMPLIFICATION;
-        offsetIndicatorElement.current.style.transform = `translate(${offsetTransformX}px,${offsetTransformY}px)`;
+        cachedStyles.current.offsetIndicator.transform = `translate(${offsetTransformX}px,${offsetTransformY}px)`;
       }
 
-      if (lerpedOffsetIndicatorElement.current) {
+      if (cachedStyles.current.lerpedOffsetIndicator) {
         const lerpedTransformX = lerpedOffsetX * INDICATOR_AMPLIFICATION;
         const lerpedTransformY = lerpedOffsetY * INDICATOR_AMPLIFICATION;
-        lerpedOffsetIndicatorElement.current.style.transform = `translate(${lerpedTransformX}px,${lerpedTransformY}px)`;
+        cachedStyles.current.lerpedOffsetIndicator.transform = `translate(${lerpedTransformX}px,${lerpedTransformY}px)`;
       }
     }, [bubbleOffsetWidth, bubbleOffsetHeight, doubleBoundary, rounding, boundary]);
 
