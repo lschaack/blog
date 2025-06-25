@@ -1,6 +1,18 @@
-import { clamp, zipWith } from "lodash";
-
 import { LineSegment } from "@/app/utils/findVectorSegmentsInShape";
+
+// Inline implementations to avoid lodash dependency
+const clamp = (value: number, min: number, max: number): number => {
+  return value < min ? min : value > max ? max : value;
+};
+
+const zipWith = <T, U, R>(arr1: T[], arr2: U[], fn: (a: T, b: U) => R): R[] => {
+  const length = Math.min(arr1.length, arr2.length);
+  const result: R[] = [];
+  for (let i = 0; i < length; i++) {
+    result[i] = fn(arr1[i], arr2[i]);
+  }
+  return result;
+};
 
 export type Vec2 = [number, number];
 

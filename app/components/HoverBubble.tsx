@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, memo, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { FC, memo, ReactNode, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 import clsx from "clsx";
 import { SimpleFaker } from "@faker-js/faker";
 
@@ -26,6 +26,7 @@ import {
   multiplyVecMutable,
   segmentToVec2Mutable,
   clampVecMutable,
+  copyVec2,
   createVec2,
   lerpVec2Mutable,
   zeroVec2,
@@ -110,7 +111,6 @@ type HoverBubbleProps = {
   sluggishness?: number;
   seed?: number;
   moveOnMount?: boolean;
-  uuid?: string;
   className?: string;
   bubbleClassname?: string;
   innerBubbleClassname?: string;
@@ -125,7 +125,6 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     rounding = DEFAULT_ROUNDING,
     sluggishness = DEFAULT_OFFSET_LERP_AMOUNT,
     seed,
-    uuid,
     moveOnMount = false,
     className,
     bubbleClassname,
@@ -133,6 +132,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     insetFilter = asymmetricFilter,
     showIndicators = false,
   }) {
+    const componentId = useId();
     const { debug } = useContext(DebugContext);
 
     const overkill = useDebuggableValue('bubbleOverkill', BUBBLE_OVERKILL, true);
@@ -151,7 +151,13 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const lerpedOffsetIndicatorElement = useRef<HTMLDivElement>(null);
 
     const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
-    const impulses = useRef<Vec2[]>([]);
+
+    // Optimize impulses with pre-allocated array pool
+    const MAX_IMPULSES = 10; // Conservative estimate for max forces per frame
+    const impulsesPool = useRef<Vec2[]>(Array.from({ length: MAX_IMPULSES }, () => createVec2()));
+    const activeImpulses = useRef<Vec2[]>([]);
+    const poolIndex = useRef(0);
+
     const bubbleMeta = useRef<BubbleMeta>({
       top: 0,
       right: 0,
@@ -160,7 +166,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       width: 0,
       height: 0,
     })
-    
+
     // Object pools for reusable objects
     const tempVec = useRef<Vec2>(createVec2());
     const intersectionVec = useRef<Vec2>(createVec2());
@@ -216,18 +222,20 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       const translateX = (bubbleLeft - bubbleRight) / 2;
       const translateY = (bubbleTop - bubbleBottom) / 2;
 
+      // Optimize transform by setting transform properties directly
       if (bubbleElement.current) {
-        bubbleElement.current.style.transform = `matrix(${scaleX}, 0, 0, ${scaleY}, ${translateX}, ${translateY})`;
+        const style = bubbleElement.current.style;
+        style.transform = `matrix(${scaleX},0,0,${scaleY},${translateX},${translateY})`;
       }
 
       if (contentElement.current) {
         // Avoid shifting the text content too much since it still needs to be readable
-        const contentOffsetX = offsetX / 2;
-        const contentOffsetY = offsetY / 2;
+        const contentOffsetX = offsetX * 0.5;
+        const contentOffsetY = offsetY * 0.5;
 
         const distortionX = scaleX - 1;
         const distortionY = scaleY - 1;
-        const scaleAvg = (scaleX + scaleY) / 2;
+        const scaleAvg = (scaleX + scaleY) * 0.5;
 
         // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
         const clipX = bubbleLeft - contentOffsetX + boundary * distortionX;
@@ -236,16 +244,21 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         const clipHeight = Math.max(bubbleHeight - doubleBoundary * scaleY, 0);
         const clipRounding = rounding * scaleAvg;
 
-        contentElement.current.style.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
-        contentElement.current.style.transform = `translate(${contentOffsetX}px, ${contentOffsetY}px)`;
+        const style = contentElement.current.style;
+        style.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
+        style.transform = `translate(${contentOffsetX}px,${contentOffsetY}px)`;
       }
 
       if (offsetIndicatorElement.current) {
-        offsetIndicatorElement.current.style.transform = `translate(${offsetX * INDICATOR_AMPLIFICATION}px, ${offsetY * INDICATOR_AMPLIFICATION}px)`;
+        const offsetTransformX = offsetX * INDICATOR_AMPLIFICATION;
+        const offsetTransformY = offsetY * INDICATOR_AMPLIFICATION;
+        offsetIndicatorElement.current.style.transform = `translate(${offsetTransformX}px,${offsetTransformY}px)`;
       }
 
       if (lerpedOffsetIndicatorElement.current) {
-        lerpedOffsetIndicatorElement.current.style.transform = `translate(${lerpedOffsetX * INDICATOR_AMPLIFICATION}px, ${lerpedOffsetY * INDICATOR_AMPLIFICATION}px)`;
+        const lerpedTransformX = lerpedOffsetX * INDICATOR_AMPLIFICATION;
+        const lerpedTransformY = lerpedOffsetY * INDICATOR_AMPLIFICATION;
+        lerpedOffsetIndicatorElement.current.style.transform = `translate(${lerpedTransformX}px,${lerpedTransformY}px)`;
       }
     }, [bubbleOffsetWidth, bubbleOffsetHeight, doubleBoundary, rounding, boundary]);
 
@@ -297,26 +310,32 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
         if (intersectingSegments.length) {
           zeroVec2(intersectionVec.current);
-          
+
           for (const segment of intersectingSegments) {
             segmentToVec2Mutable(segment, tempVec.current);
             addVec2Mutable(intersectionVec.current, tempVec.current);
           }
-          
+
           clampVecMutable(intersectionVec.current, -doubleBoundary, doubleBoundary, clampTempVec.current);
           multiplyVecMutable(intersectionVec.current, BUBBLE_STIFFNESS);
 
-          impulses.current.push(createVec2(intersectionVec.current[0], intersectionVec.current[1]));
+          // Use pooled vector instead of creating new one
+          if (poolIndex.current < MAX_IMPULSES) {
+            const pooledVec = impulsesPool.current[poolIndex.current];
+            copyVec2(intersectionVec.current, pooledVec);
+            activeImpulses.current.push(pooledVec);
+            poolIndex.current++;
+          }
 
           if (!isUpdatePending) setIsUpdatePending(true);
         }
       };
 
-      const unsubscribe = mouseService.subscribe(uuid || 'hoverbubble', handleMouseMove);
+      const unsubscribe = mouseService.subscribe(componentId, handleMouseMove);
 
       return unsubscribe;
     }, [
-      uuid,
+      componentId,
       boundary,
       doubleBoundary,
       isUpdatePending,
@@ -327,21 +346,27 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     ]);
 
     const populateSpringForce = useCallback(() => {
-      // apply spring physics
-      const springForce = getSpringForceVec2(physicsState.current.offset, springStiffness);
-
-      impulses.current.push(springForce);
+      // apply spring physics and use pooled vector
+      if (poolIndex.current < MAX_IMPULSES) {
+        const pooledVec = impulsesPool.current[poolIndex.current];
+        const springForce = getSpringForceVec2(physicsState.current.offset, springStiffness);
+        copyVec2(springForce, pooledVec);
+        activeImpulses.current.push(pooledVec);
+        poolIndex.current++;
+      }
     }, [springStiffness]);
 
     const consumeForces = useCallback((delta: number) => {
       applyForcesMutable(
         physicsState.current.velocity,
-        impulses.current,
+        activeImpulses.current,
         delta,
         tempVec.current
       );
 
-      impulses.current.length = 0;
+      // Reset active impulses array and pool index instead of creating new arrays
+      activeImpulses.current.length = 0;
+      poolIndex.current = 0;
 
       // jump to still at low values or else this will basically never end
       const shouldStop = (
@@ -384,7 +409,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const update = useCallback((delta: number) => {
       populateSpringForce();
 
-      const shouldUpdate = Boolean(impulses.current.length);
+      const shouldUpdate = Boolean(activeImpulses.current.length);
 
       consumeForces(delta);
 

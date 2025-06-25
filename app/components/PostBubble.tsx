@@ -2,7 +2,6 @@ import { memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { DeepPartial } from "@apollo/client/utilities";
-import { simpleFaker } from '@faker-js/faker';
 
 import { BlogPost } from "@/app/graphql/graphql";
 import { HoverBubble } from "@/app/components/HoverBubble";
@@ -56,15 +55,13 @@ export const PostBubble = memo(function PostBubble({
   moveOnMount,
   className
 }: PostBubbleProps) {
-  const uuid = simpleFaker.string.uuid();
-
   return (
     <Link
       href={fake ? post.slug! : `/posts/${post.slug}`}
       key={post.sys?.id}
       className={clsx(fake && 'pointer-events-none', className)}
     >
-      <HoverBubble moveOnMount={moveOnMount} uuid={uuid}>
+      <HoverBubble moveOnMount={moveOnMount}>
         <PostBubbleContents post={post} />
       </HoverBubble>
     </Link>

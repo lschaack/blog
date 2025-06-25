@@ -1,7 +1,10 @@
-import { clamp } from "lodash";
-
 import { LineSegment } from "@/app/utils/findVectorSegmentsInShape";
 import { getDecay } from "./physicsConsts";
+
+// Inline clamp function to avoid lodash dependency
+const clamp = (value: number, min: number, max: number): number => {
+  return value < min ? min : value > max ? max : value;
+};
 
 export type Vec2 = [number, number];
 
