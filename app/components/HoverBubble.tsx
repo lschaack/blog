@@ -3,7 +3,6 @@
 import { FC, memo, ReactNode, useCallback, useContext, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { SimpleFaker } from "@faker-js/faker";
-import { zipWith } from "lodash";
 
 import {
   findVectorSegmentsInRoundedShape,
@@ -11,7 +10,6 @@ import {
   RoundedRectangle,
   RoundedShapeWithHole,
 } from "@/app/utils/findVectorSegmentsInShape";
-import { lerp } from "@/app/utils/lerp";
 import {
   VELOCITY_ANIMATION_THRESHOLD,
   BUBBLE_STIFFNESS,
@@ -19,17 +17,21 @@ import {
   BUBBLE_OVERKILL,
   SPRING_STIFFNESS,
   getSpringForceVec2,
-  getDecay,
   BUBBLE_BOUNDARY,
 } from "@/app/utils/physicsConsts";
 import {
-  addVec2,
-  clampVec,
-  magnitude,
-  multiplyVec,
-  segmentToVec2,
   Vec2,
+  magnitude,
+  addVec2Mutable,
+  multiplyVecMutable,
+  segmentToVec2Mutable,
+  clampVecMutable,
+  createVec2,
+  lerpVec2Mutable,
+  zeroVec2,
+  applyForcesMutable,
 } from "@/app/utils/vector";
+import { mouseService } from "@/app/utils/mouseService";
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
 import { useResizeValue } from "@/app/hooks/useResizeValue";
@@ -80,40 +82,26 @@ const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState 
     if (seed) faker.seed(seed);
 
     return {
-      offset: [
+      offset: createVec2(
         faker.number.int(INSET_OPTIONS),
         faker.number.int(INSET_OPTIONS)
-      ],
-      lerpedOffset: [
+      ),
+      lerpedOffset: createVec2(
         faker.number.int(INSET_OPTIONS),
         faker.number.int(INSET_OPTIONS)
-      ],
-      velocity: [0, 0],
+      ),
+      velocity: createVec2(),
     }
   } else {
     return {
-      offset: [0, 0],
-      lerpedOffset: [0, 0],
-      velocity: [0, 0],
+      offset: createVec2(),
+      lerpedOffset: createVec2(),
+      velocity: createVec2(),
     }
   }
 };
 
-export const applyForces = (velocity: Vec2, forces: Vec2[], delta: number) => {
-  const totalForce: Vec2 = [0, 0];
-
-  for (const [x, y] of forces) {
-    totalForce[0] += x;
-    totalForce[1] += y;
-  }
-
-  const acceleration = multiplyVec(totalForce, delta);
-  const decayedVelocity = multiplyVec(velocity, getDecay(delta));
-
-  const applied = addVec2(decayedVelocity, acceleration);
-
-  return applied;
-}
+// Moved to mutableVector.ts as applyForcesMutable
 
 type HoverBubbleProps = {
   children?: ReactNode;
@@ -172,6 +160,11 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       width: 0,
       height: 0,
     })
+    
+    // Object pools for reusable objects
+    const tempVec = useRef<Vec2>(createVec2());
+    const intersectionVec = useRef<Vec2>(createVec2());
+    const clampTempVec = useRef<Vec2>(createVec2());
 
     const updateDomMeasurements = useCallback(() => ({
       bubbleOffsetWidth: bubbleElement.current?.offsetWidth ?? 0,
@@ -256,33 +249,24 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       }
     }, [bubbleOffsetWidth, bubbleOffsetHeight, doubleBoundary, rounding, boundary]);
 
+    // Object pools for reused shapes
+    const outerRectangle = useRef<RoundedRectangle>({
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      radius: 0,
+    });
+    const innerRectangle = useRef<RoundedRectangle>({
+      x: 0,
+      y: 0,
+      width: 0,
+      height: 0,
+      radius: 0,
+    });
+
     useEffect(() => {
-      const currMousePos: Point = { x: 0, y: 0 };
-      const prevMousePos: Point = { x: 0, y: 0 };
-      const outerRectangle: RoundedRectangle = {
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        radius: 0,
-      };
-      const innerRectangle: RoundedRectangle = {
-        x: 0,
-        y: 0,
-        width: 0,
-        height: 0,
-        radius: 0,
-      };
-
-      const handleMouseMove = (event: MouseEvent) => {
-        const { pageX, pageY, movementX, movementY } = event;
-
-        currMousePos.x = pageX;
-        currMousePos.y = pageY;
-
-        prevMousePos.x = pageX - movementX;
-        prevMousePos.y = pageY - movementY;
-
+      const handleMouseMove = (currMousePos: Point, prevMousePos: Point) => {
         const {
           top: bubbleTop,
           left: bubbleLeft,
@@ -290,44 +274,47 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
           height: bubbleHeight,
         } = bubbleMeta.current;
 
-        outerRectangle.x = containerOffsetLeft + bubbleLeft;
-        outerRectangle.y = containerOffsetTop + bubbleTop;
-        outerRectangle.width = bubbleWidth;
-        outerRectangle.height = bubbleHeight;
-        outerRectangle.radius = rounding + boundary;
+        const outer = outerRectangle.current;
+        const inner = innerRectangle.current;
 
-        innerRectangle.x = outerRectangle.x + boundary;
-        innerRectangle.y = outerRectangle.y + boundary;
-        innerRectangle.width = outerRectangle.width - doubleBoundary;
-        innerRectangle.height = outerRectangle.height - doubleBoundary;
-        innerRectangle.radius = rounding;
+        outer.x = containerOffsetLeft + bubbleLeft;
+        outer.y = containerOffsetTop + bubbleTop;
+        outer.width = bubbleWidth;
+        outer.height = bubbleHeight;
+        outer.radius = rounding + boundary;
+
+        inner.x = outer.x + boundary;
+        inner.y = outer.y + boundary;
+        inner.width = outer.width - doubleBoundary;
+        inner.height = outer.height - doubleBoundary;
+        inner.radius = rounding;
 
         const intersectingSegments = findVectorSegmentsInRoundedShape(
           currMousePos,
           prevMousePos,
-          new RoundedShapeWithHole(outerRectangle, innerRectangle)
+          new RoundedShapeWithHole(outer, inner)
         );
 
         if (intersectingSegments.length) {
-          const intersection = intersectingSegments.reduce(
-            (total, segment) => addVec2(total, segmentToVec2(segment)),
-            [0, 0] as Vec2
-          );
-          // Minimize literal edge case where moving perfectly along the boundary causes
-          // an absolutely massive force to be imparted on the bubble. This is essentially
-          // true to the idealized physics, but it definitely looks wrong
-          const clamped = clampVec(intersection, -doubleBoundary, doubleBoundary);
-          const force = multiplyVec(clamped, BUBBLE_STIFFNESS);
+          zeroVec2(intersectionVec.current);
+          
+          for (const segment of intersectingSegments) {
+            segmentToVec2Mutable(segment, tempVec.current);
+            addVec2Mutable(intersectionVec.current, tempVec.current);
+          }
+          
+          clampVecMutable(intersectionVec.current, -doubleBoundary, doubleBoundary, clampTempVec.current);
+          multiplyVecMutable(intersectionVec.current, BUBBLE_STIFFNESS);
 
-          impulses.current.push(force);
+          impulses.current.push(createVec2(intersectionVec.current[0], intersectionVec.current[1]));
 
           if (!isUpdatePending) setIsUpdatePending(true);
         }
       };
 
-      document.addEventListener('mousemove', handleMouseMove);
+      const unsubscribe = mouseService.subscribe(uuid || 'hoverbubble', handleMouseMove);
 
-      return () => document.removeEventListener('mousemove', handleMouseMove);
+      return unsubscribe;
     }, [
       uuid,
       boundary,
@@ -347,10 +334,11 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     }, [springStiffness]);
 
     const consumeForces = useCallback((delta: number) => {
-      physicsState.current.velocity = applyForces(
+      applyForcesMutable(
         physicsState.current.velocity,
         impulses.current,
-        delta
+        delta,
+        tempVec.current
       );
 
       impulses.current.length = 0;
@@ -365,15 +353,12 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         setIsUpdatePending(false);
         physicsState.current = getInitialPhysicsState();
       } else {
-        const nextOffset = addVec2(physicsState.current.offset, physicsState.current.velocity) as Vec2;
-        const nextLerpedOffset = zipWith(
+        addVec2Mutable(physicsState.current.offset, physicsState.current.velocity);
+        lerpVec2Mutable(
           physicsState.current.lerpedOffset,
           physicsState.current.offset,
-          (a, b) => lerp(a, b, sluggishness)
-        ) as Vec2;
-
-        physicsState.current.offset = nextOffset;
-        physicsState.current.lerpedOffset = nextLerpedOffset;
+          sluggishness
+        );
       }
     }, [sluggishness]);
 

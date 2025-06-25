@@ -16,6 +16,21 @@ export const segmentToVec2 = (segment: LineSegment) => (
   ] as Vec2
 )
 
+// Re-export mutable operations for performance-critical code
+export {
+  createVec2,
+  setVec2,
+  copyVec2,
+  addVec2Mutable,
+  multiplyVecMutable,
+  segmentToVec2Mutable,
+  normalizeVecMutable,
+  clampVecMutable,
+  lerpVec2Mutable,
+  zeroVec2,
+  applyForcesMutable
+} from "@/app/utils/mutableVector";
+
 export const magnitude = <T extends number[]>(vector: T) => {
   return Math.sqrt(
     vector.reduce(
