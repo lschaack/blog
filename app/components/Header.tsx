@@ -4,7 +4,6 @@ import typescript from "highlight.js/lib/languages/typescript";
 import "highlight.js/styles/monokai.css";
 
 import { SignPost } from "@/app/components/SignPost";
-import { FrameRateChecker } from "@/app/components/FrameRateChecker";
 
 hljs.registerLanguage("typescript", typescript);
 
@@ -13,9 +12,6 @@ const highlighted = hljs.highlight('let something', { language: 'typescript' }).
 export const Header = () => {
   return (
     <header className="flex flex-col items-center">
-      <div className="absolute top-0 left-0 h-full">
-        <FrameRateChecker />
-      </div>
       <Link href="/" className="my-12 cursor-pointer">
         <SignPost>
           <h1 className="p-4 hljs">

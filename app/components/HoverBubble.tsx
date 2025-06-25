@@ -428,7 +428,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     return (
       <div
         ref={containerElement}
-        className={clsx("relative", className)}
+        className={clsx("relative contain-layout", className)}
         style={{ padding: boundary }}
       >
         {/* NOTE: Separate, absolutely-positioned bubble is necessary to allow separate values for
