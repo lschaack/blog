@@ -11,7 +11,6 @@ export default function Demo() {
           boundary={8}
           rounding={64}
           bubbleClassname="bg-black!"
-          innerBubbleClassname="bg-black! mix-blend-normal"
           sluggishness={0.05}
           insetFilter={n => n}
           showIndicators

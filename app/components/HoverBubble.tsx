@@ -113,7 +113,6 @@ type HoverBubbleProps = {
   moveOnMount?: boolean;
   className?: string;
   bubbleClassname?: string;
-  innerBubbleClassname?: string;
   insetFilter?: (direction: number) => number;
   // TODO: This property is pretty hacked together for the demos
   showIndicators?: boolean;
@@ -128,7 +127,6 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     moveOnMount = false,
     className,
     bubbleClassname,
-    innerBubbleClassname,
     insetFilter = asymmetricFilter,
     showIndicators = false,
   }) {
@@ -171,7 +169,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const tempVec = useRef<Vec2>(createVec2());
     const intersectionVec = useRef<Vec2>(createVec2());
     const clampTempVec = useRef<Vec2>(createVec2());
-    
+
     // Cache DOM element styles for performance
     const cachedStyles = useRef<{
       bubble?: CSSStyleDeclaration;
@@ -218,7 +216,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       if (!cachedStyles.current.lerpedOffsetIndicator && lerpedOffsetIndicatorElement.current) {
         cachedStyles.current.lerpedOffsetIndicator = lerpedOffsetIndicatorElement.current.style;
       }
-      
+
       const {
         offset: [
           offsetX,
@@ -263,7 +261,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         const clipY = bubbleTop - contentOffsetY + boundary * distortionY;
         const clipWidth = Math.max(bubbleWidth - doubleBoundary * scaleX, 0);
         const clipHeight = Math.max(bubbleHeight - doubleBoundary * scaleY, 0);
-        const clipRounding = rounding * scaleAvg;
+        const clipRounding = (rounding - boundary) * scaleAvg;
 
         cachedStyles.current.content.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
         cachedStyles.current.content.transform = `translate(${contentOffsetX}px,${contentOffsetY}px)`;
@@ -314,13 +312,13 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         outer.y = containerOffsetTop + bubbleTop;
         outer.width = bubbleWidth;
         outer.height = bubbleHeight;
-        outer.radius = rounding + boundary;
+        outer.radius = rounding;
 
         inner.x = outer.x + boundary;
         inner.y = outer.y + boundary;
         inner.width = outer.width - doubleBoundary;
         inner.height = outer.height - doubleBoundary;
-        inner.radius = rounding;
+        inner.radius = rounding - boundary;
 
         const intersectingSegments = findVectorSegmentsInRoundedShape(
           currMousePos,
@@ -466,32 +464,23 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         <div
           ref={bubbleElement}
           className={clsx(
-            "absolute overflow-hidden",
+            "absolute overflow-hidden inset-0 border-stone-300/25 bg-stone-50/95 bg-clip-padding",
             "transition-colors duration-500 ease-out",
-            "inset-0",
-            "bg-stone-300/25",
-            isUpdatePending && debug && "bg-blue-300/75!",
+            isUpdatePending && debug && "border-blue-300/75!",
             doAnimate && "will-change-transform",
             bubbleClassname,
           )}
           style={{
-            borderRadius: rounding + boundary
+            borderRadius: rounding,
+            borderWidth: boundary,
           }}
-        >
-          <div
-            className={clsx(
-              "absolute bg-stone-50/95 mix-blend-lighten",
-              innerBubbleClassname
-            )}
-            style={{
-              inset: boundary,
-              borderRadius: rounding,
-            }}
-          />
-        </div>
+        />
         <div
           ref={contentElement}
-          className={clsx("relative", doAnimate && "will-change-transform")}
+          className={clsx("relative overflow-hidden", doAnimate && "will-change-transform")}
+          style={{
+            borderRadius: rounding - boundary,
+          }}
         >
           {children}
         </div>
