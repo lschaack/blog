@@ -9,7 +9,7 @@ export default function Demo() {
       <div className="w-full p-12 flex justify-center items-center">
         <HoverBubble
           boundary={8}
-          rounding={64}
+          rounding={9999}
           bubbleClassname="bg-black!"
           sluggishness={0.05}
           insetFilter={n => n}

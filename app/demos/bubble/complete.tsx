@@ -9,11 +9,15 @@ export default function Demo() {
       <div className="w-full p-12 flex justify-center items-center">
         <HoverBubble
           boundary={8}
-          rounding={128}
-          bubbleClassname="bg-white! mix-blend-normal!"
+          rounding={9999}
+          bubbleClassname="bg-blue-300! border-blue-300/25!"
           sluggishness={0.05}
+          overkill={2}
         >
-          <div className="p-16 flex justify-center items-center" />
+          <div className="p-16 relative">
+            <div className="p-4 rounded-full bg-white absolute right-1/4 top-1/5">
+            </div>
+          </div>
         </HoverBubble>
       </div>
     </BatchedAnimationContextProvider>

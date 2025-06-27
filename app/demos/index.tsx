@@ -14,6 +14,7 @@ export const DEMOS = {
   'bubble-with-lerp': lazy(() => import('./bubble/with-lerp')),
   'bubble-complete': lazy(() => import('./bubble/complete')),
   'bubble-configurator': lazy(() => import('./bubble/configurator')),
+  'bubble-matryoshka': lazy(() => import('./bubble/matryoshka')),
   'test': lazy(() => import('./test')),
 }
 

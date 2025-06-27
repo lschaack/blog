@@ -109,6 +109,8 @@ type HoverBubbleProps = {
   boundary?: number;
   rounding?: number;
   sluggishness?: number;
+  stiffness?: number;
+  overkill?: number;
   seed?: number;
   moveOnMount?: boolean;
   className?: string;
@@ -123,6 +125,8 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     boundary: _boundary = BUBBLE_BOUNDARY,
     rounding = DEFAULT_ROUNDING,
     sluggishness = DEFAULT_OFFSET_LERP_AMOUNT,
+    stiffness: _stiffness = SPRING_STIFFNESS,
+    overkill: _overkill = BUBBLE_OVERKILL,
     seed,
     moveOnMount = false,
     className,
@@ -133,8 +137,8 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const componentId = useId();
     const { debug } = useContext(DebugContext);
 
-    const overkill = useDebuggableValue('bubbleOverkill', BUBBLE_OVERKILL, true);
-    const springStiffness = useDebuggableValue('springStiffness', SPRING_STIFFNESS, true);
+    const overkill = useDebuggableValue('bubbleOverkill', _overkill, true);
+    const springStiffness = useDebuggableValue('springStiffness', _stiffness, true);
     const boundary = useDebuggableValue('bubbleBoundary', _boundary, true);
     const doubleBoundary = 2 * boundary;
 
@@ -178,12 +182,41 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       lerpedOffsetIndicator?: CSSStyleDeclaration;
     }>({});
 
-    const updateDomMeasurements = useCallback(() => ({
-      bubbleOffsetWidth: bubbleElement.current?.offsetWidth ?? 0,
-      bubbleOffsetHeight: bubbleElement.current?.offsetHeight ?? 0,
-      containerOffsetTop: containerElement.current?.offsetTop ?? 0,
-      containerOffsetLeft: containerElement.current?.offsetLeft ?? 0,
-    }), []);
+    const updateDomMeasurements = useCallback(() => {
+      const currentContainer = containerElement.current;
+
+      if (currentContainer) {
+        // Ensure container position is computed relative to entire document
+        // https://stackoverflow.com/a/26230989
+        const containerRect = currentContainer.getBoundingClientRect();
+
+        const body = document.body;
+        const docEl = document.documentElement;
+
+        const scrollTop = window.pageYOffset || docEl.scrollTop || body.scrollTop;
+        const scrollLeft = window.pageXOffset || docEl.scrollLeft || body.scrollLeft;
+
+        const clientTop = docEl.clientTop || body.clientTop || 0;
+        const clientLeft = docEl.clientLeft || body.clientLeft || 0;
+
+        const top = containerRect.top + scrollTop - clientTop;
+        const left = containerRect.left + scrollLeft - clientLeft;
+
+        return {
+          bubbleOffsetWidth: bubbleElement.current?.offsetWidth ?? 0,
+          bubbleOffsetHeight: bubbleElement.current?.offsetHeight ?? 0,
+          containerOffsetTop: Math.round(top),
+          containerOffsetLeft: Math.round(left),
+        };
+      }
+
+      return {
+        bubbleOffsetWidth: 0,
+        bubbleOffsetHeight: 0,
+        containerOffsetTop: 0,
+        containerOffsetLeft: 0,
+      }
+    }, []);
 
     const getElementsToObserve = useCallback(() => [
       containerElement.current?.parentElement,
@@ -261,7 +294,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         const clipY = bubbleTop - contentOffsetY + boundary * distortionY;
         const clipWidth = Math.max(bubbleWidth - doubleBoundary * scaleX, 0);
         const clipHeight = Math.max(bubbleHeight - doubleBoundary * scaleY, 0);
-        const clipRounding = (rounding - boundary) * scaleAvg;
+        const clipRounding = Math.max(rounding - boundary, 0) * scaleAvg;
 
         cachedStyles.current.content.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
         cachedStyles.current.content.transform = `translate(${contentOffsetX}px,${contentOffsetY}px)`;
@@ -471,6 +504,11 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
             bubbleClassname,
           )}
           style={{
+            // NOTE: It's a little odd that border radius is not just `rounding`, but it has the
+            // nice side effect that setting border radius to half of the height/width results
+            // in a circle. Not sure why that is, maybe it has to do with box size calculations
+            // including/excluding border, or maybe I made a mistake somewhere else that this
+            // is accounting for. Not gonna look into it too hard cause it works perfectly.
             borderRadius: rounding,
             borderWidth: boundary,
           }}
