@@ -2,12 +2,14 @@ import { useEffect, useRef } from "react";
 import { lerp } from "@/app/utils/lerp";
 import { PHYSICS_FRAME_RATE_MS } from "@/app/utils/physicsConsts";
 
+export type AnimationCallback = (delta: number) => void;
+
 /**
  * Handles boilerplate for animating in an effect
  *
  * NOTE: callback should be memoized for performance
  */
-export const useAnimationFrames = (callback: (delta: number) => void, enable = true) => {
+export const useAnimationFrames = (callback: AnimationCallback, enable = true) => {
   const fps = useRef(60);
 
   useEffect(() => {

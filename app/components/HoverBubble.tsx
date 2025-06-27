@@ -504,11 +504,6 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
             bubbleClassname,
           )}
           style={{
-            // NOTE: It's a little odd that border radius is not just `rounding`, but it has the
-            // nice side effect that setting border radius to half of the height/width results
-            // in a circle. Not sure why that is, maybe it has to do with box size calculations
-            // including/excluding border, or maybe I made a mistake somewhere else that this
-            // is accounting for. Not gonna look into it too hard cause it works perfectly.
             borderRadius: rounding,
             borderWidth: boundary,
           }}
