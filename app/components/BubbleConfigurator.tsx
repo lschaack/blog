@@ -14,6 +14,12 @@ const INIT_STATE = {
   bubbleBoundary: BUBBLE_BOUNDARY,
 }
 
+const RESET_STATE = {
+  springStiffness: undefined,
+  bubbleOverkill: undefined,
+  bubbleBoundary: undefined,
+}
+
 export const BubbleConfigurator = memo(function BubbleConfigurator() {
   const { debugMenuOptions, setDebugMenuOptions } = useContext(DebugContext);
 
@@ -72,7 +78,7 @@ export const BubbleConfigurator = memo(function BubbleConfigurator() {
           onClick={() => setDebugMenuOptions(
             prev => ({
               ...prev,
-              ...INIT_STATE
+              ...RESET_STATE
             })
           )}
         />

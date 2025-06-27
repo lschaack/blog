@@ -1,7 +1,7 @@
 import { lazy } from "react";
 
 import type { Demo as DemoType } from "@/app/graphql/graphql";
-import { RichTextError } from "../components/RichTextError";
+import { RichTextError } from "@/app/components/RichTextError";
 
 export const DEMOS = {
   'dock-magnification': lazy(() => import('./dock-magnification/full')),
@@ -13,6 +13,7 @@ export const DEMOS = {
   'bubble-with-hole': lazy(() => import('./bubble/with-hole')),
   'bubble-with-lerp': lazy(() => import('./bubble/with-lerp')),
   'bubble-complete': lazy(() => import('./bubble/complete')),
+  'bubble-configurator': lazy(() => import('./bubble/configurator')),
   'test': lazy(() => import('./test')),
 }
 

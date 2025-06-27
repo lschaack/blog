@@ -1,1 +1,1 @@
-export const lerp = (x: number, y: number, a: number) => x * (1 - a) + y * a;
+export const lerp = (from: number, to: number, amount: number) => from * (1 - amount) + to * amount;
