@@ -25,7 +25,7 @@ export default function Demo() {
                   boundary={12}
                   rounding={9999}
                   bubbleClassname="bg-slate-50! border-slate-50/25!"
-                  overkill={3}
+                  overkill={2}
                 >
                   <div className="p-4" />
                 </HoverBubble>

@@ -44,7 +44,7 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
     ),
     [BLOCKS.HEADING_3]: (node, children) => (
       <h3
-        className="text-xl font-bold mt-2 mb-1"
+        className="text-xl font-bold mt-4 mb-1"
         id={kebabCase(documentToPlainTextString(node))}
       >
         {children}
@@ -59,7 +59,10 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
       </h4>
     ),
     [BLOCKS.UL_LIST]: (_, children) => (
-      <ul className="list-disc list-inside my-4 pl-6">{children}</ul>
+      <ul className="list-disc list-outside my-4 pl-6 text-lg">{children}</ul>
+    ),
+    [BLOCKS.OL_LIST]: (_, children) => (
+      <ol className="list-decimal list-outside my-4 pl-6 text-lg">{children}</ol>
     ),
     [BLOCKS.LIST_ITEM]: (node) => (
       // avoid wrapping li text children in <p> tags for styling
@@ -70,9 +73,12 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
           [BLOCKS.PARAGRAPH]: (_, children) => children,
           // 22px below is a janky workaround for default list behavior not
           // having any indent on lines after the first, could be better...
-          [BLOCKS.LIST_ITEM]: (_, children) => <li className="my-2 -indent-[22px]">{children}</li>,
+          [BLOCKS.LIST_ITEM]: (_, children) => <li className="my-2">{children}</li>,
           [BLOCKS.UL_LIST]: (_, children) => (
-            <ul className="list-disc list-inside my-2 pl-6">{children}</ul>
+            <ul className="list-disc list-outside my-2 pl-6 text-lg">{children}</ul>
+          ),
+          [BLOCKS.OL_LIST]: (_, children) => (
+            <ol className="list-decimal list-outside my-2 pl-6 text-lg">{children}</ol>
           ),
         }
       })
