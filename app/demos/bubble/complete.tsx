@@ -10,7 +10,7 @@ export default function Demo() {
         <HoverBubble
           boundary={8}
           rounding={9999}
-          bubbleClassname="bg-blue-300! border-blue-300/25!"
+          bubbleClassname="bg-black! border-white!"
           sluggishness={0.05}
           overkill={2}
         >

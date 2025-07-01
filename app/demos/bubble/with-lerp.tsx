@@ -10,7 +10,7 @@ export default function Demo() {
         <HoverBubble
           boundary={8}
           rounding={9999}
-          bubbleClassname="bg-black!"
+          bubbleClassname="bg-black! border-white!"
           sluggishness={0.05}
           insetFilter={n => n}
           showIndicators

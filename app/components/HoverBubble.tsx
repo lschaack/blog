@@ -174,14 +174,6 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const intersectionVec = useRef<Vec2>(createVec2());
     const clampTempVec = useRef<Vec2>(createVec2());
 
-    // Cache DOM element styles for performance
-    const cachedStyles = useRef<{
-      bubble?: CSSStyleDeclaration;
-      content?: CSSStyleDeclaration;
-      offsetIndicator?: CSSStyleDeclaration;
-      lerpedOffsetIndicator?: CSSStyleDeclaration;
-    }>({});
-
     const updateDomMeasurements = useCallback(() => {
       const currentContainer = containerElement.current;
 
@@ -236,19 +228,10 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     );
 
     const updateStyles = useCallback(() => {
-      // Cache style references to avoid repeated property access
-      if (!cachedStyles.current.bubble && bubbleElement.current) {
-        cachedStyles.current.bubble = bubbleElement.current.style;
-      }
-      if (!cachedStyles.current.content && contentElement.current) {
-        cachedStyles.current.content = contentElement.current.style;
-      }
-      if (!cachedStyles.current.offsetIndicator && offsetIndicatorElement.current) {
-        cachedStyles.current.offsetIndicator = offsetIndicatorElement.current.style;
-      }
-      if (!cachedStyles.current.lerpedOffsetIndicator && lerpedOffsetIndicatorElement.current) {
-        cachedStyles.current.lerpedOffsetIndicator = lerpedOffsetIndicatorElement.current.style;
-      }
+      const bubbleStyle = bubbleElement.current?.style;
+      const contentStyle = contentElement.current?.style;
+      const offsetIndicatorStyle = offsetIndicatorElement.current?.style;
+      const lerpedOffsetIndicatorStyle = lerpedOffsetIndicatorElement.current?.style;
 
       const {
         offset: [
@@ -276,11 +259,11 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       const translateY = (bubbleTop - bubbleBottom) * 0.5;
 
       // Use cached style reference
-      if (cachedStyles.current.bubble) {
-        cachedStyles.current.bubble.transform = `matrix(${scaleX},0,0,${scaleY},${translateX},${translateY})`;
+      if (bubbleStyle) {
+        bubbleStyle.transform = `matrix(${scaleX},0,0,${scaleY},${translateX},${translateY})`;
       }
 
-      if (cachedStyles.current.content) {
+      if (contentStyle) {
         // Avoid shifting the text content too much since it still needs to be readable
         const contentOffsetX = offsetX * 0.5;
         const contentOffsetY = offsetY * 0.5;
@@ -296,20 +279,20 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         const clipHeight = Math.max(bubbleHeight - doubleBoundary * scaleY, 0);
         const clipRounding = Math.max(rounding - boundary, 0) * scaleAvg;
 
-        cachedStyles.current.content.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
-        cachedStyles.current.content.transform = `translate(${contentOffsetX}px,${contentOffsetY}px)`;
+        contentStyle.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
+        contentStyle.transform = `translate(${contentOffsetX}px,${contentOffsetY}px)`;
       }
 
-      if (cachedStyles.current.offsetIndicator) {
+      if (offsetIndicatorStyle) {
         const offsetTransformX = offsetX * INDICATOR_AMPLIFICATION;
         const offsetTransformY = offsetY * INDICATOR_AMPLIFICATION;
-        cachedStyles.current.offsetIndicator.transform = `translate(${offsetTransformX}px,${offsetTransformY}px)`;
+        offsetIndicatorStyle.transform = `translate(${offsetTransformX}px,${offsetTransformY}px)`;
       }
 
-      if (cachedStyles.current.lerpedOffsetIndicator) {
+      if (lerpedOffsetIndicatorStyle) {
         const lerpedTransformX = lerpedOffsetX * INDICATOR_AMPLIFICATION;
         const lerpedTransformY = lerpedOffsetY * INDICATOR_AMPLIFICATION;
-        cachedStyles.current.lerpedOffsetIndicator.transform = `translate(${lerpedTransformX}px,${lerpedTransformY}px)`;
+        lerpedOffsetIndicatorStyle.transform = `translate(${lerpedTransformX}px,${lerpedTransformY}px)`;
       }
     }, [bubbleOffsetWidth, bubbleOffsetHeight, doubleBoundary, rounding, boundary]);
 
@@ -519,18 +502,18 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         </div>
         {(debug || showIndicators) && (
           <div className="absolute w-4 h-4 top-1/2 left-1/2">
-            <div className="relative rounded-full w-4 h-4 -left-1/2 -top-1/2 overflow-visible mix-blend-lighten bg-blue-300/100">
+            <div className="relative -top-1/2 -left-1/2 rounded-full p-2 m-auto overflow-visible mix-blend-difference bg-[rgb(0,0,255)]">
               <div
                 ref={offsetIndicatorElement}
                 className={clsx(
-                  "absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-green-300/100",
+                  "absolute inset-0 rounded-full p-2 contain-layout mix-blend-difference bg-[rgb(0,255,0)]",
                   doAnimate && "will-change-transform"
                 )}
               />
               <div
                 ref={lerpedOffsetIndicatorElement}
                 className={clsx(
-                  "absolute rounded-full w-4 h-4 contain-layout mix-blend-lighten bg-red-300/100",
+                  "absolute inset-0 rounded-full p-2 contain-layout mix-blend-difference bg-[rgb(255,0,0)]",
                   doAnimate && "will-change-transform"
                 )}
               />

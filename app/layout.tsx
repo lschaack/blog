@@ -30,14 +30,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <body className={clsx(
-        geistMono.variable,
-        lato.variable,
-        'bg-stone-50/30 text-stone-800 font-lato',
-        'bg-[url(/mesa-background-downsampled.jpg)] bg-cover bg-center bg-fixed backdrop-blur-3xl',
-        'min-h-screen overflow-x-hidden overflow-y-scroll pb-8',
-      )}>
+    <html
+      lang="en"
+      className="scroll-smooth"
+      style={{
+        scrollbarGutter: 'stable',
+      }}
+    >
+      <body
+        className={clsx(
+          geistMono.variable,
+          lato.variable,
+          'bg-stone-50/30 text-stone-800 font-lato',
+          'bg-[url(/mesa-background-downsampled.jpg)] bg-cover bg-center bg-fixed backdrop-blur-3xl',
+          'min-h-screen overflow-x-hidden pb-8',
+          'scroll-smooth overflow-y-scroll has-[dialog[open]]:overflow-y-hidden',
+        )}
+      >
         <DebugProvider>
           <Header />
           <main className="w-full flex justify-center">

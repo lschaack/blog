@@ -10,13 +10,15 @@ type DebugToggleProps = {
   className?: string;
 }
 export const DebugToggle: FC<DebugToggleProps> = memo(function DebugToggle({ className }) {
-  const { debug, setDebug } = useContext(DebugContext);
+  const { debug, setDebug, isOverridden } = useContext(DebugContext);
 
   return (
     <button
       onClick={() => setDebug(prev => !prev)}
       className={clsx(
         "hljs rounded-full p-2",
+        "outline-4 transition-colors duration-200",
+        isOverridden ? "hljs-keyword" : "outline-transparent",
         className,
       )}
     >

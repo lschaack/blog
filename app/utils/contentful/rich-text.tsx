@@ -10,6 +10,7 @@ import { CodeBlock } from "@/app/components/CodeBlock";
 import { RichTextError } from "@/app/components/RichTextError";
 import { Demo } from "@/app/demos";
 import { kebabCase } from "lodash/fp";
+import { Expandable } from "@/app/components/Expandable";
 
 const NEXT_KNOWN_IMAGE_EXTENSIONS = [
   "jpg",
@@ -156,13 +157,14 @@ export const getBlogPostOptions = (links: Partial<BlogPostBodyLinks>): Options =
               );
             } else if (NEXT_KNOWN_IMAGE_EXTENSIONS.some(ext => asset.url?.endsWith(ext))) {
               return (
-                <Image
-                  src={asset.url}
-                  alt={asset.description!}
-                  width={asset.width!}
-                  height={asset.height!}
-                  className="my-8"
-                />
+                <Expandable className="my-8">
+                  <Image
+                    src={asset.url}
+                    alt={asset.description!}
+                    width={asset.width!}
+                    height={asset.height!}
+                  />
+                </Expandable>
               );
             } else {
               return (

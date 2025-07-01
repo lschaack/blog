@@ -34,10 +34,10 @@ export default async function Post({
     return (
       <div className="flex justify-center w-full">
         <div className="grow relative">
-          <div className="h-full absolute right-4">
+          <div className="h-full absolute right-0">
             {post.body && (
               <Navigator
-                className="sticky top-4 self-start"
+                className="sticky top-4 self-start hidden xl:block"
                 body={post.body as BlogPostBody}
               />
             )}
