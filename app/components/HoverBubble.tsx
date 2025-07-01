@@ -36,7 +36,6 @@ import { mouseService } from "@/app/utils/mouseService";
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
 import { useResizeValue } from "@/app/hooks/useResizeValue";
-import { useIsVisible } from "@/app/hooks/useIsVisible";
 import { useBatchedAnimation } from "@/app/hooks/useBatchedAnimation";
 
 const faker = new SimpleFaker();
@@ -479,9 +478,9 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         <div
           ref={bubbleElement}
           className={clsx(
-            "absolute overflow-hidden inset-0 border-stone-300/25 bg-stone-50/95 bg-clip-padding",
+            "absolute overflow-hidden inset-0 border-stone-300/75 bg-stone-50/95 bg-clip-padding",
             "transition-colors duration-500 ease-out",
-            isUpdatePending && debug && "border-blue-300/75!",
+            isUpdatePending && debug && "border-hljs-keyword/50!",
             doAnimate && "will-change-transform",
             bubbleClassname,
           )}
@@ -501,18 +500,31 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         </div>
         {(debug || showIndicators) && (
           <div className="absolute w-4 h-4 top-1/2 left-1/2">
-            <div className="relative -top-1/2 -left-1/2 rounded-full p-2 m-auto overflow-visible mix-blend-difference bg-[rgb(0,0,255)]">
+            <div
+              className={clsx(
+                "relative -top-1/2 -left-1/2 m-auto overflow-visible",
+                "rounded-full p-2 bg-black",
+              )}
+            >
+              <div
+                className={clsx(
+                  "absolute inset-0 rounded-full p-2",
+                  "mix-blend-difference bg-[color(display-p3_0_0_1)]",
+                )}
+              />
               <div
                 ref={offsetIndicatorElement}
                 className={clsx(
-                  "absolute inset-0 rounded-full p-2 contain-layout mix-blend-difference bg-[rgb(0,255,0)]",
+                  "absolute inset-0 rounded-full p-2 contain-layout",
+                  "mix-blend-difference bg-[color(display-p3_0_1_0)]",
                   doAnimate && "will-change-transform"
                 )}
               />
               <div
                 ref={lerpedOffsetIndicatorElement}
                 className={clsx(
-                  "absolute inset-0 rounded-full p-2 contain-layout mix-blend-difference bg-[rgb(255,0,0)]",
+                  "absolute inset-0 rounded-full p-2 contain-layout",
+                  "mix-blend-difference bg-[color(display-p3_1_0_0)]",
                   doAnimate && "will-change-transform"
                 )}
               />

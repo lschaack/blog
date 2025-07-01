@@ -24,7 +24,7 @@ const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
   useEffect(() => {
     const handleScroll = () => {
       const heading = document.querySelector<HTMLHeadingElement>(`#${anchor}`);
-      const midScreen = window.scrollY + window.innerHeight / 2;
+      const midScreen = window.scrollY + window.innerHeight / 3;
 
       if (heading) setIsPassed(midScreen > heading.offsetTop);
     }
@@ -46,8 +46,8 @@ const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
         isPassed
           ? "border-stone-800"
           : "border-stone-300",
-        "nth-last-[1_of_.passed]:bg-keyword/20",
-        "nth-last-[1_of_.passed]:border-l-keyword",
+        "nth-last-[1_of_.passed]:bg-hljs-keyword/20",
+        "nth-last-[1_of_.passed]:border-l-hljs-keyword",
       )}
     >
       <li
@@ -69,7 +69,7 @@ export const Navigator: FC<{ body: BlogPostBody; className?: string }> = ({ body
   const headings = extractHeadings(body.json);
 
   return (
-    <ul className={clsx('p-6 bg-stone-50 mx-4', className)}>
+    <ul className={clsx('p-6 bg-stone-50/90 backdrop-blur-sm mx-4 rounded-4xl', className)}>
       <div className="flex flex-col border-stone-800/70 border-l-2">
         {headings.map((heading, i) => (
           <NavigatorEntry

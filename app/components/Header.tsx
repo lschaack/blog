@@ -1,4 +1,6 @@
 import Link from "next/link";
+import clsx from "clsx";
+
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 import "highlight.js/styles/monokai.css";
@@ -11,10 +13,21 @@ const highlighted = hljs.highlight('let something', { language: 'typescript' }).
 
 export const Header = () => {
   return (
-    <header className="flex flex-col items-center">
-      <Link href="/" className="my-12 cursor-pointer">
+    <header className="relative py-12 flex flex-col items-center overflow-visible">
+      <div
+        className={clsx(
+          "absolute before:-z-10",
+          "inset-0",
+          "bg-[url(/stacked-waves-haikei.svg)]",
+          "bg-cover before:bg-no-repeat",
+          "bg-top",
+        )}
+      />
+      <Link href="/" className="cursor-pointer">
         <SignPost>
-          <h1 className="p-4 hljs">
+          {/* NOTE: backdrop-blur here is just a sort of antialiasing on the
+            * transformed element */}
+          <h1 className="p-4 hljs backdrop-blur-xs">
             <pre
               className="font-geist-mono text-3xl"
               dangerouslySetInnerHTML={{
@@ -24,12 +37,6 @@ export const Header = () => {
           </h1>
         </SignPost>
       </Link>
-      <div className="absolute top-0 right-4 h-full">
-        <div
-          id="debug-menu-surface"
-          className="sticky top-4 z-50"
-        />
-      </div>
     </header>
   )
 }

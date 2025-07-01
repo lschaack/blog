@@ -11,7 +11,12 @@
   --font-geist-mono: "Geist Mono", monospace;
   --font-lato: "Lato", sans-serif;
 
-  --color-keyword: #f92672;
+  --color-hljs-background: #272822;
+  --color-hljs-keyword: #f92672;
+  --color-hljs-title: #a6e22e;
+
+  --color-mesa-sky: #b2d3f3;
+  --color-mesa-shadow: #1f2238;
 
   --animate-twist: twist 1.4s ease normal;
   --animate-quicktwist: quicktwist 1s ease normal;

@@ -7,6 +7,7 @@ import clsx from 'clsx';
 
 import { Header } from "@/app/components/Header";
 import { DebugProvider } from "@/app/components/DebugContext";
+import { DebugSurface } from "@/app/components/DebugSurface";
 
 export const metadata: Metadata = {
   title: "let something = ",
@@ -24,6 +25,7 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,20 +35,18 @@ export default function RootLayout({
     <html
       lang="en"
       className="scroll-smooth"
-      style={{
-        scrollbarGutter: 'stable',
-      }}
+    //style={{
+    //  scrollbarGutter: 'stable',
+    //}}
     >
       <body
         className={clsx(
           geistMono.variable,
           lato.variable,
-          'bg-stone-50/30 text-stone-800 font-lato',
-          'bg-[url(/mesa-background-downsampled.jpg)] bg-cover bg-center bg-fixed backdrop-blur-3xl',
-          'min-h-screen overflow-x-hidden pb-8',
-          'scroll-smooth overflow-y-scroll has-[dialog[open]]:overflow-y-hidden',
+          'text-stone-800 font-lato bg-mesa-shadow min-h-screen pb-8',
         )}
       >
+        <DebugSurface />
         <DebugProvider>
           <Header />
           <main className="w-full flex justify-center">

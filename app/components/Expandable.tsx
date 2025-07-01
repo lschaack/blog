@@ -2,6 +2,8 @@
 
 import { FC, ReactNode, useEffect, useRef } from "react";
 import clsx from "clsx";
+import { X } from "lucide-react";
+import { IconButton } from "@/app/components/IconButton";
 
 type ExpandableProps = {
   children: ReactNode;
@@ -55,6 +57,14 @@ export const Expandable: FC<ExpandableProps> = ({
         )}
       >
         {children}
+        <IconButton
+          className="fixed top-4 right-4 bg-white focus:outline-hljs-keyword"
+          label="Close modal"
+          onClick={() => dialogElement.current?.close()}
+          name="Close"
+        >
+          <X size={24} />
+        </IconButton>
       </dialog>
     </div>
   );
