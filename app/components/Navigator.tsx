@@ -40,12 +40,14 @@ const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
     <a
       href={`#${anchor}`}
       className={clsx(
+        isPassed && 'passed',
         "transition-colors duration-75",
         "-ml-[2px] border-l-2 py-1 pr-2",
         isPassed
-          ? "passed border-stone-50 bg-stone-500/10"
-          : "passed border-l-transparent bg-transparent",
-        "nth-last-[1 of .passed]:bg-amber-400"
+          ? "border-stone-800"
+          : "border-stone-300",
+        "nth-last-[1_of_.passed]:bg-keyword/20",
+        "nth-last-[1_of_.passed]:border-l-keyword",
       )}
     >
       <li
@@ -67,7 +69,7 @@ export const Navigator: FC<{ body: BlogPostBody; className?: string }> = ({ body
   const headings = extractHeadings(body.json);
 
   return (
-    <ul className={clsx('p-6 bg-stone-50/70 mx-4', className)}>
+    <ul className={clsx('p-6 bg-stone-50 mx-4', className)}>
       <div className="flex flex-col border-stone-800/70 border-l-2">
         {headings.map((heading, i) => (
           <NavigatorEntry

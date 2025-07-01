@@ -11,6 +11,8 @@
   --font-geist-mono: "Geist Mono", monospace;
   --font-lato: "Lato", sans-serif;
 
+  --color-keyword: #f92672;
+
   --animate-twist: twist 1.4s ease normal;
   --animate-quicktwist: quicktwist 1s ease normal;
 
