@@ -144,7 +144,6 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
     // always start with at least one frame of animation to set clipPath
     const [isUpdatePending, setIsUpdatePending] = useState(true);
-    const isVisible = useIsVisible();
 
     const containerElement = useRef<HTMLDivElement>(null);
     const bubbleElement = useRef<HTMLDivElement>(null);
@@ -457,7 +456,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     // in applySpringForce since DOM property access is so slow. This avoids essentially all
     // animation frame cancellations, which are expensive during my ridiculous FakePostList
     // pop-in effect. Kinda weird, but makes a sizeable difference on slow CPUs
-    const doAnimate = isUpdatePending && Boolean(bubbleOffsetWidth) && Boolean(bubbleOffsetHeight) && isVisible;
+    const doAnimate = isUpdatePending && Boolean(bubbleOffsetWidth) && Boolean(bubbleOffsetHeight);
 
     useBatchedAnimation(update, doAnimate);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, FC, ReactNode, useContext, useEffect, useMemo } from "react";
+import { createContext, FC, ReactNode, useContext, useEffect, useState } from "react";
 
 import { AnimationCallback } from "@/app/hooks/useAnimationFrames";
 import { lerp } from "@/app/utils/lerp";
@@ -10,9 +10,9 @@ type AnimationCallbackQueue = Set<AnimationCallback>;
 // TODO: Replace old useAnimationFrames() hook pattern with this
 class AnimationBatch {
   private callbacks: AnimationCallbackQueue;
-  // NOTE: prevTime serves as a marker as to whether or not the animation is currently running
   private prevTime: number | undefined;
   private frameId: number;
+  private running: boolean;
   fps: number;
 
   static EXPECTED_FRAME_RATE_MS = 60;
@@ -20,6 +20,7 @@ class AnimationBatch {
   constructor() {
     this.callbacks = new Set();
     this.frameId = -1;
+    this.running = false;
     this.fps = 60;
   }
 
@@ -52,6 +53,10 @@ class AnimationBatch {
   }
 
   private start = () => {
+    if (this.running) throw new Error('Attempted to start a running animation batch');
+
+    this.running = true;
+
     const runBatch = (
       this.deltaify(
         this.extractFrameRate(
@@ -66,35 +71,55 @@ class AnimationBatch {
 
         this.frameId = requestAnimationFrame(iterate);
       } else {
-        this.prevTime = undefined;
+        this.stop();
       }
     }
 
     this.frameId = requestAnimationFrame(iterate);
   }
 
+  stop = () => {
+    if (this.frameId) {
+      cancelAnimationFrame(this.frameId);
+      this.prevTime = undefined;
+      this.running = false;
+    }
+  }
+
+  resume = () => {
+    if (!this.running && this.callbacks.size) this.start();
+  }
+
   add = (callback: AnimationCallback) => {
     this.callbacks.add(callback);
 
-    if (!this.prevTime) this.start();
+    if (!this.running) this.start();
   }
 
   delete = (callback: AnimationCallback) => {
     this.callbacks.delete(callback);
+
+    if (!this.callbacks.size && this.running) this.stop();
   }
 
-  cancel = () => {
-    if (this.frameId) {
-      cancelAnimationFrame(this.frameId);
-      this.prevTime = undefined;
-    }
-  }
+  getSize = () => this.callbacks.size;
 }
 
 export const BatchedAnimationContext = createContext<AnimationBatch>(new AnimationBatch());
 
 export const BatchedAnimationContextProvider: FC<{ children?: ReactNode }> = ({ children }) => {
-  const batch = useMemo<AnimationBatch>(() => new AnimationBatch(), []);
+  const [batch] = useState<AnimationBatch>(new AnimationBatch());
+
+  useEffect(() => {
+    const pauseOrResume = () => {
+      if (document.hidden) batch.stop();
+      else if (batch.getSize()) batch.resume();
+    };
+
+    document.addEventListener('visibilitychange', pauseOrResume);
+
+    return () => document.removeEventListener('visibilitychange', pauseOrResume);
+  }, [batch]);
 
   return (
     <BatchedAnimationContext.Provider value={batch}>
