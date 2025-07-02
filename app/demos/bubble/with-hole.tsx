@@ -8,13 +8,13 @@ export default function Demo() {
     <BatchedAnimationContextProvider>
       <div className="w-full p-12 flex justify-center items-center">
         <HoverBubble
-          boundary={4}
+          boundary={8}
           rounding={9999}
           bubbleClassname="bg-black! border-white!"
           sluggishness={1}
           insetFilter={n => n}
         >
-          <div className="w-32 h-32" />
+          <div className="p-16" />
         </HoverBubble>
       </div>
     </BatchedAnimationContextProvider>

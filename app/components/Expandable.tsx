@@ -8,11 +8,13 @@ import { IconButton } from "@/app/components/IconButton";
 type ExpandableProps = {
   children: ReactNode;
   className?: string;
+  maxWidth?: number | string;
 };
 
 export const Expandable: FC<ExpandableProps> = ({
   children,
   className,
+  maxWidth = '80%',
 }) => {
   const dialogElement = useRef<HTMLDialogElement>(null);
 
@@ -49,16 +51,17 @@ export const Expandable: FC<ExpandableProps> = ({
         ref={dialogElement}
         onBlur={() => dialogElement.current?.close()}
         className={clsx(
-          "m-auto backdrop:bg-zinc-900/50",
+          "m-auto backdrop:bg-slate-900/50",
           "transition-opacity duration-200 ease",
           "starting:open:opacity-0 open:opacity-100",
           "backdrop:transition-opacity backdrop:duration-200 ease",
           "starting:open:backdrop:opacity-0 open:backdrop:opacity-100",
         )}
+        style={{ maxWidth }}
       >
         {children}
         <IconButton
-          className="fixed top-4 right-4 bg-white focus:outline-night-owl-keyword"
+          className="fixed top-4 right-4 bg-white focus:outline-night-owl-literal"
           label="Close modal"
           onClick={() => dialogElement.current?.close()}
           name="Close"

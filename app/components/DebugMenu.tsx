@@ -22,7 +22,7 @@ export const DebugMenu: FC<DebugMenuProps> = memo(function DebugMenu({ children 
         <DebugToggle />
         {debug && (
           <menu className={clsx(
-            "bg-zinc-50/90 rounded-4xl backdrop-blur-md p-6 flex flex-col gap-4 w-full max-w-2xl",
+            "bg-slate-50/90 rounded-4xl backdrop-blur-md p-6 flex flex-col gap-4 w-full max-w-2xl",
             "starting:opacity-0 opacity-100 transition-opacity duration-200",
           )}>
             {children}

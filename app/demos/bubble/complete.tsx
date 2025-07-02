@@ -13,6 +13,7 @@ export default function Demo() {
           bubbleClassname="bg-black! border-white!"
           sluggishness={0.05}
           overkill={2}
+          showIndicators
         >
           <div className="p-16 relative">
             <div className="p-4 rounded-full bg-white absolute right-1/4 top-1/5">

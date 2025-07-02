@@ -9,7 +9,7 @@ export const useResizeEffect = <TValue>(
   sideEffect: () => TValue,
   toObserve: Array<ElementPossibly> | (() => Array<ElementPossibly>),
   runOnMount = false,
-  debounceMs?: number,
+  debounceMs = 50,
 ) => {
   useEffect(() => {
     if (runOnMount) sideEffect();

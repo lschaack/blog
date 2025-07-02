@@ -37,6 +37,7 @@ import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
 import { useResizeValue } from "@/app/hooks/useResizeValue";
 import { useBatchedAnimation } from "@/app/hooks/useBatchedAnimation";
+import { getAbsoluteOffset } from "@/app/utils/dom";
 
 const faker = new SimpleFaker();
 
@@ -176,27 +177,13 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       const currentContainer = containerElement.current;
 
       if (currentContainer) {
-        // Ensure container position is computed relative to entire document
-        // https://stackoverflow.com/a/26230989
-        const containerRect = currentContainer.getBoundingClientRect();
-
-        const body = document.body;
-        const docEl = document.documentElement;
-
-        const scrollTop = window.pageYOffset || docEl.scrollTop || body.scrollTop;
-        const scrollLeft = window.pageXOffset || docEl.scrollLeft || body.scrollLeft;
-
-        const clientTop = docEl.clientTop || body.clientTop || 0;
-        const clientLeft = docEl.clientLeft || body.clientLeft || 0;
-
-        const top = containerRect.top + scrollTop - clientTop;
-        const left = containerRect.left + scrollLeft - clientLeft;
+        const { offsetTop, offsetLeft } = getAbsoluteOffset(currentContainer);
 
         return {
           bubbleOffsetWidth: bubbleElement.current?.offsetWidth ?? 0,
           bubbleOffsetHeight: bubbleElement.current?.offsetHeight ?? 0,
-          containerOffsetTop: Math.round(top),
-          containerOffsetLeft: Math.round(left),
+          containerOffsetTop: Math.round(offsetTop),
+          containerOffsetLeft: Math.round(offsetLeft),
         };
       }
 
@@ -478,7 +465,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         <div
           ref={bubbleElement}
           className={clsx(
-            "absolute overflow-hidden inset-0 border-zinc-300/75 bg-zinc-50/95 bg-clip-padding",
+            "absolute overflow-hidden inset-0 border-slate-300/30 bg-slate-50/95 bg-clip-padding",
             "transition-colors duration-500 ease-out",
             isUpdatePending && debug && "border-night-owl-attr!",
             doAnimate && "will-change-transform",
