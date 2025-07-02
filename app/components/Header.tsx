@@ -1,11 +1,11 @@
 import Link from "next/link";
-import clsx from "clsx";
 
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
 import "highlight.js/styles/monokai.css";
 
 import { SignPost } from "@/app/components/SignPost";
+import clsx from "clsx";
 
 hljs.registerLanguage("typescript", typescript);
 
@@ -13,16 +13,10 @@ const highlighted = hljs.highlight('let something', { language: 'typescript' }).
 
 export const Header = () => {
   return (
-    <header className="relative py-12 flex flex-col items-center overflow-visible">
-      <div
-        className={clsx(
-          "absolute before:-z-10",
-          "inset-0",
-          "bg-[url(/stacked-waves-haikei.svg)]",
-          "bg-cover before:bg-no-repeat",
-          "bg-top",
-        )}
-      />
+    <header className={clsx(
+      "relative pt-10 pb-14 flex flex-col items-center overflow-visible",
+      "bg-[url(/stacked-waves-haikei-contrast-less.svg)] bg-center bg-cover 2xl:bg-[length:100%_100%]"
+    )}>
       <Link href="/" className="cursor-pointer">
         <SignPost>
           {/* NOTE: backdrop-blur here is just a sort of antialiasing on the

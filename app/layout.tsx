@@ -35,21 +35,21 @@ export default function RootLayout({
     <html
       lang="en"
       className="scroll-smooth"
-    //style={{
-    //  scrollbarGutter: 'stable',
-    //}}
+      style={{
+        scrollbarGutter: 'stable',
+      }}
     >
       <body
         className={clsx(
           geistMono.variable,
           lato.variable,
-          'text-stone-800 font-lato bg-mesa-shadow min-h-screen pb-8',
+          'text-stone-800 font-lato bg-mesa-shadow-dark min-h-screen flex flex-col',
         )}
       >
         <DebugSurface />
         <DebugProvider>
           <Header />
-          <main className="w-full flex justify-center">
+          <main className="w-full grow flex justify-center bg-[linear-gradient(180deg,rgba(31,_34,_56,_1)_0%,_rgba(17,_18,_24,_1)_100%)] bg-[length:100%_100vh] bg-no-repeat">
             {children}
           </main>
         </DebugProvider>

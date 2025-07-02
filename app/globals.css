@@ -16,7 +16,14 @@
   --color-hljs-title: #a6e22e;
 
   --color-mesa-sky: #b2d3f3;
+  --color-mesa-sky-light: #c9ddf0;
+  --color-mesa-sky-dark: #112d46;
+
   --color-mesa-shadow: #1f2238;
+  --color-mesa-shadow-dark: #111218;
+
+  --color-mesa-sky-green: #cbd5ab;
+  --color-mesa-shadow-green: #1b2726;
 
   --animate-twist: twist 1.4s ease normal;
   --animate-quicktwist: quicktwist 1s ease normal;
