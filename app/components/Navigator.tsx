@@ -46,8 +46,8 @@ const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
         isPassed
           ? "border-stone-800"
           : "border-stone-300",
-        "nth-last-[1_of_.passed]:bg-hljs-keyword/20",
-        "nth-last-[1_of_.passed]:border-l-hljs-keyword",
+        "nth-last-[1_of_.passed]:bg-night-owl-keyword/20",
+        "nth-last-[1_of_.passed]:border-l-night-owl-keyword",
       )}
     >
       <li

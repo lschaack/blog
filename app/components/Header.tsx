@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
-import "highlight.js/styles/monokai.css";
+import "highlight.js/styles/night-owl.css";
 
 import { SignPost } from "@/app/components/SignPost";
 import clsx from "clsx";
@@ -15,7 +15,7 @@ export const Header = () => {
   return (
     <header className={clsx(
       "relative pt-10 pb-14 flex flex-col items-center overflow-visible",
-      "bg-[url(/stacked-waves-haikei-contrast-less.svg)] bg-center bg-cover 2xl:bg-[length:100%_100%]"
+      "bg-[url(/stacked-waves-haikei-night-owl.svg)] bg-center bg-cover 2xl:bg-[length:100%_100%]"
     )}>
       <Link href="/" className="cursor-pointer">
         <SignPost>

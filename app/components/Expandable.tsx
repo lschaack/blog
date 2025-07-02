@@ -58,7 +58,7 @@ export const Expandable: FC<ExpandableProps> = ({
       >
         {children}
         <IconButton
-          className="fixed top-4 right-4 bg-white focus:outline-hljs-keyword"
+          className="fixed top-4 right-4 bg-white focus:outline-night-owl-keyword"
           label="Close modal"
           onClick={() => dialogElement.current?.close()}
           name="Close"

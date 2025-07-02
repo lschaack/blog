@@ -4,7 +4,7 @@ import { RichTextError } from "@/app/components/RichTextError";
 
 import hljs from "highlight.js/lib/core";
 import typescript from "highlight.js/lib/languages/typescript";
-import "highlight.js/styles/monokai.css";
+import "highlight.js/styles/night-owl.css";
 
 hljs.registerLanguage("typescript", typescript);
 
