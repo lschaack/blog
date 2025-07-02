@@ -11,10 +11,6 @@
   --font-geist-mono: "Geist Mono", monospace;
   --font-lato: "Lato", sans-serif;
 
-  --color-hljs-background: #272822;
-  --color-hljs-keyword: #f92672;
-  --color-hljs-title: #a6e22e;
-
   --color-mesa-sky: #b2d3f3;
   --color-mesa-sky-light: #c9ddf0;
   --color-mesa-sky-dark: #112d46;
@@ -22,9 +18,12 @@
   --color-mesa-shadow: #1f2238;
   --color-mesa-shadow-dark: #111218;
 
-  --color-night-owl-background: #041623;
-  --color-night-owl-keyword: #C087E7;
-  --color-night-owl-keyword-dark: #041623;
+  --color-night-owl-background: #011627;
+  --color-night-owl-background-dark: #031421;
+  --color-night-owl-text: #d0d9e8;
+  --color-night-owl-keyword: #c087e7;
+  --color-night-owl-keyword-dark: #12051b;
+  --color-night-owl-attr: #7fdbca;
 
   --animate-twist: twist 1.4s ease normal;
   --animate-quicktwist: quicktwist 1s ease normal;

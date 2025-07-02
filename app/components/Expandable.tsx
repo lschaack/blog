@@ -49,7 +49,7 @@ export const Expandable: FC<ExpandableProps> = ({
         ref={dialogElement}
         onBlur={() => dialogElement.current?.close()}
         className={clsx(
-          "m-auto backdrop:bg-stone-900/50",
+          "m-auto backdrop:bg-zinc-900/50",
           "transition-opacity duration-200 ease",
           "starting:open:opacity-0 open:opacity-100",
           "backdrop:transition-opacity backdrop:duration-200 ease",

@@ -14,7 +14,7 @@ const highlighted = hljs.highlight('let something', { language: 'typescript' }).
 export const Header = () => {
   return (
     <header className={clsx(
-      "relative pt-10 pb-14 flex flex-col items-center overflow-visible",
+      "relative pt-17 pb-23 flex flex-col items-center overflow-visible",
       "bg-[url(/stacked-waves-haikei-night-owl.svg)] bg-center bg-cover 2xl:bg-[length:100%_100%]"
     )}>
       <Link href="/" className="cursor-pointer">

@@ -43,13 +43,13 @@ export default function RootLayout({
         className={clsx(
           geistMono.variable,
           lato.variable,
-          'text-stone-800 font-lato bg-[#12051b] min-h-screen flex flex-col',
+          'text-zinc-800 font-lato bg-[#12051b] min-h-screen flex flex-col',
         )}
       >
-        <DebugSurface />
         <DebugProvider>
           <Header />
           <main className="w-full grow flex justify-center bg-[linear-gradient(180deg,rgba(4,_22,_35,_1)_0%,_rgba(18,_5,_27,_1)_100%)] bg-[length:100%_100vh] bg-no-repeat">
+            <DebugSurface />
             {children}
           </main>
         </DebugProvider>

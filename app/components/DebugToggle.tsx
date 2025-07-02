@@ -18,7 +18,7 @@ export const DebugToggle: FC<DebugToggleProps> = memo(function DebugToggle({ cla
       // FIXME: Not sure why onChange gets fired but onClick doesn't
       onClick={() => setDebug(prev => !prev)}
       onChange={() => setDebug(prev => !prev)}
-      className={clsx("hljs", isOverridden ? "night-owl-keyword" : "outline-transparent", className)}
+      className={clsx("bg-zinc-50/90", isOverridden ? "outline-night-owl-attr" : "outline-transparent", className)}
       type="checkbox"
       name="debug"
       value={String(debug)}

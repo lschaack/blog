@@ -478,9 +478,9 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         <div
           ref={bubbleElement}
           className={clsx(
-            "absolute overflow-hidden inset-0 border-stone-300/75 bg-stone-50/95 bg-clip-padding",
+            "absolute overflow-hidden inset-0 border-zinc-300/75 bg-zinc-50/95 bg-clip-padding",
             "transition-colors duration-500 ease-out",
-            isUpdatePending && debug && "border-night-owl-keyword/50!",
+            isUpdatePending && debug && "border-night-owl-attr!",
             doAnimate && "will-change-transform",
             bubbleClassname,
           )}

@@ -44,8 +44,8 @@ const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
         "transition-colors duration-75",
         "-ml-[2px] border-l-2 py-1 pr-2",
         isPassed
-          ? "border-stone-800"
-          : "border-stone-300",
+          ? "border-zinc-800"
+          : "border-zinc-300",
         "nth-last-[1_of_.passed]:bg-night-owl-keyword/20",
         "nth-last-[1_of_.passed]:border-l-night-owl-keyword",
       )}
@@ -53,7 +53,7 @@ const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
       <li
         className={clsx(
           "font-bold",
-          isPassed ? "text-stone-800" : "text-stone-800/70",
+          isPassed ? "text-zinc-800" : "text-zinc-800/70",
         )}
         style={{
           paddingLeft: `${12 * parseInt(level)}px`
@@ -69,8 +69,8 @@ export const Navigator: FC<{ body: BlogPostBody; className?: string }> = ({ body
   const headings = extractHeadings(body.json);
 
   return (
-    <ul className={clsx('p-6 bg-stone-50/90 backdrop-blur-sm mx-4 rounded-4xl', className)}>
-      <div className="flex flex-col border-stone-800/70 border-l-2">
+    <ul className={clsx('p-6 bg-zinc-50/90 backdrop-blur-sm mx-4 mt-8 rounded-4xl', className)}>
+      <div className="flex flex-col border-zinc-800/70 border-l-2">
         {headings.map((heading, i) => (
           <NavigatorEntry
             key={`heading-${i}`}
