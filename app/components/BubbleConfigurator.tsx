@@ -7,6 +7,7 @@ import { DebugContext } from "@/app/components/DebugContext";
 import { BUBBLE_BOUNDARY, BUBBLE_OVERKILL, SPRING_STIFFNESS } from "@/app/utils/physicsConsts";
 import { Button } from "@/app/components/Button";
 import { DebugMenu } from "@/app/components/DebugMenu";
+import { Pingable } from "@/app/components/Pingable";
 
 const INIT_STATE = {
   springStiffness: SPRING_STIFFNESS,
@@ -21,7 +22,7 @@ const RESET_STATE = {
 }
 
 export const BubbleConfigurator = memo(function BubbleConfigurator() {
-  const { debugMenuOptions, setDebugMenuOptions } = useContext(DebugContext);
+  const { debugMenuOptions, setDebugMenuOptions, isOverridden } = useContext(DebugContext);
 
   return (
     <DebugMenu>
@@ -72,16 +73,19 @@ export const BubbleConfigurator = memo(function BubbleConfigurator() {
         />
       </li>
       <li>
-        <Button
-          label="reset"
-          color="emerald"
-          onClick={() => setDebugMenuOptions(
-            prev => ({
-              ...prev,
-              ...RESET_STATE
-            })
-          )}
-        />
+        <Pingable ping={isOverridden} className="bg-emerald-300! inset-x-7 inset-y-1">
+          <Button
+            label="reset"
+            color="emerald"
+            onClick={() => setDebugMenuOptions(
+              prev => ({
+                ...prev,
+                ...RESET_STATE
+              })
+            )}
+          >
+          </Button>
+        </Pingable>
       </li>
     </DebugMenu>
   );

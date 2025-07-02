@@ -22,7 +22,6 @@ export const IconButton: FC<IconButtonProps> = ({
       onClick={onClick}
       className={clsx(
         "rounded-full p-2",
-        "outline-4 transition-colors duration-200",
         className,
       )}
     >
