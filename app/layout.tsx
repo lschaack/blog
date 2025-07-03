@@ -48,7 +48,7 @@ export default function RootLayout({
       >
         <DebugProvider>
           <Header />
-          <main className="w-full grow flex justify-center bg-[linear-gradient(180deg,rgba(1,_22,_39,_1)_0%,_rgba(1,_10,_21,_1)_100%)] bg-[length:100%_100vh] bg-no-repeat">
+          <main className="w-full py-8 grow flex justify-center bg-[linear-gradient(180deg,rgba(1,_22,_39,_1)_0%,_rgba(1,_10,_21,_1)_100%)] bg-[length:100%_100vh] bg-no-repeat">
             <DebugSurface />
             {children}
           </main>

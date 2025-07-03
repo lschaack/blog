@@ -81,7 +81,7 @@ export const Navigator: FC<{ body: BlogPostBody; className?: string }> = ({ body
   const headings = extractHeadings(body.json);
 
   return (
-    <ul className={clsx('p-6 bg-slate-50/95 backdrop-blur-sm mx-4 mt-8 rounded-4xl', className)}>
+    <ul className={clsx('p-6 bg-slate-50/95 backdrop-blur-sm mx-4 rounded-4xl', className)}>
       <div className="flex flex-col border-slate-800/70 border-l-2">
         {headings.map((heading, i) => (
           <NavigatorEntry
