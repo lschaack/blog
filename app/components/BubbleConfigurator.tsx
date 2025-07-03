@@ -73,10 +73,9 @@ export const BubbleConfigurator = memo(function BubbleConfigurator() {
         />
       </li>
       <li>
-        <Pingable ping={isOverridden} className="bg-emerald-300! inset-x-7 inset-y-1">
+        <Pingable ping={isOverridden} className="inset-x-7 inset-y-1 opacity-50">
           <Button
             label="reset"
-            color="emerald"
             onClick={() => setDebugMenuOptions(
               prev => ({
                 ...prev,

@@ -1,7 +1,6 @@
 import { clsx } from "clsx";
 import { ChangeEventHandler, FC, useRef, useState } from "react";
 
-import { inputColorClasses } from "@/app/utils/colors";
 import { LabelledValue } from "@/app/components/LabelledValue";
 import { easify, EASING_STRATEGY, EasingStrategy } from "@/app/utils/easingFunctions";
 import { roundToPrecision } from "@/app/utils/roundToPrecision";
@@ -9,7 +8,6 @@ import { normalize } from "@/app/utils/range";
 
 type InputRangeProps = {
   label: string;
-  color: keyof typeof inputColorClasses;
   id: string;
   min: number;
   max: number;
@@ -18,13 +16,13 @@ type InputRangeProps = {
   value?: number;
   onChange: (value: number) => void;
   className?: string;
+  trackClassName?: string;
   easing?: EasingStrategy;
 }
 
 export const InputRange: FC<InputRangeProps> = ({
   label,
   id,
-  color,
   min,
   max,
   step,
@@ -32,13 +30,13 @@ export const InputRange: FC<InputRangeProps> = ({
   value: managedValue,
   onChange,
   className,
+  trackClassName = 'bg-night-owl-built-in',
   easing,
 }) => {
   const [_value, _setValue] = useState(defaultValue ?? min);
   const value = managedValue ?? _value;
 
   const [isDragging, setIsDragging] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
   const pad = Math.max(max.toString().length, min.toString().length);
 
@@ -90,32 +88,43 @@ export const InputRange: FC<InputRangeProps> = ({
         onChange={handleChange}
         onMouseDown={() => setIsDragging(true)}
         onMouseUp={() => setIsDragging(false)}
-        className="absolute w-full opacity-0 cursor-pointer z-10"
-        onFocus={() => setIsFocused(true)}
+        className="peer absolute w-full opacity-0 cursor-pointer z-10"
         onBlur={() => {
           setIsDragging(false);
-          setIsFocused(false);
         }}
       />
 
       {/* Custom track */}
-      <div className={`relative w-full h-4 ${inputColorClasses[color].track}`} ref={trackRef}>
-        {/* Filled portion */}
-        <div
-          className={`absolute h-full ${inputColorClasses[color].filled}`}
-          style={{ width: `${percentage}%` }}
-        />
+      <div
+        ref={trackRef}
+        className={clsx(
+          trackClassName,
+          "relative w-full bg-inherit brightness-200",
+          // Scale needs to be the incredibly specific 112.5% to avoid sub-pixel issues
+          // with the absolutely-positioned filled track. A classic alternative fix would be to
+          // pass these calculations off to the GPU with e.g. `will-change: transform`, but the
+          // sub-pixel rounding seems to happen pre-GPU, at least with Chrome. A scaling bump of
+          // 1/8 increases height from 16px to an even 18px, so no more problems.
+          "transition-transform origin-center ease duration-200 peer-focus:scale-[112.5%]",
+        )}
+      >
 
         {/* Smaller track to limit thumb to left/right edges */}
-        <div className="relative w-full h-full px-2">
+        <div className="relative w-full px-2 bg-inherit">
+          {/* Filled portion */}
+          <div
+            className="absolute h-full bg-inherit brightness-50 -ml-2"
+            style={{ width: `${percentage}%` }}
+          />
+
           {/* Custom thumb */}
           <div
             className={clsx(
               'relative w-4 h-4',
               'transform -translate-x-1/2',
               'transition-[box-shadow,background-color] duration-200',
-              isDragging ? inputColorClasses[color].thumbActive : inputColorClasses[color].thumb,
-              isFocused && inputColorClasses[color].focused,
+              'bg-inherit opacity-100 brightness-[25%] active:brightness-[10%]',
+              'ring-4 ring-transparent group-focus:bg-white!',
             )}
             style={{ left: `${percentage}%` }}
           />

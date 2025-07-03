@@ -1,35 +1,27 @@
-import { FC, useState } from 'react';
+import { FC } from 'react';
 import clsx from 'clsx';
 
-import { inputColorClasses } from "@/app/utils/colors";
-
 type ButtonProps = {
-  color: keyof typeof inputColorClasses;
   label: string;
   onClick: () => void;
+  className?: string;
 }
 
-export const Button: FC<ButtonProps> = ({ color, label, onClick }) => {
-  const [isFocused, setIsFocused] = useState(false);
-  const [isActive, setIsActive] = useState(false);
-
+export const Button: FC<ButtonProps> = ({ label, onClick, className }) => {
   return (
     <button
       onClick={onClick}
-      onFocus={() => setIsFocused(true)}
-      onBlur={() => setIsFocused(false)}
-      onMouseDown={() => setIsActive(true)}
-      onMouseUp={() => setIsActive(false)}
-      onMouseOut={() => setIsActive(false)}
       className={clsx(
-        "w-full p-2 font-geist-mono cursor-pointer transition-colors duration-200",
-        "focus:outline-0",
-        inputColorClasses[color].track,
-        isFocused && inputColorClasses[color].altFocused,
-        isActive && inputColorClasses[color].filled,
+        className,
+        "text font-geist-mono font-bold",
+        "w-full p-2 cursor-pointer transition-[background-color,filter,box-shadow] duration-200",
+        "bg-night-owl-literal/50 ring-night-owl-literal",
+        "focus:outline-0 focus:ring-4",
+        "brightness-125",
+        "active:brightness-75 active:saturate-200",
       )}
     >
-      {label}
+      {label.toLocaleUpperCase()}
     </button>
   );
 }
