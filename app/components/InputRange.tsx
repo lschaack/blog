@@ -1,5 +1,6 @@
 import { clsx } from "clsx";
-import { ChangeEventHandler, FC, useRef, useState } from "react";
+import { ChangeEventHandler, FC, KeyboardEventHandler, useRef, useState } from "react";
+import { clamp } from "lodash";
 
 import { LabelledValue } from "@/app/components/LabelledValue";
 import { easify, EASING_STRATEGY, EasingStrategy } from "@/app/utils/easingFunctions";
@@ -60,6 +61,25 @@ export const InputRange: FC<InputRangeProps> = ({
     }
   };
 
+  // FIXME: Downstream of the handleChange weirdness,
+  // need to manually handle keyboard changes b/c/o isDragging check above...
+  // some true lazy tech debt for after the initial release
+  const handleKeyDown: KeyboardEventHandler<HTMLInputElement> = (e) => {
+    let newValue: number;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+      newValue = clamp(value + step, min, max);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+      newValue = clamp(value - step, min, max);
+    } else {
+      newValue = NaN;
+    }
+
+    if (!isNaN(newValue)) {
+      _setValue(newValue);
+      if (onChange) onChange(newValue);
+    }
+  }
+
   const rawNorm = normalize(value, min, max);
   // If value is eased, we need to "undo" the easing for the thumb to move linearly
   // in the visual presentation
@@ -89,7 +109,8 @@ export const InputRange: FC<InputRangeProps> = ({
           onChange={handleChange}
           onMouseDown={() => setIsDragging(true)}
           onMouseUp={() => setIsDragging(false)}
-          className="peer absolute w-full h-full opacity-0 cursor-pointer z-10"
+          onKeyDown={handleKeyDown}
+          className="opacity-0 peer absolute w-full h-full cursor-pointer z-10"
           onBlur={() => {
             setIsDragging(false);
           }}
