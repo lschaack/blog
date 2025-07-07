@@ -4,6 +4,16 @@ schema {
 
 directive @contentSourceMaps on QUERY
 
+directive @delegatedResourceLink(contentTypeId: String, field: JSON) on FIELD_DEFINITION | OBJECT
+
+directive @enumMapper(value: JSON) on ENUM_VALUE
+
+directive @featureFlag(featureName: String) on FIELD
+
+directive @fieldResolver(data: JSON, kind: String) on FIELD_DEFINITION
+
+directive @typeIdentifier(contentTypeId: String) on OBJECT
+
 """Represents a binary file in a space. An asset can be any file type."""
 type Asset {
   contentType(locale: String): String
@@ -195,7 +205,7 @@ enum AuthorOrder {
 }
 
 """
-A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost)
+[See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost)
 """
 type BlogPost implements Entry & _Node {
   _id: ID!
@@ -318,7 +328,7 @@ enum BlogPostOrder {
 }
 
 """
-An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage)
+[See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage)
 """
 type CaptionedImage implements Entry & _Node {
   _id: ID!
@@ -377,7 +387,7 @@ enum CaptionedImageOrder {
 }
 
 """
-A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock)
+[See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock)
 """
 type CodeBlock implements Entry & _Node {
   _id: ID!
@@ -492,7 +502,7 @@ A date-time string at UTC, such as 2007-12-03T10:15:30Z,
 scalar DateTime
 
 """
-An embeddable code demo enabling interactivity within blog posts [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo)
+[See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo)
 """
 type Demo implements Entry & _Node {
   _id: ID!

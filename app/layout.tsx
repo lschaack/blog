@@ -43,12 +43,12 @@ export default function RootLayout({
         className={clsx(
           geistMono.variable,
           lato.variable,
-          'text-slate-800 font-lato bg-night-owl-background-dark min-h-screen flex flex-col',
+          'text-deep-900 font-lato bg-deep-900 min-h-screen flex flex-col',
         )}
       >
         <DebugProvider>
           <Header />
-          <main className="w-full py-8 grow flex justify-center bg-[linear-gradient(180deg,rgba(1,_22,_39,_1)_0%,_rgba(1,_10,_21,_1)_100%)] bg-[length:100%_100vh] bg-no-repeat">
+          <main className="w-full py-8 grow flex justify-center bg-[linear-gradient(180deg,rgba(1,_22,_39,_1)_0%,_rgba(1,_8,_15,_1)_100%)] bg-[length:100%_100vh] bg-no-repeat">
             <DebugSurface />
             {children}
           </main>

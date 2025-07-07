@@ -4,7 +4,11 @@ export const getBlogPostWithSlug = gql`
   query GetBlogPostWithSlug($preview: Boolean, $slug: String) {
     blogPostCollection(preview: $preview, limit: 1, where: { slug: $slug }) {
       items {
+        sys {
+          publishedAt
+        }
         title
+        subtitle
         slug
         body {
           json

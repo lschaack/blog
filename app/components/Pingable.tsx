@@ -11,7 +11,7 @@ const Ping = ({ ping, className }: Pick<PingableProps, 'ping' | 'className'>) =>
     <div
       className={clsx(
         className,
-        "absolute inset-0 -z-10 bg-night-owl-literal",
+        "absolute inset-0 -z-10 bg-prickly-pear-200",
         ping ? "animate-ping" : 'opacity-0!',
       )}
     />

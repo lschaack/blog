@@ -55,16 +55,23 @@ export const PostBubble = memo(function PostBubble({
   moveOnMount,
   className
 }: PostBubbleProps) {
-  return (
-    <Link
-      href={fake ? post.slug! : `/posts/${post.slug}`}
-      key={post.sys?.id}
-      className={clsx(fake && 'pointer-events-none', className)}
-    >
+  if (fake) {
+    return (
       <HoverBubble moveOnMount={moveOnMount}>
         <PostBubbleContents post={post} />
       </HoverBubble>
-    </Link>
-  );
+    );
+  } else {
+    return (
+      <Link
+        href={fake ? post.slug! : `/posts/${post.slug}`}
+        className={clsx(fake && 'pointer-events-none', className)}
+      >
+        <HoverBubble moveOnMount={moveOnMount}>
+          <PostBubbleContents post={post} />
+        </HoverBubble>
+      </Link>
+    );
+  }
 });
 

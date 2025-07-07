@@ -348,7 +348,7 @@ export enum AuthorOrder {
   SysPublishedVersionDesc = 'sys_publishedVersion_DESC'
 }
 
-/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPost = Entry & _Node & {
   __typename?: 'BlogPost';
   _id: Scalars['ID']['output'];
@@ -365,7 +365,7 @@ export type BlogPost = Entry & _Node & {
 };
 
 
-/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostAuthorArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
   preview?: InputMaybe<Scalars['Boolean']['input']>;
@@ -373,44 +373,44 @@ export type BlogPostAuthorArgs = {
 };
 
 
-/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostBodyArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 
-/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostHeroImageArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
   preview?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 
-/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostLinkedFromArgs = {
   allowedLocales?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
 };
 
 
-/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostSlugArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 
-/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostSubtitleArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 
-/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostTagsArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 
-/** A post that appears in a blog. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostTitleArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
@@ -539,7 +539,7 @@ export enum BlogPostOrder {
   TitleDesc = 'title_DESC'
 }
 
-/** An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
 export type CaptionedImage = Entry & _Node & {
   __typename?: 'CaptionedImage';
   _id: Scalars['ID']['output'];
@@ -552,26 +552,26 @@ export type CaptionedImage = Entry & _Node & {
 };
 
 
-/** An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
 export type CaptionedImageCaptionArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 
-/** An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
 export type CaptionedImageImageArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
   preview?: InputMaybe<Scalars['Boolean']['input']>;
 };
 
 
-/** An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
 export type CaptionedImageLinkedFromArgs = {
   allowedLocales?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
 };
 
 
-/** An image with the little textbox below it that describes what's in the image. Ali says that's a caption. There's a description field on the asset, but that's basically gotta be reserved for alt text. Why doesn't the default split alt text and description??? [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/captionedImage) */
 export type CaptionedImageTitleArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
@@ -632,7 +632,7 @@ export enum CaptionedImageOrder {
   TitleDesc = 'title_DESC'
 }
 
-/** A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
 export type CodeBlock = Entry & _Node & {
   __typename?: 'CodeBlock';
   _id: Scalars['ID']['output'];
@@ -645,25 +645,25 @@ export type CodeBlock = Entry & _Node & {
 };
 
 
-/** A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
 export type CodeBlockCodeArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 
-/** A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
 export type CodeBlockLanguageArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 
-/** A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
 export type CodeBlockLinkedFromArgs = {
   allowedLocales?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
 };
 
 
-/** A block of code. What do you want from me. [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/codeBlock) */
 export type CodeBlockTitleArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
@@ -774,7 +774,7 @@ export type ContentfulTag = {
   name?: Maybe<Scalars['String']['output']>;
 };
 
-/** An embeddable code demo enabling interactivity within blog posts [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo) */
 export type Demo = Entry & _Node & {
   __typename?: 'Demo';
   _id: Scalars['ID']['output'];
@@ -785,13 +785,13 @@ export type Demo = Entry & _Node & {
 };
 
 
-/** An embeddable code demo enabling interactivity within blog posts [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo) */
 export type DemoIdArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 
-/** An embeddable code demo enabling interactivity within blog posts [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo) */
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo) */
 export type DemoLinkedFromArgs = {
   allowedLocales?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
 };
@@ -1218,7 +1218,7 @@ export type GetBlogPostWithSlugQueryVariables = Exact<{
 }>;
 
 
-export type GetBlogPostWithSlugQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', items: Array<{ __typename?: 'BlogPost', title?: string | null, slug?: string | null, body?: { __typename?: 'BlogPostBody', json: any, links: { __typename?: 'BlogPostBodyLinks', entries: { __typename?: 'BlogPostBodyEntries', block: Array<{ __typename?: 'Author', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'BlogPost', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CaptionedImage', caption?: string | null, image?: { __typename?: 'Asset', url?: string | null, width?: number | null, height?: number | null, description?: string | null } | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CodeBlock', language?: string | null, code?: string | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'Demo', id?: string | null, sys: { __typename?: 'Sys', id: string } } | null> }, assets: { __typename?: 'BlogPostBodyAssets', block: Array<{ __typename?: 'Asset', url?: string | null, title?: string | null, width?: number | null, height?: number | null, description?: string | null, sys: { __typename?: 'Sys', id: string } } | null> } } } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
+export type GetBlogPostWithSlugQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', items: Array<{ __typename?: 'BlogPost', title?: string | null, slug?: string | null, sys: { __typename?: 'Sys', publishedAt?: any | null }, body?: { __typename?: 'BlogPostBody', json: any, links: { __typename?: 'BlogPostBodyLinks', entries: { __typename?: 'BlogPostBodyEntries', block: Array<{ __typename?: 'Author', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'BlogPost', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CaptionedImage', caption?: string | null, image?: { __typename?: 'Asset', url?: string | null, width?: number | null, height?: number | null, description?: string | null } | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CodeBlock', language?: string | null, code?: string | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'Demo', id?: string | null, sys: { __typename?: 'Sys', id: string } } | null> }, assets: { __typename?: 'BlogPostBodyAssets', block: Array<{ __typename?: 'Asset', url?: string | null, title?: string | null, width?: number | null, height?: number | null, description?: string | null, sys: { __typename?: 'Sys', id: string } } | null> } } } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
 
 export class TypedDocumentString<TResult, TVariables>
   extends String
@@ -1279,6 +1279,9 @@ export const GetBlogPostWithSlugDocument = new TypedDocumentString(`
     query GetBlogPostWithSlug($preview: Boolean, $slug: String) {
   blogPostCollection(preview: $preview, limit: 1, where: {slug: $slug}) {
     items {
+      sys {
+        publishedAt
+      }
       title
       slug
       body {

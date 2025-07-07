@@ -23,6 +23,70 @@
   --color-night-owl-keyword: #c087e7;
   --color-night-owl-attr: #7fdbca;
 
+  --color-deep-950: #01060A;
+  --color-deep-900: #01080F;
+  --color-deep-800: #011627;
+  --color-deep-700: #132534;
+  --color-deep-600: #394C60;
+  --color-deep-500: #657E95;
+  --color-deep-400: #A4B8CB;
+  --color-deep-300: #D0DCE7;
+  --color-deep-200: #E1E9F0;
+  --color-deep-100: #F2F5F8;
+  --color-deep-50: #FBFCFD;
+
+  --color-virginia-sky-950: #020509;
+  --color-virginia-sky-900: #070E1B;
+  --color-virginia-sky-800: #11223F;
+  --color-virginia-sky-700: #1B3663;
+  --color-virginia-sky-600: #254A87;
+  --color-virginia-sky-500: #2F5FAB;
+  --color-virginia-sky-400: #4A7DCD;
+  --color-virginia-sky-300: #7A9FDA;
+  --color-virginia-sky-200: #AAC2E8;
+  --color-virginia-sky-100: #DAE4F5;
+  --color-virginia-sky-50: #F2F6FB;
+
+  --color-saguaro-800: #1A270C;
+  --color-saguaro-700: #2C4214;
+  --color-saguaro-600: #466D1C;
+  --color-saguaro-500: #588B23;
+  --color-saguaro-400: #80B04A;
+  --color-saguaro-300: #A1DA62;
+  --color-saguaro-200: #B9E387;
+  --color-saguaro-100: #E7F9D2;
+  --color-saguaro-50: #F5FDED;
+
+  --color-prickly-pear-800: #250E1A;
+  --color-prickly-pear-700: #41102A;
+  --color-prickly-pear-600: #77224E;
+  --color-prickly-pear-500: #A32968;
+  --color-prickly-pear-400: #BD327B;
+  --color-prickly-pear-300: #F075B5;
+  --color-prickly-pear-200: #FCC5E2;
+  --color-prickly-pear-100: #FEF1F8;
+  --color-prickly-pear-50: #FFFAFD;
+
+  /* switchable theme colors */
+  --color-bold: var(--color-deep-800);
+  --color-semibold: var(--color-deep-600);
+  --color-medium: var(--color-deep-500);
+  --color-normal: var(--color-deep-300);
+  --color-semilight: var(--color-deep-200);
+  --color-light: var(--color-deep-100);
+  --color-extralight: var(--color-deep-50);
+
+  --color-text-dark: var(--color-deep-800);
+  --color-text-semilight: var(--color-deep-600);
+  --color-text-light: var(--color-deep-500);
+  --color-text-extralight: var(--color-deep-100);
+  --color-highlight: var(--color-deep-200);
+
+  --color-surface: var(--color-slate-50);
+  /* TODO: probably makes more sense to just do transparency inline unless it's configurable */
+  --color-surface-translucent: --alpha(var(--color-deep-50) / 90%);
+
+  /* animations */
   --animate-twist: twist 1.4s ease normal;
   --animate-quicktwist: quicktwist 1s ease normal;
 
@@ -30,24 +94,30 @@
     20% {
       transform: rotateX(8deg) rotateY(-40deg);
     }
+
     60% {
       animation-timing-function: ease-in;
       transform: rotateX(8deg) rotateY(374deg);
     }
+
     78% {
       transform: rotateX(8deg) rotateY(340deg);
     }
+
     92% {
       animation-timing-function: ease-in;
       transform: rotateX(8deg) rotateY(344deg);
     }
+
     96% {
       transform: rotateX(8deg) rotateY(340deg);
     }
+
     98% {
       animation-timing-function: ease-in;
       transform: rotateX(8deg) rotateY(342deg);
     }
+
     100% {
       transform: rotateX(8deg) rotateY(340deg);
     }
@@ -59,23 +129,51 @@
       animation-timing-function: ease-in;
       transform: rotateX(8deg) rotateY(374deg);
     }
+
     78% {
       animation-timing-function: ease-out;
       transform: rotateX(8deg) rotateY(340deg);
     }
+
     92% {
       animation-timing-function: ease-in;
       transform: rotateX(8deg) rotateY(344deg);
     }
+
     96% {
       transform: rotateX(8deg) rotateY(340deg);
     }
+
     98% {
       animation-timing-function: ease-in;
       transform: rotateX(8deg) rotateY(342deg);
     }
+
     100% {
       transform: rotateX(8deg) rotateY(340deg);
     }
+  }
+}
+
+@layer components {
+
+  .pop-focus,
+  .pop-focus-within {
+    transition: scale 0.2s ease;
+  }
+
+  .pop-focus:focus,
+  .pop-focus-within:focus-within {
+    /* Scale needs to be the reciprocal of a power of 2 (e.g. 1/16 = 6.25%)
+     * to avoid sub-pixel issues with the absolutely-positioned filled track
+     * since root rem is the default 16px */
+    scale: 1.0625;
+    filter: brightness(115%);
+    outline: 0;
+  }
+
+  .icon-surface {
+    border-radius: 100%;
+    padding: 0.5rem;
   }
 }

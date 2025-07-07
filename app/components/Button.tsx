@@ -13,15 +13,12 @@ export const Button: FC<ButtonProps> = ({ label, onClick, className }) => {
       onClick={onClick}
       className={clsx(
         className,
-        "text font-geist-mono font-bold",
-        "w-full p-2 cursor-pointer transition-[background-color,filter,box-shadow] duration-200",
-        "bg-night-owl-literal/50 ring-night-owl-literal",
-        "focus:outline-0 focus:ring-4",
-        "brightness-125",
-        "active:brightness-75 active:saturate-200",
+        "text-base/loose text-text-extralight font-geist-mono font-semibold",
+        "w-full p-2 rounded-[10px] cursor-pointer bg-bold",
+        "pop-focus",
       )}
     >
-      {label.toLocaleUpperCase()}
+      {label}
     </button>
   );
 }

@@ -7,7 +7,6 @@ import { DebugContext } from "@/app/components/DebugContext";
 import { BUBBLE_BOUNDARY, BUBBLE_OVERKILL, SPRING_STIFFNESS } from "@/app/utils/physicsConsts";
 import { Button } from "@/app/components/Button";
 import { DebugMenu } from "@/app/components/DebugMenu";
-import { Pingable } from "@/app/components/Pingable";
 
 const INIT_STATE = {
   springStiffness: SPRING_STIFFNESS,
@@ -22,14 +21,13 @@ const RESET_STATE = {
 }
 
 export const BubbleConfigurator = memo(function BubbleConfigurator() {
-  const { debugMenuOptions, setDebugMenuOptions, isOverridden } = useContext(DebugContext);
+  const { debugMenuOptions, setDebugMenuOptions } = useContext(DebugContext);
 
   return (
     <DebugMenu>
       <li>
         <InputRange
           label="Stiffness"
-          color="amber"
           id="stiffness"
           min={0.0001}
           max={0.01}
@@ -45,7 +43,6 @@ export const BubbleConfigurator = memo(function BubbleConfigurator() {
       <li>
         <InputRange
           label="Overkill"
-          color="rose"
           id="overkill"
           min={0.1}
           max={3}
@@ -60,7 +57,6 @@ export const BubbleConfigurator = memo(function BubbleConfigurator() {
       <li>
         <InputRange
           label="Border"
-          color="cyan"
           id="border"
           min={1}
           max={32}
@@ -72,19 +68,17 @@ export const BubbleConfigurator = memo(function BubbleConfigurator() {
           }))}
         />
       </li>
-      <li>
-        <Pingable ping={isOverridden} className="inset-x-7 inset-y-1 opacity-50">
-          <Button
-            label="reset"
-            onClick={() => setDebugMenuOptions(
-              prev => ({
-                ...prev,
-                ...RESET_STATE
-              })
-            )}
-          >
-          </Button>
-        </Pingable>
+      <li className="mt-2">
+        <Button
+          label="Reset all"
+          onClick={() => setDebugMenuOptions(
+            prev => ({
+              ...prev,
+              ...RESET_STATE
+            })
+          )}
+        >
+        </Button>
       </li>
     </DebugMenu>
   );

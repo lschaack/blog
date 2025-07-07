@@ -30,7 +30,6 @@ export const InputRange: FC<InputRangeProps> = ({
   value: managedValue,
   onChange,
   className,
-  trackClassName = 'bg-night-owl-built-in',
   easing,
 }) => {
   const [_value, _setValue] = useState(defaultValue ?? min);
@@ -77,54 +76,41 @@ export const InputRange: FC<InputRangeProps> = ({
       value={roundToPrecision(value, 4).toString()}
       className={className}
     >
-      <input
-        tabIndex={0}
-        type="range"
-        id={id}
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={handleChange}
-        onMouseDown={() => setIsDragging(true)}
-        onMouseUp={() => setIsDragging(false)}
-        className="peer absolute w-full opacity-0 cursor-pointer z-10"
-        onBlur={() => {
-          setIsDragging(false);
-        }}
-      />
-
       {/* Custom track */}
-      <div
-        ref={trackRef}
-        className={clsx(
-          trackClassName,
-          "relative w-full bg-inherit brightness-200",
-          // Scale needs to be the incredibly specific 112.5% to avoid sub-pixel issues
-          // with the absolutely-positioned filled track. A classic alternative fix would be to
-          // pass these calculations off to the GPU with e.g. `will-change: transform`, but the
-          // sub-pixel rounding seems to happen pre-GPU, at least with Chrome. A scaling bump of
-          // 1/8 increases height from 16px to an even 18px, so no more problems.
-          "transition-transform origin-center ease duration-200 peer-focus:scale-[112.5%]",
-        )}
-      >
+      <div ref={trackRef} className="pop-focus-within relative w-full h-6 rounded-sm bg-light">
+        <input
+          tabIndex={0}
+          type="range"
+          id={id}
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={handleChange}
+          onMouseDown={() => setIsDragging(true)}
+          onMouseUp={() => setIsDragging(false)}
+          className="peer absolute w-full h-full opacity-0 cursor-pointer z-10"
+          onBlur={() => {
+            setIsDragging(false);
+          }}
+        />
+
 
         {/* Smaller track to limit thumb to left/right edges */}
-        <div className="relative w-full px-2 bg-inherit">
+        <div className="relative w-full px-2">
           {/* Filled portion */}
           <div
-            className="absolute h-full bg-inherit brightness-50 -ml-2"
+            className="absolute h-full bg-medium -ml-2 rounded-l-sm"
             style={{ width: `${percentage}%` }}
           />
 
           {/* Custom thumb */}
           <div
             className={clsx(
-              'relative w-4 h-4',
+              'relative w-3 h-6 rounded-xs bg-bold',
+              // TODO: the ring rounding looks a little funky somehow
+              'ring-2 ring-bold',
               'transform -translate-x-1/2',
-              'transition-[box-shadow,background-color] duration-200',
-              'bg-inherit opacity-100 brightness-[25%] active:brightness-[10%]',
-              'ring-4 ring-transparent group-focus:bg-white!',
             )}
             style={{ left: `${percentage}%` }}
           />

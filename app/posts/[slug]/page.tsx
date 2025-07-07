@@ -4,7 +4,7 @@ import { documentToReactComponents } from "@contentful/rich-text-react-renderer"
 import { getBlogPostOptions } from "@/app/utils/contentful/rich-text";
 import { client } from "@/app/utils/contentful/client";
 import { getBlogPostWithSlug } from "@/app/queries/getBlogPostWithSlug";
-import { BlogPostBody, BlogPostBodyLinks, GetBlogPostWithSlugQuery } from "@/app/graphql/graphql";
+import { BlogPostBodyLinks, GetBlogPostWithSlugQuery } from "@/app/graphql/graphql";
 import { Navigator } from '@/app/components/Navigator';
 
 const getEntriesMatchingSlug = (slug: string) => {
@@ -37,13 +37,13 @@ export default async function Post({
           <div className="h-full absolute right-0">
             {post.body && (
               <Navigator
-                className="sticky top-4 self-start hidden xl:block"
-                body={post.body as BlogPostBody}
+                className="sticky top-10 self-start mx-6"
+                post={post}
               />
             )}
           </div>
         </div>
-        <article className="max-w-2xl px-6 py-2 rounded-4xl bg-slate-50/95 backdrop-blur-sm overflow-hidden md:overflow-visible break-words">
+        <article className="max-w-2xl px-6 py-2 rounded-2xl bg-extralight overflow-hidden md:overflow-visible break-words">
           {post.body && documentToReactComponents(
             post.body.json,
             getBlogPostOptions(post.body.links as BlogPostBodyLinks)

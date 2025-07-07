@@ -64,13 +64,13 @@ export const FakePostList = () => {
 
       {howMany === 0 ? (
         <div onClick={handleAddPosts}>
-          <HoverBubble>
-            <button
-              className="p-16 font-bold text-3xl max-w-96"
-            >
-              I wanna see more bubbles, fake me some posts
-            </button>
-          </HoverBubble>
+          <button>
+            <HoverBubble>
+              <div className="p-16 font-bold text-3xl max-w-96">
+                I wanna see more bubbles, fake me some posts
+              </div>
+            </HoverBubble>
+          </button>
         </div>
       ) : (
         <>

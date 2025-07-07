@@ -3,7 +3,6 @@
 import { FC, ReactNode, useEffect, useRef } from "react";
 import clsx from "clsx";
 import { X } from "lucide-react";
-import { IconButton } from "@/app/components/IconButton";
 
 type ExpandableProps = {
   children: ReactNode;
@@ -41,15 +40,14 @@ export const Expandable: FC<ExpandableProps> = ({
 
   return (
     <div className={className}>
-      <div
-        className="cursor-pointer transition-all duration-200 hover:scale-[1.02] hover:shadow-lg"
+      <button
+        className="pop-focus cursor-pointer transition-transform duration-200 focus:scale-[1.02]! hover:scale-[1.02]"
         onClick={() => dialogElement.current?.showModal()}
       >
         {children}
-      </div>
+      </button>
       <dialog
         ref={dialogElement}
-        onBlur={() => dialogElement.current?.close()}
         className={clsx(
           "m-auto backdrop:bg-slate-900/50",
           "transition-opacity duration-200 ease",
@@ -60,14 +58,12 @@ export const Expandable: FC<ExpandableProps> = ({
         style={{ maxWidth }}
       >
         {children}
-        <IconButton
-          className="fixed top-4 right-4 bg-white focus:outline-night-owl-literal"
-          label="Close modal"
+        <button
+          className="icon-surface fixed bg-white top-4 right-4 sm:top-8 sm:right-8"
           onClick={() => dialogElement.current?.close()}
-          name="Close"
         >
           <X size={24} />
-        </IconButton>
+        </button>
       </dialog>
     </div>
   );

@@ -12,7 +12,7 @@ export default async function Demo({
 
   if (Demo) {
     return (
-      <div className="p-6 rounded-4xl flex justify-center items-center bg-slate-50/95">
+      <div className="p-6 rounded-4xl h-fit flex justify-center items-center bg-slate-50/95">
         <Demo />
       </div>
     );

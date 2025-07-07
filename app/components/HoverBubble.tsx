@@ -409,10 +409,13 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const updateBubbleMeta = useCallback(() => {
       const [lerpedOffsetX, lerpedOffsetY] = physicsState.current.lerpedOffset;
 
-      const nextTop = overkill * insetFilter(lerpedOffsetY);
-      const nextRight = overkill * insetFilter(-lerpedOffsetX);
-      const nextBottom = overkill * insetFilter(-lerpedOffsetY);
-      const nextLeft = overkill * insetFilter(lerpedOffsetX);
+      const presentationOffsetX = overkill * lerpedOffsetX;
+      const presentationOffsetY = overkill * lerpedOffsetY;
+
+      const nextTop = insetFilter(presentationOffsetY);
+      const nextRight = insetFilter(-presentationOffsetX);
+      const nextBottom = insetFilter(-presentationOffsetY);
+      const nextLeft = insetFilter(presentationOffsetX);
 
       bubbleMeta.current.top = nextTop;
       bubbleMeta.current.right = nextRight;
@@ -465,9 +468,9 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         <div
           ref={bubbleElement}
           className={clsx(
-            "absolute overflow-hidden inset-0 border-slate-300/30 bg-slate-50/95 bg-clip-padding",
+            "absolute overflow-hidden inset-0 border-normal bg-extralight bg-clip-padding",
             "transition-colors duration-500 ease-out",
-            isUpdatePending && debug && "border-night-owl-attr!",
+            isUpdatePending && debug && "border-saguaro-200!",
             doAnimate && "will-change-transform",
             bubbleClassname,
           )}

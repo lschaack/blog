@@ -6,8 +6,9 @@ import { Block } from "@contentful/rich-text-types";
 import { documentToPlainTextString } from "@contentful/rich-text-plain-text-renderer";
 import { kebabCase } from "lodash/fp";
 import { CommonNode } from "@contentful/rich-text-react-renderer";
+import { ArrowLeft } from "lucide-react";
 
-import { BlogPostBody } from "@/app/graphql/graphql";
+import { BlogPost } from "@/app/graphql/graphql";
 import { useAbsoluteOffset } from "@/app/hooks/useAbsoluteOffset";
 
 const extractHeadings = (node: CommonNode): Block[] => {
@@ -52,45 +53,68 @@ const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
     <a
       href={`#${anchor}`}
       className={clsx(
+        "-ml-[2px] border-l-2",
+        "font-medium text-base/loose",
         isPassed && "passed",
-        "transition-colors duration-75",
-        "-ml-[2px] border-l-2 py-1 pr-2",
         isPassed
-          ? "border-slate-800"
-          : "border-slate-300",
-        "nth-last-[1_of_.passed]:bg-night-owl-keyword/20",
-        "nth-last-[1_of_.passed]:border-l-night-owl-keyword",
+          ? "border-slate-400 text-slate-500"
+          : "border-slate-300 text-slate-600",
+        "nth-last-[1_of_.passed]:bg-slate-200!",
+        "nth-last-[1_of_.passed]:border-l-slate-800!",
+        "nth-last-[1_of_.passed]:text-slate-800!",
+        "nth-last-[1_of_.passed]:font-bold",
+        "rounded-r-lg",
+        "transition-colors duration-75",
       )}
     >
-      <li
-        className={clsx(
-          "font-bold",
-          isPassed ? "text-slate-800" : "text-slate-800/70",
-        )}
-        style={{
-          paddingLeft: `${12 * parseInt(level)}px`
-        }}
-      >
+      <li style={{ paddingLeft: `${12 * parseInt(level)}px` }}>
         {content}
       </li>
     </a>
   );
 }
 
-export const Navigator: FC<{ body: BlogPostBody; className?: string }> = ({ body, className }) => {
-  const headings = extractHeadings(body.json);
+export const Navigator: FC<{ post: NonNullable<BlogPost>; className?: string }> = ({
+  post,
+  className
+}) => {
+  const title = post.title;
+  const subtitle = post.subtitle;
+  const publishDate = post.sys.publishedAt;
+  const headings = extractHeadings(post.body?.json);
 
   return (
-    <ul className={clsx('p-6 bg-slate-50/95 backdrop-blur-sm mx-4 rounded-4xl', className)}>
-      <div className="flex flex-col border-slate-800/70 border-l-2">
+    <div className={clsx(
+      'p-4 max-w-xs bg-extralight rounded-2xl hidden xl:flex flex-col gap-4',
+      className
+    )}>
+      <div className="w-full flex justify-between font-medium text-sm leading-none">
+        {/* FIXME: make the back button work */}
+        <button className="text-deep-600">
+          <ArrowLeft size={16} className="inline align-text-bottom cursor-pointer" />
+          Back
+        </button>
+        <span className="text-deep-500 text-sm leading-none">{
+          (new Date(publishDate)).toLocaleDateString(navigator.language, {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          })}
+        </span>
+      </div>
+      <div className="leading-none">
+        <h2 className="font-bold mb-2">{title}</h2>
+        <p className="text-sm text-deep-600 font-medium">{subtitle}</p>
+      </div>
+      <ul className="flex flex-col border-slate-800/70 border-l-2">
         {headings.map((heading, i) => (
           <NavigatorEntry
             key={`heading-${i}`}
             node={heading}
           />
         ))}
-      </div>
-    </ul>
+      </ul>
+    </div>
   )
 }
 

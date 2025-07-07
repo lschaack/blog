@@ -10,14 +10,14 @@ export default function Demo() {
         <HoverBubble
           boundary={12}
           rounding={9999}
-          bubbleClassname="bg-night-owl-attr! border-night-owl-attr/25!"
+          bubbleClassname="bg-virginia-sky-500! border-virginia-sky-500/25!"
           overkill={2}
         >
           <div className="p-4">
             <HoverBubble
               boundary={12}
               rounding={9999}
-              bubbleClassname="bg-night-owl-title! border-night-owl-title/25!"
+              bubbleClassname="bg-prickly-pear-300! border-prickly-pear-300/25!"
               overkill={2}
             >
               <div className="p-5">

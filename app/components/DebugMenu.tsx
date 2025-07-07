@@ -18,11 +18,11 @@ export const DebugMenu: FC<DebugMenuProps> = memo(function DebugMenu({ children 
 
   if (menuElement) {
     return createPortal(
-      <div className="flex flex-col gap-4 items-end">
+      <div className="flex flex-col gap-2 items-end">
         <DebugToggle />
         {debug && (
           <menu className={clsx(
-            "bg-slate-50/90 rounded-4xl backdrop-blur-md p-6 flex flex-col gap-4 w-full max-w-2xl",
+            "p-4 w-64 flex flex-col gap-4 rounded-[20px] bg-surface-translucent",
             "starting:opacity-0 opacity-100 transition-opacity duration-200",
           )}>
             {children}
