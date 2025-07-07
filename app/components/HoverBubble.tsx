@@ -260,8 +260,10 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
         const clipX = bubbleLeft - contentOffsetX + boundary * distortionX;
         const clipY = bubbleTop - contentOffsetY + boundary * distortionY;
+
         const clipWidth = Math.max(bubbleWidth - doubleBoundary * scaleX, 0);
         const clipHeight = Math.max(bubbleHeight - doubleBoundary * scaleY, 0);
+
         const clipRounding = Math.max(rounding - boundary, 0) * scaleAvg;
 
         contentStyle.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
@@ -481,7 +483,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         />
         <div
           ref={contentElement}
-          className={clsx("relative overflow-hidden", doAnimate && "will-change-transform")}
+          className={clsx("relative", doAnimate && "will-change-transform")}
           style={{
             borderRadius: rounding - boundary,
           }}

@@ -12,7 +12,7 @@ type PostBubbleContentsProps = {
 }
 const PostBubbleContents = memo(function PostBubbleContents({ post }: PostBubbleContentsProps) {
   return (
-    <li className="w-full max-w-96 relative overflow-hidden">
+    <li className="w-full max-w-96 relative overflow-hidden rounded-[inherit]">
       <div className="relative w-full aspect-2/1">
         {post.heroImage && (
           <Image
