@@ -15,7 +15,7 @@ export const Header = () => {
   return (
     <header className={clsx(
       "relative pt-17 pb-23 flex flex-col items-center overflow-visible",
-      "bg-[url(/stacked-waves-haikei-slate.svg)] bg-center bg-cover 2xl:bg-[length:100%_100%] bg-no-repeat"
+      "bg-[url(/stacked-waves-haikei-slate.svg)] bg-center bg-cover min-[2160px]:bg-[length:100%_100%] bg-no-repeat"
     )}>
       <Link href="/" className="cursor-pointer">
         <SignPost>
