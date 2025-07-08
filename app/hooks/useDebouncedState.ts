@@ -17,8 +17,6 @@ export const useDebouncedState = <S>(
     setSourceOfTruth(action);
   }, [setSourceOfTruth]);
 
-  console.log('here')
-
   return useMemo(() => [localValue, setLocalValue], [localValue, setLocalValue]);
 }
 
