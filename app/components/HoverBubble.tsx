@@ -209,7 +209,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       updateDomMeasurements,
       INIT_DOM_MEASUREMENTS,
       getElementsToObserve,
-      50,
+      20,
     );
 
     const updateStyles = useCallback(() => {

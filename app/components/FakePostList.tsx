@@ -67,7 +67,7 @@ export const FakePostList = () => {
           <button>
             <HoverBubble>
               <div className="p-16 font-bold text-3xl max-w-96">
-                I wanna see more bubbles, fake me some posts
+                More bubbles!
               </div>
             </HoverBubble>
           </button>

@@ -51,7 +51,7 @@ export const BubbleConfigurator = memo(function BubbleConfigurator() {
           label="Overkill"
           id="overkill"
           min={0.1}
-          max={3}
+          max={5}
           step={0.1}
           value={debugMenuOptions.bubbleOverkill as number ?? INIT_STATE.bubbleOverkill}
           onChange={value => setDebugMenuOptions(prev => ({

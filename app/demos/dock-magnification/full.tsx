@@ -86,7 +86,6 @@ export default function Demo() {
             <InputRange
               label="Scale"
               id="scale"
-              color="amber"
               min={SCALE_MIN}
               max={SCALE_MAX}
               defaultValue={scale}
@@ -96,7 +95,6 @@ export default function Demo() {
             <InputRange
               label="Falloff"
               id="falloff"
-              color="lime"
               min={1}
               // FIXME: make this more dynamic if I enable more than 7 images
               max={shiftStrategy.includes('elegant') ? 3 : 10}
@@ -107,7 +105,6 @@ export default function Demo() {
             <InputRange
               label="Gap"
               id="gap"
-              color="cyan"
               min={GAP_MIN}
               max={GAP_MAX}
               defaultValue={gap}

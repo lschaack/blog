@@ -7,6 +7,7 @@ import { documentToPlainTextString } from "@contentful/rich-text-plain-text-rend
 import { kebabCase } from "lodash/fp";
 import { CommonNode } from "@contentful/rich-text-react-renderer";
 import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 import { BlogPost } from "@/app/graphql/graphql";
 import { useAbsoluteOffset } from "@/app/hooks/useAbsoluteOffset";
@@ -78,6 +79,7 @@ export const Navigator: FC<{ post: NonNullable<BlogPost>; className?: string }> 
   post,
   className
 }) => {
+  const router = useRouter();
   const title = post.title;
   const subtitle = post.subtitle;
   const publishDate = post.sys.publishedAt;
@@ -89,10 +91,13 @@ export const Navigator: FC<{ post: NonNullable<BlogPost>; className?: string }> 
       className
     )}>
       <div className="w-full flex justify-between font-medium text-sm leading-none">
-        {/* FIXME: make the back button work */}
-        <button className="text-deep-600">
+        <button
+          role="link"
+          className="text-deep-600 cursor-pointer"
+          onClick={() => router.back()}
+        >
           <ArrowLeft size={16} className="inline align-text-bottom cursor-pointer" />
-          Back
+          &nbsp;Back
         </button>
         <span className="text-deep-500 text-sm leading-none">{
           (new Date(publishDate)).toLocaleDateString(navigator.language, {
