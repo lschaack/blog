@@ -9,7 +9,7 @@ import { CaptionedImage } from "@/app/components/CaptionedImage";
 import { CodeBlock } from "@/app/components/CodeBlock";
 import { RichTextError } from "@/app/components/RichTextError";
 import { Demo } from "@/app/demos";
-import { kebabCase } from "lodash/fp";
+import kebabCase from "lodash/kebabCase";
 import { Expandable } from "@/app/components/Expandable";
 
 const NEXT_KNOWN_IMAGE_EXTENSIONS = [

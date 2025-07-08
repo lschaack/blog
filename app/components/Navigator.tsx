@@ -4,7 +4,7 @@ import { FC, useEffect, useState } from "react";
 import clsx from "clsx";
 import { Block } from "@contentful/rich-text-types";
 import { documentToPlainTextString } from "@contentful/rich-text-plain-text-renderer";
-import { kebabCase } from "lodash/fp";
+import kebabCase from "lodash/kebabCase";
 import { CommonNode } from "@contentful/rich-text-react-renderer";
 import { ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";

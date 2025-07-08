@@ -1,5 +1,5 @@
 import { Dispatch, SetStateAction, useCallback, useMemo, useState } from "react";
-import { debounce } from "lodash";
+import debounce from "lodash/debounce";
 
 // Given an initial state and a source of truth state setter, provides an
 // immediately-updating [state, setState] pair while debouncing the source of truth

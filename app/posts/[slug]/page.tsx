@@ -4,7 +4,7 @@ import { documentToReactComponents } from "@contentful/rich-text-react-renderer"
 import { getBlogPostOptions } from "@/app/utils/contentful/rich-text";
 import { client } from "@/app/utils/contentful/client";
 import { getBlogPostWithSlug } from "@/app/queries/getBlogPostWithSlug";
-import { BlogPostBodyLinks, GetBlogPostWithSlugQuery } from "@/app/graphql/graphql";
+import { BlogPost, BlogPostBodyLinks, GetBlogPostWithSlugQuery } from "@/app/graphql/graphql";
 import { Navigator } from '@/app/components/Navigator';
 
 const getEntriesMatchingSlug = (slug: string) => {
@@ -38,7 +38,7 @@ export default async function Post({
             {post.body && (
               <Navigator
                 className="sticky top-10 self-start mx-6"
-                post={post}
+                post={post as BlogPost}
               />
             )}
           </div>

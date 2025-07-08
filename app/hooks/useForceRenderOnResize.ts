@@ -1,6 +1,6 @@
 'use client';
 
-import { debounce } from "lodash";
+import debounce from "lodash/debounce";
 import { useCallback, useEffect, useReducer } from "react";
 
 export const useForceRenderOnResize = (enable = true) => {

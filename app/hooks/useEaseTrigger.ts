@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { EasingStrategy } from '@/app/utils/easingFunctions';
 import { EasingDirection, requestEasingFrames } from '@/app/utils/requestEasingFrames';
-import { throttle } from 'lodash';
+import throttle from "lodash/throttle";
 
 export const useEaseTrigger = (
   duration: number,

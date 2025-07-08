@@ -1,4 +1,4 @@
-import { curry } from "lodash/fp";
+import curry from "lodash/curry";
 
 // Get easing factor from time (0 to 1)
 export const easeOutSine = curry(

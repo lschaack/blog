@@ -14,7 +14,8 @@ import {
   useState
 } from "react";
 import clsx from "clsx";
-import { clamp, throttle } from "lodash";
+import clamp from "lodash/clamp";
+import throttle from "lodash/throttle";
 
 import { useEaseUpDown } from "@/app/hooks/useEaseUpDown";
 import { AnimatedVariablesContext } from "@/app/components/AnimatedVariables";

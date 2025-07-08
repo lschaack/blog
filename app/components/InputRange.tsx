@@ -1,6 +1,6 @@
 import { clsx } from "clsx";
 import { ChangeEventHandler, FC, KeyboardEventHandler, useRef, useState } from "react";
-import { clamp } from "lodash";
+import clamp from "lodash/clamp";
 
 import { LabelledValue } from "@/app/components/LabelledValue";
 import { easify, EASING_STRATEGY, EasingStrategy } from "@/app/utils/easingFunctions";

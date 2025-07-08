@@ -10,7 +10,7 @@ import {
   useState,
   useCallback
 } from "react";
-import { throttle } from "lodash";
+import throttle from "lodash/throttle";
 import { createNoise2D } from "simplex-noise";
 
 import { inputColorClasses } from "@/app/utils/colors";
