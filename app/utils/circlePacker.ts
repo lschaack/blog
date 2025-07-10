@@ -8,8 +8,8 @@ interface Sector {
 
 interface PackingState {
   circles: Circle[];
-  currentCircle?: Circle;
-  unoccupiedSectors?: Sector[];
+  currentCircle: Circle;
+  unoccupiedSectors: Sector[];
 }
 
 interface PackingArea {
@@ -26,9 +26,9 @@ export class CirclePacker {
   private quadtree: Quadtree<Circle>;
   private placedCircles: Circle[] = [];
   private stack: Circle[] = [];
-  private onAddCircle?: (state: PackingState) => Promise<void>;
+  private onAddCircle?: (state: Partial<PackingState>) => Promise<void>;
 
-  constructor(area: PackingArea, onAddCircle?: (state: PackingState) => Promise<void>) {
+  constructor(area: PackingArea, onAddCircle?: (state: Partial<PackingState>) => Promise<void>) {
     this.area = area;
     this.onAddCircle = onAddCircle;
     this.quadtree = new Quadtree<Circle>({
@@ -71,17 +71,11 @@ export class CirclePacker {
     while (this.stack.length > 0 && iter < MAX_ITERS) {
       // FIXME: optimize this...
       const current = this.stack.shift()!;
-      const nearby = this.findNearbyCircles(current);
-      const unoccupiedSectors = this.calculateUnoccupiedSectors(current, nearby);
-
-      // Show current circle and its sectors
       if (this.onAddCircle) {
-        await this.onAddCircle({
-          circles: this.placedCircles,
-          currentCircle: current,
-          unoccupiedSectors
-        });
+        await this.onAddCircle({ currentCircle: current });
       }
+      const nearby = this.findNearbyCircles(current);
+      const unoccupiedSectors = await this.calculateUnoccupiedSectors(current, nearby);
 
       for (const sector of unoccupiedSectors) {
         let updatedSector = sector;
@@ -163,7 +157,7 @@ export class CirclePacker {
     };
   }
 
-  private calculateUnoccupiedSectors(current: Circle, nearby: Circle[]): Sector[] {
+  private async calculateUnoccupiedSectors(current: Circle, nearby: Circle[]): Promise<Sector[]> {
     const occupiedSectors: Sector[] = [];
 
     for (const nearbyCircle of nearby) {
@@ -173,89 +167,74 @@ export class CirclePacker {
     return this.findUnoccupiedSectors(occupiedSectors);
   }
 
-  private findUnoccupiedSectors(occupiedSectors: Sector[]): Sector[] {
+  private async findUnoccupiedSectors(occupiedSectors: Sector[]): Promise<Sector[]> {
     if (occupiedSectors.length === 0) {
       return [{
         startAngle: 0,
-        endAngle: 2 * Math.PI,
-        width: 2 * Math.PI
+        endAngle: TAU,
+        width: TAU
       }];
     }
 
-    type SectorPoint = {
-      angle: number,
-      type: number,
-    }
+    // Step 1: Join overlapping occupied sectors
+    const joinedOccupied = this.joinSectors(occupiedSectors);
 
-    const sectorPoints = occupiedSectors
-      .flatMap<SectorPoint>(({ startAngle, endAngle }) => [
-        {
-          angle: startAngle,
-          type: 1,
-        },
-        {
-          angle: endAngle,
-          type: -1,
-        }
-      ])
-      .sort((a, b) => a.angle - b.angle);
+    // broken step 2: assume only one unoccupied segment
+    // FIXME: this does eventually need to handle multiple, but works very nicely
+    // this way for now since circles are added approximately radially outward
+    const unoccupied = [{
+      startAngle: joinedOccupied[0].endAngle,
+      endAngle: joinedOccupied[0].startAngle,
+      width: joinedOccupied[0].startAngle - joinedOccupied[0].endAngle,
+    }]
 
-    if (sectorPoints[0].type !== 1 || sectorPoints.at(-1)!.type !== -1) {
-      debugger;
-    }
+    //// Step 2: Find gaps between joined occupied sectors
+    //const unoccupied: Sector[] = [];
+    //let currentAngle = 0;
+    //
+    //for (const sector of joinedOccupied) {
+    //  // Handle wrap-around sectors
+    //  if (sector.endAngle < sector.startAngle) {
+    //    // This is a wrap-around sector like [5.5, 1.2]
+    //    // Gap before: [currentAngle, startAngle]
+    //    if (currentAngle < sector.startAngle) {
+    //      unoccupied.push({
+    //        startAngle: currentAngle,
+    //        endAngle: sector.startAngle,
+    //        width: sector.startAngle - currentAngle
+    //      });
+    //    }
+    //    // Gap after wrapping: [endAngle, TAU] is handled at the end
+    //    currentAngle = sector.endAngle;
+    //  } else {
+    //    // Normal sector
+    //    if (currentAngle < sector.startAngle) {
+    //      unoccupied.push({
+    //        startAngle: currentAngle,
+    //        endAngle: sector.startAngle,
+    //        width: sector.startAngle - currentAngle
+    //      });
+    //    }
+    //    currentAngle = Math.max(currentAngle, sector.endAngle);
+    //  }
+    //}
+    //
+    //// Check for final gap to TAU
+    //if (currentAngle < TAU) {
+    //  unoccupied.push({
+    //    startAngle: currentAngle,
+    //    endAngle: TAU,
+    //    width: TAU - currentAngle
+    //  });
+    //}
 
-    const joinedOccupiedSectors: Sector[] = [];
-    let depth = 0;
-    let isJoining = false;
-    for (const { angle, type } of sectorPoints) {
-      depth += type;
-      console.log('depth', depth)
-
-      if (depth === 1 && !isJoining) {
-        joinedOccupiedSectors.push({
-          startAngle: angle,
-          endAngle: NaN,
-          width: NaN,
-        });
-
-        isJoining = true;
-      } else if (depth === 0) {
-        const lastSector = joinedOccupiedSectors.at(-1)!;
-        lastSector.endAngle = angle;
-        lastSector.width = lastSector.endAngle - lastSector.startAngle;
-
-        isJoining = false;
-      }
-    }
-
-    if (isNaN(joinedOccupiedSectors.at(-1)!.endAngle)) {
-      throw new Error('Unmatched types in SectorPoints');
-    }
-
-    const unoccupied: Sector[] = [];
-    let currentAngle = 0;
-
-    for (const sector of joinedOccupiedSectors) {
-      if (currentAngle < sector.startAngle) {
-        unoccupied.push({
-          startAngle: currentAngle,
-          endAngle: sector.startAngle,
-          width: sector.startAngle - currentAngle
-        });
-      }
-      currentAngle = Math.max(currentAngle, sector.endAngle);
-    }
-
-    // Check wrap-around
-    if (currentAngle < 2 * Math.PI) {
-      unoccupied.push({
-        startAngle: currentAngle,
-        endAngle: 2 * Math.PI,
-        width: 2 * Math.PI - currentAngle
+    if (this.onAddCircle) {
+      await this.onAddCircle({
+        unoccupiedSectors: unoccupied
       });
     }
 
-    debugger;
+    //debugger;
 
     return unoccupied;
   }
@@ -331,6 +310,85 @@ export class CirclePacker {
     const newY = current.y + distance * Math.sin(angle);
 
     return new Circle({ x: newX, y: newY, r: radius });
+  }
+
+  private joinSectors(sectors: Sector[]): Sector[] {
+    // Step 1: Normalize & Validate
+    const validSectors = sectors
+      .map(sector => ({
+        startAngle: this.normalizeAngleRadians(sector.startAngle),
+        endAngle: this.normalizeAngleRadians(sector.endAngle),
+        width: sector.width
+      }))
+      .filter(sector => sector.width > 0);
+
+    if (validSectors.length === 0) {
+      return [];
+    }
+
+    // Step 2: Split wrap-around sectors
+    const splitSectors: Sector[] = [];
+    for (const sector of validSectors) {
+      if (sector.endAngle < sector.startAngle) {
+        // Wrap-around sector: split into two
+        splitSectors.push({
+          startAngle: sector.startAngle,
+          endAngle: TAU,
+          width: TAU - sector.startAngle
+        });
+        splitSectors.push({
+          startAngle: 0,
+          endAngle: sector.endAngle,
+          width: sector.endAngle
+        });
+      } else {
+        splitSectors.push(sector);
+      }
+    }
+
+    // Step 3: Sort by startAngle
+    splitSectors.sort((a, b) => a.startAngle - b.startAngle);
+
+    // Step 4: Merge overlapping/touching sectors
+    const merged: Sector[] = [];
+    for (const sector of splitSectors) {
+      if (merged.length === 0) {
+        merged.push(sector);
+      } else {
+        const last = merged[merged.length - 1];
+
+        // Check if sectors overlap or touch
+        if (sector.startAngle <= last.endAngle) {
+          // Merge: extend the last sector's end to cover this sector
+          last.endAngle = Math.max(last.endAngle, sector.endAngle);
+          last.width = last.endAngle - last.startAngle;
+        } else {
+          // No overlap: add as separate sector
+          merged.push(sector);
+        }
+      }
+    }
+
+    // Step 5: Handle circular boundary reconnection
+    if (merged.length > 1) {
+      const first = merged[0];
+      const last = merged[merged.length - 1];
+
+      // Check if first starts at 0 and last ends at TAU
+      if (first.startAngle === 0 && last.endAngle === TAU) {
+        // They connect across the boundary - merge them into a wrap-around sector
+        const reconnected: Sector = {
+          startAngle: last.startAngle,
+          endAngle: first.endAngle,
+          width: first.width + last.width
+        };
+
+        // Return merged sectors excluding first and last, plus the reconnected one
+        return [...merged.slice(1, -1), reconnected];
+      }
+    }
+
+    return merged;
   }
 
   private randomRadius(min: number, max: number): number {

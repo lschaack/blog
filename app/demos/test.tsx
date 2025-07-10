@@ -42,19 +42,18 @@ export default function CirclePackerVisualizer({
     maxRadius
   });
 
+  console.log('unoccupiedSectors', unoccupiedSectors)
+
   const generateCircles = React.useCallback(async () => {
     setIsGenerating(true);
     try {
-      const onAddCircle = async (state: PackingState) => {
-        setCircles([...state.circles]);
+      const onAddCircle = async (state: Partial<PackingState>) => {
+        if (state.circles) setCircles([...state.circles]);
+        if (state.currentCircle) setCurrentCircle(state.currentCircle);
+        if (state.unoccupiedSectors) setUnoccupiedSectors([...state.unoccupiedSectors]);
 
-        // Only update sector visualization when we have sector data
-        if (state.currentCircle && state.unoccupiedSectors) {
-          setCurrentCircle(state.currentCircle);
-          setUnoccupiedSectors(state.unoccupiedSectors);
-        }
         // Small delay to allow rendering
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise(resolve => setTimeout(resolve, 20));
       };
 
       const packer = new CirclePacker(params, onAddCircle);
