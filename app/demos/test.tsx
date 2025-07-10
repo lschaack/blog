@@ -4,6 +4,18 @@ import React, { useRef, useEffect, useState } from 'react';
 import { CirclePacker } from '../utils/circlePacker';
 import { Circle } from '@timohausmann/quadtree-ts';
 
+interface Sector {
+  startAngle: number;
+  endAngle: number;
+  width: number;
+}
+
+interface PackingState {
+  circles: Circle[];
+  currentCircle?: Circle;
+  unoccupiedSectors?: Sector[];
+}
+
 interface CanvasVisualizerProps {
   width?: number;
   height?: number;
@@ -19,6 +31,9 @@ export default function CirclePackerVisualizer({
 }: CanvasVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [circles, setCircles] = useState<Circle[]>([]);
+  const [currentCircle, setCurrentCircle] = useState<Circle | undefined>();
+  const [unoccupiedSectors, setUnoccupiedSectors] = useState<Sector[]>([]);
+  const [showSectors, setShowSectors] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [params, setParams] = useState({
     width,
@@ -30,10 +45,16 @@ export default function CirclePackerVisualizer({
   const generateCircles = React.useCallback(async () => {
     setIsGenerating(true);
     try {
-      const onAddCircle = async (currentCircles: Circle[]) => {
-        setCircles([...currentCircles]);
+      const onAddCircle = async (state: PackingState) => {
+        setCircles([...state.circles]);
+
+        // Only update sector visualization when we have sector data
+        if (state.currentCircle && state.unoccupiedSectors) {
+          setCurrentCircle(state.currentCircle);
+          setUnoccupiedSectors(state.unoccupiedSectors);
+        }
         // Small delay to allow rendering
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 100));
       };
 
       const packer = new CirclePacker(params, onAddCircle);
@@ -61,6 +82,46 @@ export default function CirclePackerVisualizer({
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, params.width, params.height);
 
+    // Draw unoccupied sectors for current circle
+    if (showSectors && currentCircle && unoccupiedSectors.length > 0) {
+      ctx.save();
+      unoccupiedSectors.forEach((sector, index) => {
+        ctx.beginPath();
+        ctx.moveTo(currentCircle.x, currentCircle.y);
+        ctx.arc(
+          currentCircle.x,
+          currentCircle.y,
+          currentCircle.r + params.maxRadius,
+          sector.startAngle,
+          sector.endAngle
+        );
+        ctx.closePath();
+
+        // Use different colors for each sector
+        const hue = (index * 60) % 360;
+        ctx.fillStyle = `hsla(${hue}, 50%, 80%, 0.3)`;
+        ctx.fill();
+
+        ctx.strokeStyle = `hsl(${hue}, 70%, 50%)`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+      ctx.restore();
+    } else {
+      console.log('showSectors', showSectors)
+      console.log('currentCircle', currentCircle)
+      console.log('unoccupiedSectors.length > 0', unoccupiedSectors.length > 0)
+    }
+
+    // Highlight current circle
+    if (currentCircle) {
+      ctx.beginPath();
+      ctx.arc(currentCircle.x, currentCircle.y, currentCircle.r, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#ff0000';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+
     // Draw circles
     circles.forEach((circle, index) => {
       ctx.beginPath();
@@ -81,7 +142,10 @@ export default function CirclePackerVisualizer({
     ctx.fillStyle = '#333';
     ctx.font = '16px monospace';
     ctx.fillText(`Circles: ${circles.length}`, 10, 25);
-  }, [circles, params]);
+    if (currentCircle) {
+      ctx.fillText(`Sectors: ${unoccupiedSectors.length}`, 10, 45);
+    }
+  }, [circles, currentCircle, unoccupiedSectors, showSectors, params]);
 
   useEffect(() => {
     drawCircles();
@@ -152,6 +216,13 @@ export default function CirclePackerVisualizer({
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-gray-400"
         >
           {isGenerating ? 'Generating...' : 'Generate New'}
+        </button>
+
+        <button
+          onClick={() => setShowSectors(!showSectors)}
+          className={`px-4 py-2 rounded ${showSectors ? 'bg-green-500 hover:bg-green-600' : 'bg-gray-500 hover:bg-gray-600'} text-white`}
+        >
+          {showSectors ? 'Hide Sectors' : 'Show Sectors'}
         </button>
       </div>
 

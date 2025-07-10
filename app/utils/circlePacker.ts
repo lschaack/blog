@@ -6,6 +6,12 @@ interface Sector {
   width: number;
 }
 
+interface PackingState {
+  circles: Circle[];
+  currentCircle?: Circle;
+  unoccupiedSectors?: Sector[];
+}
+
 interface PackingArea {
   width: number;
   height: number;
@@ -20,9 +26,9 @@ export class CirclePacker {
   private quadtree: Quadtree<Circle>;
   private placedCircles: Circle[] = [];
   private stack: Circle[] = [];
-  private onAddCircle?: (circles: Circle[]) => Promise<void>;
+  private onAddCircle?: (state: PackingState) => Promise<void>;
 
-  constructor(area: PackingArea, onAddCircle?: (circles: Circle[]) => Promise<void>) {
+  constructor(area: PackingArea, onAddCircle?: (state: PackingState) => Promise<void>) {
     this.area = area;
     this.onAddCircle = onAddCircle;
     this.quadtree = new Quadtree<Circle>({
@@ -56,7 +62,7 @@ export class CirclePacker {
     this.stack.push(initialCircle);
 
     if (this.onAddCircle) {
-      await this.onAddCircle(this.placedCircles);
+      await this.onAddCircle({ circles: this.placedCircles });
     }
 
     const MAX_ITERS = 50;
@@ -67,6 +73,15 @@ export class CirclePacker {
       const current = this.stack.shift()!;
       const nearby = this.findNearbyCircles(current);
       const unoccupiedSectors = this.calculateUnoccupiedSectors(current, nearby);
+
+      // Show current circle and its sectors
+      if (this.onAddCircle) {
+        await this.onAddCircle({
+          circles: this.placedCircles,
+          currentCircle: current,
+          unoccupiedSectors
+        });
+      }
 
       for (const sector of unoccupiedSectors) {
         let updatedSector = sector;
@@ -82,7 +97,7 @@ export class CirclePacker {
           this.stack.push(newCircle);
 
           if (this.onAddCircle) {
-            await this.onAddCircle(this.placedCircles);
+            await this.onAddCircle({ circles: this.placedCircles });
           }
 
           // account for new circle in sector and update effectiveMaxRadius
