@@ -51,25 +51,58 @@ export class CirclePacker {
     this.quadtree.insert(initialCircle);
     this.stack.push(initialCircle);
 
-    while (this.stack.length > 0) {
+    const MAX_ITERS = 20;
+    let iter = 0;
+
+    while (this.stack.length > 0 && iter < MAX_ITERS) {
       const current = this.stack.pop()!;
       const nearby = this.findNearbyCircles(current);
       const unoccupiedSectors = this.calculateUnoccupiedSectors(current, nearby);
 
       for (const sector of unoccupiedSectors) {
-        const effectiveMaxRadius = this.calculateEffectiveMaxRadius(current, sector);
+        let updatedSector = sector;
+        let availableRadius = this.calculateAvailableRadius(current, updatedSector);
+        let effectiveMaxRadius = this.calculateEffectiveMaxRadius(current, updatedSector, availableRadius);
 
-        if (effectiveMaxRadius < this.area.minRadius) {
-          continue;
+        while (effectiveMaxRadius >= this.area.minRadius) {
+          const newRadius = this.selectRadius(effectiveMaxRadius, availableRadius);
+          const newCircle = this.placeCircleTangent(current, updatedSector, newRadius);
+
+          this.placedCircles.push(newCircle);
+          this.quadtree.insert(newCircle);
+          this.stack.push(newCircle);
+          onAddCircle?.(this.placedCircles);
+
+          // account for new circle in sector and update effectiveMaxRadius
+          const newlyOccupiedSector = this.getSectorForCircle(current, newCircle);
+
+          let newStartAngle = updatedSector.startAngle + newlyOccupiedSector.width;
+
+          if (iter === 1) debugger;
+
+          if (newStartAngle > updatedSector.endAngle) {
+            // check if these are approximately equal to avoid issues w/floating point rounding
+            if (Math.abs(newStartAngle - updatedSector.endAngle) > 0.0000001) {
+              debugger;
+              throw new Error('Newly placed circle covers more than the available sector');
+            } else {
+              // if the issue is floating point rounding, just hack them into equality
+              newStartAngle = updatedSector.endAngle;
+            }
+          }
+
+          updatedSector = {
+            startAngle: newStartAngle,
+            endAngle: updatedSector.endAngle,
+            width: updatedSector.endAngle - newStartAngle,
+          };
+
+          availableRadius = this.calculateAvailableRadius(current, updatedSector);
+          effectiveMaxRadius = this.calculateEffectiveMaxRadius(current, updatedSector, availableRadius);
         }
-
-        const newRadius = this.selectRadius(effectiveMaxRadius);
-        const newCircle = this.placeCircleTangent(current, sector, newRadius);
-
-        this.placedCircles.push(newCircle);
-        this.quadtree.insert(newCircle);
-        this.stack.push(newCircle);
       }
+
+      iter += 1;
     }
 
     return this.placedCircles;
@@ -86,24 +119,26 @@ export class CirclePacker {
     return this.quadtree.retrieve(searchArea).filter((c: Circle) => c !== circle);
   }
 
+  private getSectorForCircle(current: Circle, nearbyCircle: Circle) {
+    const dx = nearbyCircle.x - current.x;
+    const dy = nearbyCircle.y - current.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    const centerAngle = Math.atan2(dy, dx);
+    const angularWidth = 2 * Math.asin(nearbyCircle.r / distance);
+
+    return {
+      startAngle: centerAngle - angularWidth / 2,
+      endAngle: centerAngle + angularWidth / 2,
+      width: angularWidth
+    };
+  }
+
   private calculateUnoccupiedSectors(current: Circle, nearby: Circle[]): Sector[] {
     const occupiedSectors: Sector[] = [];
 
     for (const nearbyCircle of nearby) {
-      const dx = nearbyCircle.x - current.x;
-      const dy = nearbyCircle.y - current.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < current.r + nearbyCircle.r + this.area.maxRadius) {
-        const centerAngle = Math.atan2(dy, dx);
-        const angularWidth = 2 * Math.asin(nearbyCircle.r / distance);
-
-        occupiedSectors.push({
-          startAngle: centerAngle - angularWidth / 2,
-          endAngle: centerAngle + angularWidth / 2,
-          width: angularWidth
-        });
-      }
+      occupiedSectors.push(this.getSectorForCircle(current, nearbyCircle));
     }
 
     return this.findUnoccupiedSectors(occupiedSectors);
@@ -147,19 +182,22 @@ export class CirclePacker {
     return unoccupied;
   }
 
-  private calculateEffectiveMaxRadius(current: Circle, sector: Sector): number {
+  private calculateAvailableRadius(current: Circle, sector: Sector): number {
     const theta = sector.width;
-    const maxAvailableRadius = sector.width > Math.PI
+
+    return sector.width > Math.PI
       ? Infinity
       : (current.r * Math.sin(theta / 2)) / (1 - Math.sin(theta / 2));
+  }
 
+  private calculateEffectiveMaxRadius(current: Circle, sector: Sector, availableRadius: number): number {
     // Calculate distance to nearest edge
     const midAngle = (sector.startAngle + sector.endAngle) / 2;
     const distanceToEdge = this.getDistanceToEdge(current, midAngle);
 
     return Math.min(
       this.area.maxRadius,
-      maxAvailableRadius,
+      availableRadius,
       distanceToEdge / 2
     );
   }
@@ -181,21 +219,34 @@ export class CirclePacker {
     return Math.min(...distances);
   }
 
-  private selectRadius(effectiveMaxRadius: number): number {
-    const { minRadius, maxRadius } = this.area;
+  // FIXME: This isn't always taking up all the space, check out the second condition
+  private selectRadius(effectiveMaxRadius: number, availableRadius: number): number {
+    const { minRadius } = this.area;
 
-    if (effectiveMaxRadius >= maxRadius + minRadius) {
+    if (availableRadius >= effectiveMaxRadius + minRadius) {
+      // can fit at least two circles regardless of random choice
+      // still use effectiveMax instead of max to account for distance to edge
       return this.randomRadius(minRadius, effectiveMaxRadius);
-    } else if (effectiveMaxRadius >= minRadius && effectiveMaxRadius <= maxRadius + minRadius) {
-      return this.randomRadius(minRadius, maxRadius - minRadius);
+    } else if (effectiveMaxRadius > 2 * minRadius) {
+      // can fit up to two circles, limit random choice to ensure that two fit
+      // i.e. eliminate the possibility of an unfillable remainder
+      return this.randomRadius(
+        minRadius,
+        Math.min(effectiveMaxRadius, availableRadius - minRadius),
+      );
     } else {
+      // Can only fit one circle, take up all available space
       return effectiveMaxRadius;
     }
   }
 
   private placeCircleTangent(current: Circle, sector: Sector, radius: number): Circle {
-    // Place at the start of the sector (near edge)
-    const angle = sector.startAngle;
+    // from sin(theta / 2) = r / (R + r) where R = c1 radius and r = c2 radius, we know that
+    // theta = 2 * asin(r / (R + r)), but we need half theta so can avoid undoing the 2 *
+    const newCircleCenter = Math.asin(radius / (current.r + radius));
+
+    // place tangent to both current and the ray defining the near edge of the arc
+    const angle = sector.startAngle + newCircleCenter;
     const distance = current.r + radius;
 
     const newX = current.x + distance * Math.cos(angle);
