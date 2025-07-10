@@ -149,7 +149,9 @@ export class CirclePacker {
 
   private calculateEffectiveMaxRadius(current: Circle, sector: Sector): number {
     const theta = sector.width;
-    const maxAvailableRadius = (current.r * Math.sin(theta / 2)) / (1 + Math.sin(theta / 2));
+    const maxAvailableRadius = sector.width > Math.PI
+      ? Infinity
+      : (current.r * Math.sin(theta / 2)) / (1 - Math.sin(theta / 2));
 
     // Calculate distance to nearest edge
     const midAngle = (sector.startAngle + sector.endAngle) / 2;
