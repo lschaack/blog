@@ -65,7 +65,7 @@ export class CirclePacker {
       await this.onAddCircle({ circles: this.placedCircles });
     }
 
-    const MAX_ITERS = 50;
+    const MAX_ITERS = 500;
     let iter = 0;
 
     while (this.stack.length > 0 && iter < MAX_ITERS) {
@@ -80,7 +80,7 @@ export class CirclePacker {
       for (const sector of unoccupiedSectors) {
         let updatedSector = sector;
         let availableRadius = this.calculateAvailableRadius(current, updatedSector);
-        let effectiveMaxRadius = this.calculateEffectiveMaxRadius(current, updatedSector, availableRadius);
+        let effectiveMaxRadius = this.calculateEffectiveMaxRadius(current, availableRadius);
 
         while (effectiveMaxRadius >= this.area.minRadius) {
           const newRadius = this.selectRadius(effectiveMaxRadius, availableRadius);
@@ -93,6 +93,8 @@ export class CirclePacker {
           if (this.onAddCircle) {
             await this.onAddCircle({ circles: this.placedCircles });
           }
+
+          debugger;
 
           // account for new circle in sector and update effectiveMaxRadius
           const newlyOccupiedSector = this.getSectorForCircle(current, newCircle);
@@ -117,7 +119,7 @@ export class CirclePacker {
           };
 
           availableRadius = this.calculateAvailableRadius(current, updatedSector);
-          effectiveMaxRadius = this.calculateEffectiveMaxRadius(current, updatedSector, availableRadius);
+          effectiveMaxRadius = this.calculateEffectiveMaxRadius(current, availableRadius);
         }
       }
 
@@ -234,7 +236,7 @@ export class CirclePacker {
       });
     }
 
-    //debugger;
+    debugger;
 
     return unoccupied;
   }
@@ -247,33 +249,34 @@ export class CirclePacker {
       : (current.r * Math.sin(theta / 2)) / (1 - Math.sin(theta / 2));
   }
 
-  private calculateEffectiveMaxRadius(current: Circle, sector: Sector, availableRadius: number): number {
-    // Calculate distance to nearest edge
-    const midAngle = (sector.startAngle + sector.endAngle) / 2;
-    const distanceToEdge = this.getDistanceToEdge(current, midAngle);
+  private calculateEffectiveMaxRadius(current: Circle, availableRadius: number): number {
+    const distance = this.getDistanceToEdge(current) / 2;
 
-    return Math.min(
+    const effectiveMaxRadius = Math.min(
       this.area.maxRadius,
       availableRadius,
-      distanceToEdge / 2
+      distance,
     );
+
+    if (effectiveMaxRadius === this.area.maxRadius) console.log('Effective max radius default')
+    else if (effectiveMaxRadius === availableRadius) console.log('Effective max radius based on available space')
+    if (effectiveMaxRadius === distance) console.log('Effective max radius based on distance to edge')
+
+    return effectiveMaxRadius;
   }
 
-  private getDistanceToEdge(circle: Circle, angle: number): number {
-    const dx = Math.cos(angle);
-    const dy = Math.sin(angle);
+  // Get distance from the current circle's edge to the area edge
+  private getDistanceToEdge(circle: Circle): number {
+    const { x, y, r } = circle;
+    const circleEdgeX = x - r;
+    const circleEdgeY = y - r;
 
-    // Calculate distance to each edge
-    const distanceToRight = (this.area.width - circle.x) / dx;
-    const distanceToLeft = -circle.x / dx;
-    const distanceToTop = (this.area.height - circle.y) / dy;
-    const distanceToBottom = -circle.y / dy;
+    const distanceToRight = (this.area.width - circleEdgeX);
+    const distanceToLeft = (circleEdgeX);
+    const distanceToTop = (this.area.height - circleEdgeY);
+    const distanceToBottom = (circleEdgeY);
 
-    // Return minimum positive distance
-    const distances = [distanceToRight, distanceToLeft, distanceToTop, distanceToBottom]
-      .filter(d => d > 0);
-
-    return Math.min(...distances);
+    return Math.min(distanceToTop, distanceToRight, distanceToBottom, distanceToLeft);
   }
 
   // FIXME: This isn't always taking up all the space, check out the second condition

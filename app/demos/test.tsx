@@ -42,8 +42,6 @@ export default function CirclePackerVisualizer({
     maxRadius
   });
 
-  console.log('unoccupiedSectors', unoccupiedSectors)
-
   const generateCircles = React.useCallback(async () => {
     setIsGenerating(true);
     try {
