@@ -13,14 +13,18 @@ interface PackingArea {
   maxRadius: number;
 }
 
+const TAU = 2 * Math.PI;
+
 export class CirclePacker {
   private area: PackingArea;
   private quadtree: Quadtree<Circle>;
   private placedCircles: Circle[] = [];
   private stack: Circle[] = [];
+  private onAddCircle?: (circles: Circle[]) => Promise<void>;
 
-  constructor(area: PackingArea) {
+  constructor(area: PackingArea, onAddCircle?: (circles: Circle[]) => Promise<void>) {
     this.area = area;
+    this.onAddCircle = onAddCircle;
     this.quadtree = new Quadtree<Circle>({
       width: area.width,
       height: area.height,
@@ -40,7 +44,7 @@ export class CirclePacker {
     }
   }
 
-  pack(): Circle[] {
+  async pack(): Promise<Circle[]> {
     // Create initial circle in center
     const centerX = this.area.width / 2;
     const centerY = this.area.height / 2;
@@ -51,11 +55,16 @@ export class CirclePacker {
     this.quadtree.insert(initialCircle);
     this.stack.push(initialCircle);
 
-    const MAX_ITERS = 20;
+    if (this.onAddCircle) {
+      await this.onAddCircle(this.placedCircles);
+    }
+
+    const MAX_ITERS = 50;
     let iter = 0;
 
     while (this.stack.length > 0 && iter < MAX_ITERS) {
-      const current = this.stack.pop()!;
+      // FIXME: optimize this...
+      const current = this.stack.shift()!;
       const nearby = this.findNearbyCircles(current);
       const unoccupiedSectors = this.calculateUnoccupiedSectors(current, nearby);
 
@@ -71,14 +80,15 @@ export class CirclePacker {
           this.placedCircles.push(newCircle);
           this.quadtree.insert(newCircle);
           this.stack.push(newCircle);
-          onAddCircle?.(this.placedCircles);
+
+          if (this.onAddCircle) {
+            await this.onAddCircle(this.placedCircles);
+          }
 
           // account for new circle in sector and update effectiveMaxRadius
           const newlyOccupiedSector = this.getSectorForCircle(current, newCircle);
 
           let newStartAngle = updatedSector.startAngle + newlyOccupiedSector.width;
-
-          if (iter === 1) debugger;
 
           if (newStartAngle > updatedSector.endAngle) {
             // check if these are approximately equal to avoid issues w/floating point rounding
@@ -119,6 +129,10 @@ export class CirclePacker {
     return this.quadtree.retrieve(searchArea).filter((c: Circle) => c !== circle);
   }
 
+  private normalizeAngleRadians(angle: number) {
+    return (angle % TAU + TAU) % TAU;
+  }
+
   private getSectorForCircle(current: Circle, nearbyCircle: Circle) {
     const dx = nearbyCircle.x - current.x;
     const dy = nearbyCircle.y - current.y;
@@ -153,13 +167,60 @@ export class CirclePacker {
       }];
     }
 
-    // Sort sectors by start angle
-    occupiedSectors.sort((a, b) => a.startAngle - b.startAngle);
+    type SectorPoint = {
+      angle: number,
+      type: number,
+    }
+
+    const sectorPoints = occupiedSectors
+      .flatMap<SectorPoint>(({ startAngle, endAngle }) => [
+        {
+          angle: startAngle,
+          type: 1,
+        },
+        {
+          angle: endAngle,
+          type: -1,
+        }
+      ])
+      .sort((a, b) => a.angle - b.angle);
+
+    if (sectorPoints[0].type !== 1 || sectorPoints.at(-1)!.type !== -1) {
+      debugger;
+    }
+
+    const joinedOccupiedSectors: Sector[] = [];
+    let depth = 0;
+    let isJoining = false;
+    for (const { angle, type } of sectorPoints) {
+      depth += type;
+      console.log('depth', depth)
+
+      if (depth === 1 && !isJoining) {
+        joinedOccupiedSectors.push({
+          startAngle: angle,
+          endAngle: NaN,
+          width: NaN,
+        });
+
+        isJoining = true;
+      } else if (depth === 0) {
+        const lastSector = joinedOccupiedSectors.at(-1)!;
+        lastSector.endAngle = angle;
+        lastSector.width = lastSector.endAngle - lastSector.startAngle;
+
+        isJoining = false;
+      }
+    }
+
+    if (isNaN(joinedOccupiedSectors.at(-1)!.endAngle)) {
+      throw new Error('Unmatched types in SectorPoints');
+    }
 
     const unoccupied: Sector[] = [];
     let currentAngle = 0;
 
-    for (const sector of occupiedSectors) {
+    for (const sector of joinedOccupiedSectors) {
       if (currentAngle < sector.startAngle) {
         unoccupied.push({
           startAngle: currentAngle,
@@ -178,6 +239,8 @@ export class CirclePacker {
         width: 2 * Math.PI - currentAngle
       });
     }
+
+    debugger;
 
     return unoccupied;
   }

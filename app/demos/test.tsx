@@ -27,11 +27,17 @@ export default function CirclePackerVisualizer({
     maxRadius
   });
 
-  const generateCircles = React.useCallback(() => {
+  const generateCircles = React.useCallback(async () => {
     setIsGenerating(true);
     try {
-      const packer = new CirclePacker(params);
-      const packedCircles = packer.pack();
+      const onAddCircle = async (currentCircles: Circle[]) => {
+        setCircles([...currentCircles]);
+        // Small delay to allow rendering
+        await new Promise(resolve => setTimeout(resolve, 50));
+      };
+
+      const packer = new CirclePacker(params, onAddCircle);
+      const packedCircles = await packer.pack();
       setCircles(packedCircles);
     } catch (error) {
       console.error('Error generating circles:', error);
@@ -62,7 +68,8 @@ export default function CirclePackerVisualizer({
 
       // Use different colors for visual distinction
       const hue = (index * 137.5) % 360;
-      ctx.fillStyle = `hsla(${hue}, 70%, 60%, 0.7)`;
+      const isNotLast = index < circles.length - 1;
+      ctx.fillStyle = `hsla(${hue}, ${isNotLast ? '70%, 60%' : '100%, 95%'}, 0.7)`;
       ctx.fill();
 
       ctx.strokeStyle = `hsl(${hue}, 70%, 40%)`;
