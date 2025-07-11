@@ -2,7 +2,7 @@ import { Quadtree, Circle } from '@timohausmann/quadtree-ts';
 import { randomLcg, RandomUniform, randomUniform } from 'd3-random';
 import { nearlyEqual } from '@/app/utils/precision';
 
-const VERBOSE_DEBUG = true;
+const VERBOSE_DEBUG = false;
 
 interface Sector {
   startAngle: number;
@@ -321,7 +321,7 @@ export class CirclePacker {
       return this.randomRadius(minRadius, limitedRadius)();
     } else {
       // we're fucked
-      debugger;
+      if (VERBOSE_DEBUG) debugger;
       return effectiveMaxRadius;
     }
   }
