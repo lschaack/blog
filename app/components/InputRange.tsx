@@ -4,7 +4,7 @@ import clamp from "lodash/clamp";
 
 import { LabelledValue } from "@/app/components/LabelledValue";
 import { easify, EASING_STRATEGY, EasingStrategy } from "@/app/utils/easingFunctions";
-import { roundToPrecision } from "@/app/utils/roundToPrecision";
+import { roundToPrecision } from "@/app/utils/precision";
 import { normalize } from "@/app/utils/range";
 
 type InputRangeProps = {

@@ -21,7 +21,7 @@ import { useEaseUpDown } from "@/app/hooks/useEaseUpDown";
 import { AnimatedVariablesContext } from "@/app/components/AnimatedVariables";
 import { EasingDirection } from "@/app/utils/requestEasingFrames";
 import { useMediaQuery } from "@/app/hooks/useMediaQuery";
-import { roundToPrecision } from "@/app/utils/roundToPrecision";
+import { roundToPrecision } from "@/app/utils/precision";
 
 const EASING_MS = 200;
 const DRAG_MODIFIER = 1000;

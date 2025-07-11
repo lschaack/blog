@@ -1,4 +1,8 @@
 import { Quadtree, Circle } from '@timohausmann/quadtree-ts';
+import { randomLcg, RandomUniform, randomUniform } from 'd3-random';
+import { nearlyEqual } from '@/app/utils/precision';
+
+const VERBOSE_DEBUG = true;
 
 interface Sector {
   startAngle: number;
@@ -27,8 +31,11 @@ export class CirclePacker {
   private placedCircles: Circle[] = [];
   private stack: Circle[] = [];
   private onAddCircle?: (state: Partial<PackingState>) => Promise<void>;
+  // TODO: check if this needs to be called as randomRadius(parameters)() b/c/o currying
+  // or b/c it's expensive to create the random thunk
+  private randomRadius: RandomUniform;
 
-  constructor(area: PackingArea, onAddCircle?: (state: Partial<PackingState>) => Promise<void>) {
+  constructor(area: PackingArea, onAddCircle?: (state: Partial<PackingState>) => Promise<void>, seed?: number) {
     this.area = area;
     this.onAddCircle = onAddCircle;
     this.quadtree = new Quadtree<Circle>({
@@ -38,6 +45,7 @@ export class CirclePacker {
       maxLevels: 4
     });
     this.validateConstraints();
+    this.randomRadius = randomUniform.source(randomLcg(seed));
   }
 
   private validateConstraints(): void {
@@ -54,7 +62,7 @@ export class CirclePacker {
     // Create initial circle in center
     const centerX = this.area.width / 2;
     const centerY = this.area.height / 2;
-    const initialRadius = this.randomRadius(this.area.minRadius, this.area.maxRadius);
+    const initialRadius = this.randomRadius(this.area.minRadius, this.area.maxRadius)();
     const initialCircle = new Circle({ x: centerX, y: centerY, r: initialRadius });
 
     this.placedCircles.push(initialCircle);
@@ -79,11 +87,11 @@ export class CirclePacker {
 
       for (const sector of unoccupiedSectors) {
         let updatedSector = sector;
-        let availableRadius = this.calculateAvailableRadius(current, updatedSector);
+        let availableRadius = this.thetaToRadius(current.r, updatedSector.width);
         let effectiveMaxRadius = this.calculateEffectiveMaxRadius(current, availableRadius);
 
         while (effectiveMaxRadius >= this.area.minRadius) {
-          const newRadius = this.selectRadius(effectiveMaxRadius, availableRadius);
+          const newRadius = this.selectRadius(effectiveMaxRadius, current.r, updatedSector.width);
           const newCircle = this.placeCircleTangent(current, updatedSector, newRadius);
 
           this.placedCircles.push(newCircle);
@@ -97,18 +105,14 @@ export class CirclePacker {
           // account for new circle in sector and update effectiveMaxRadius
           const newlyOccupiedSector = this.getSectorForCircle(current, newCircle);
 
-          // FIXME: It's common for positive-x-facing sectors to have start angles greater
-          // than their end angle (b/c/o crossing the boundary), so Math.min() fundamentally
-          // breaks these sectors and is not a valid floating point error fix
+          // need clamp to avoid floating point errors where newStartAngle becomes slightly
+          // larger than endAngle, wrapping the range to width ~= TAU and creating a new
+          // "layer" for circles to be added on
           const newStartAngle = this.clampToCounterclockwiseRange(
             updatedSector.startAngle + newlyOccupiedSector.width,
             updatedSector.startAngle,
             updatedSector.endAngle
           );
-
-          // FIXME: new layers are started when a sector is perfectly filled, but floating
-          // point rounding puts the start barely past the edge, which is then interpreted
-          // as a near-TAU-width arc rather than a 0-width arc
 
           updatedSector = {
             startAngle: newStartAngle,
@@ -118,9 +122,10 @@ export class CirclePacker {
 
           if (updatedSector.width < 0 && Math.abs(updatedSector.width - 0) > 0.00000001) debugger;
 
-          availableRadius = this.calculateAvailableRadius(current, updatedSector);
+          availableRadius = this.thetaToRadius(current.r, updatedSector.width);
           effectiveMaxRadius = this.calculateEffectiveMaxRadius(current, availableRadius);
-          debugger;
+
+          if (VERBOSE_DEBUG) debugger;
         }
       }
 
@@ -142,7 +147,9 @@ export class CirclePacker {
   }
 
   private normalizeAngleRadians(angle: number) {
-    return (angle % TAU + TAU) % TAU;
+    // Preserve both angle === 0 and angle === TAU
+    if (nearlyEqual(angle, TAU)) return TAU;
+    else return (angle % TAU + TAU) % TAU;
   }
 
   private clampToCounterclockwiseRange(angle: number, min: number, max: number) {
@@ -225,8 +232,6 @@ export class CirclePacker {
     }
 
     // joinedOccupied is sorted by startAngle, so we can just join ends to starts
-    // TODO: this can probably just be the loop w/o the first conditional b/c/o the way `at` works
-    // after the final iteration, but the TAU check would need to be here in any case
     const unoccupied: Sector[] = [];
     if (joinedOccupied[0].width !== TAU) {
       for (let i = 0; i < joinedOccupied.length - 1; i++) {
@@ -255,75 +260,74 @@ export class CirclePacker {
     const totalUnoccupiedArcSpace = unoccupied.reduce((total, { width }) => total + width, 0);
 
     if (totalJoinedArcSpace + totalUnoccupiedArcSpace !== TAU) debugger;
-
-    debugger;
+    if (VERBOSE_DEBUG) debugger;
 
     return unoccupied;
   }
 
-  private calculateAvailableRadius(current: Circle, sector: Sector): number {
-    const theta = sector.width;
-
-    return sector.width > Math.PI
+  // below two methods based on right triangle formed by the vector from c1 center
+  // to c2 center, the arc boundary ray from c1 center tangent to c2, and the vector
+  // from the tangent point to c2 center
+  // where c1 is some circle, and c2 is the incircle of an arc of a given width theta
+  // from the perspective of c2 center
+  private thetaToRadius(perspectiveRadius: number, theta: number): number {
+    return theta > Math.PI
       ? Infinity
-      : (current.r * Math.sin(theta / 2)) / (1 - Math.sin(theta / 2));
+      : (perspectiveRadius * Math.sin(theta / 2)) / (1 - Math.sin(theta / 2));
+  }
+
+  private radiiToTheta(perspectiveRadius: number, queryRadius: number): number {
+    return 2 * Math.asin(queryRadius / (perspectiveRadius + queryRadius));
   }
 
   private calculateEffectiveMaxRadius(current: Circle, availableRadius: number): number {
-    const distance = this.getDistanceToEdge(current) / 2;
-
-    const effectiveMaxRadius = Math.min(
+    return Math.min(
       this.area.maxRadius,
       availableRadius,
-      distance,
+      this.getDistanceToEdge(current) / 2,
     );
-
-    if (effectiveMaxRadius === this.area.maxRadius) console.log('Effective max radius default')
-    else if (effectiveMaxRadius === availableRadius) console.log('Effective max radius based on available space')
-    if (effectiveMaxRadius === distance) console.log('Effective max radius based on distance to edge')
-
-    return effectiveMaxRadius;
   }
 
   // Get distance from the current circle's edge to the area edge
   private getDistanceToEdge(circle: Circle): number {
     const { x, y, r } = circle;
-    const circleEdgeX = x - r;
-    const circleEdgeY = y - r;
 
-    const distanceToRight = (this.area.width - circleEdgeX);
-    const distanceToLeft = (circleEdgeX);
-    const distanceToTop = (this.area.height - circleEdgeY);
-    const distanceToBottom = (circleEdgeY);
+    const distanceToRight = (this.area.width - x - r);
+    const distanceToLeft = (x - r);
+    const distanceToTop = (this.area.height - y - r);
+    const distanceToBottom = (y - r);
 
     return Math.min(distanceToTop, distanceToRight, distanceToBottom, distanceToLeft);
   }
 
-  // FIXME: This isn't always taking up all the space, check out the second condition
-  private selectRadius(effectiveMaxRadius: number, availableRadius: number): number {
+  private selectRadius(effectiveMaxRadius: number, perspectiveRadius: number, availableArcWidth: number): number {
     const { minRadius } = this.area;
 
-    if (availableRadius >= effectiveMaxRadius + minRadius) {
+    const effectiveMaxArcWidth = this.radiiToTheta(perspectiveRadius, effectiveMaxRadius);
+    const minArcWidth = this.radiiToTheta(perspectiveRadius, minRadius);
+
+    if (availableArcWidth >= effectiveMaxArcWidth + minArcWidth) {
       // can fit at least two circles regardless of random choice
       // still use effectiveMax instead of max to account for distance to edge
-      return this.randomRadius(minRadius, effectiveMaxRadius);
-    } else if (availableRadius < effectiveMaxRadius) {
+      return this.randomRadius(minRadius, effectiveMaxRadius)();
+    } else if (availableArcWidth < effectiveMaxArcWidth || nearlyEqual(availableArcWidth, effectiveMaxArcWidth)) {
       // if it's possible to fill the space with one circle, do it
       return effectiveMaxRadius;
-    } else {
+    } else if (availableArcWidth >= 2 * minArcWidth) {
       // can fit up to two circles, limit random choice to ensure that two fit
       // i.e. eliminate the possibility of an unfillable remainder
-      return this.randomRadius(
-        minRadius,
-        Math.min(effectiveMaxRadius, availableRadius - minRadius),
-      );
+      const limitedRadius = this.thetaToRadius(perspectiveRadius, availableArcWidth - minArcWidth);
+
+      return this.randomRadius(minRadius, limitedRadius)();
+    } else {
+      // we're fucked
+      debugger;
+      return effectiveMaxRadius;
     }
   }
 
   private placeCircleTangent(current: Circle, sector: Sector, radius: number): Circle {
-    // from sin(theta / 2) = r / (R + r) where R = c1 radius and r = c2 radius, we know that
-    // theta = 2 * asin(r / (R + r)), but we need half theta so can avoid undoing the 2 *
-    const newCircleCenter = Math.asin(radius / (current.r + radius));
+    const newCircleCenter = this.radiiToTheta(current.r, radius) / 2;
 
     // place tangent to both current and the ray defining the near edge of the arc
     const angle = sector.startAngle + newCircleCenter;
@@ -412,9 +416,5 @@ export class CirclePacker {
     }
 
     return merged;
-  }
-
-  private randomRadius(min: number, max: number): number {
-    return min + Math.random() * (max - min);
   }
 }

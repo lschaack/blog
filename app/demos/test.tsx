@@ -27,7 +27,7 @@ export default function CirclePackerVisualizer({
   width = 1024,
   height = 1024,
   minRadius = 32,
-  maxRadius = 96,
+  maxRadius = 128,
 }: CanvasVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [circles, setCircles] = useState<Circle[]>([]);
@@ -54,7 +54,7 @@ export default function CirclePackerVisualizer({
         await new Promise(resolve => setTimeout(resolve, 20));
       };
 
-      const packer = new CirclePacker(params, onAddCircle);
+      const packer = new CirclePacker(params, onAddCircle, 2);
       const packedCircles = await packer.pack();
       setCircles(packedCircles);
     } catch (error) {
@@ -104,10 +104,6 @@ export default function CirclePackerVisualizer({
         ctx.stroke();
       });
       ctx.restore();
-    } else {
-      console.log('showSectors', showSectors)
-      console.log('currentCircle', currentCircle)
-      console.log('unoccupiedSectors.length > 0', unoccupiedSectors.length > 0)
     }
 
     // Highlight current circle
