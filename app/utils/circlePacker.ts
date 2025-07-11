@@ -307,16 +307,16 @@ export class CirclePacker {
       // can fit at least two circles regardless of random choice
       // still use effectiveMax instead of max to account for distance to edge
       return this.randomRadius(minRadius, effectiveMaxRadius);
-    } else if (effectiveMaxRadius > 2 * minRadius) {
+    } else if (availableRadius < effectiveMaxRadius) {
+      // if it's possible to fill the space with one circle, do it
+      return effectiveMaxRadius;
+    } else {
       // can fit up to two circles, limit random choice to ensure that two fit
       // i.e. eliminate the possibility of an unfillable remainder
       return this.randomRadius(
         minRadius,
         Math.min(effectiveMaxRadius, availableRadius - minRadius),
       );
-    } else {
-      // Can only fit one circle, take up all available space
-      return effectiveMaxRadius;
     }
   }
 

@@ -24,10 +24,10 @@ interface CanvasVisualizerProps {
 }
 
 export default function CirclePackerVisualizer({
-  width = 800,
-  height = 600,
-  minRadius = 5,
-  maxRadius = 50
+  width = 1024,
+  height = 1024,
+  minRadius = 32,
+  maxRadius = 96,
 }: CanvasVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [circles, setCircles] = useState<Circle[]>([]);
@@ -223,7 +223,7 @@ export default function CirclePackerVisualizer({
         </button>
       </div>
 
-      <div className="border rounded overflow-hidden">
+      <div className="border rounded overflow-hidden self-center">
         <canvas
           ref={canvasRef}
           width={params.width}
