@@ -94,32 +94,33 @@ export class CirclePacker {
             await this.onAddCircle({ circles: this.placedCircles });
           }
 
-          debugger;
-
           // account for new circle in sector and update effectiveMaxRadius
           const newlyOccupiedSector = this.getSectorForCircle(current, newCircle);
 
-          let newStartAngle = updatedSector.startAngle + newlyOccupiedSector.width;
+          // FIXME: It's common for positive-x-facing sectors to have start angles greater
+          // than their end angle (b/c/o crossing the boundary), so Math.min() fundamentally
+          // breaks these sectors and is not a valid floating point error fix
+          const newStartAngle = this.clampToCounterclockwiseRange(
+            updatedSector.startAngle + newlyOccupiedSector.width,
+            updatedSector.startAngle,
+            updatedSector.endAngle
+          );
 
-          if (newStartAngle > updatedSector.endAngle) {
-            // check if these are approximately equal to avoid issues w/floating point rounding
-            if (Math.abs(newStartAngle - updatedSector.endAngle) > 0.0000001) {
-              debugger;
-              throw new Error('Newly placed circle covers more than the available sector');
-            } else {
-              // if the issue is floating point rounding, just hack them into equality
-              newStartAngle = updatedSector.endAngle;
-            }
-          }
+          // FIXME: new layers are started when a sector is perfectly filled, but floating
+          // point rounding puts the start barely past the edge, which is then interpreted
+          // as a near-TAU-width arc rather than a 0-width arc
 
           updatedSector = {
             startAngle: newStartAngle,
             endAngle: updatedSector.endAngle,
-            width: updatedSector.endAngle - newStartAngle,
+            width: this.getCounterclockwiseArcWidth(newStartAngle, updatedSector.endAngle),
           };
+
+          if (updatedSector.width < 0 && Math.abs(updatedSector.width - 0) > 0.00000001) debugger;
 
           availableRadius = this.calculateAvailableRadius(current, updatedSector);
           effectiveMaxRadius = this.calculateEffectiveMaxRadius(current, availableRadius);
+          debugger;
         }
       }
 
@@ -144,6 +145,34 @@ export class CirclePacker {
     return (angle % TAU + TAU) % TAU;
   }
 
+  private clampToCounterclockwiseRange(angle: number, min: number, max: number) {
+    // TODO: everything should already be normalized going in
+    const normMin = this.normalizeAngleRadians(min);
+    const normMax = this.normalizeAngleRadians(max);
+    const normAngle = this.normalizeAngleRadians(angle);
+
+    if (normMin > normMax) {
+      // wraparound case, valid if greater than min or less than max
+      if (normAngle > min) {
+        return normAngle;
+      } else if (normAngle < max) {
+        return normAngle;
+      } else {
+        return max;
+      }
+    } else {
+      if (normAngle > min) {
+        if (normAngle < max) {
+          return normAngle;
+        } else {
+          return max;
+        }
+      } else {
+        return min;
+      }
+    }
+  }
+
   private getSectorForCircle(current: Circle, nearbyCircle: Circle) {
     const dx = nearbyCircle.x - current.x;
     const dy = nearbyCircle.y - current.y;
@@ -152,10 +181,13 @@ export class CirclePacker {
     const centerAngle = Math.atan2(dy, dx);
     const angularWidth = 2 * Math.asin(nearbyCircle.r / distance);
 
+    const startAngle = this.normalizeAngleRadians(centerAngle - angularWidth / 2);
+    const endAngle = this.normalizeAngleRadians(centerAngle + angularWidth / 2);
+
     return {
-      startAngle: centerAngle - angularWidth / 2,
-      endAngle: centerAngle + angularWidth / 2,
-      width: angularWidth
+      startAngle,
+      endAngle,
+      width: this.getCounterclockwiseArcWidth(startAngle, endAngle),
     };
   }
 
@@ -167,6 +199,11 @@ export class CirclePacker {
     }
 
     return this.findUnoccupiedSectors(occupiedSectors);
+  }
+
+  // accounts for overlap
+  private getCounterclockwiseArcWidth = (start: number, end: number) => {
+    return start <= end ? end - start : TAU - start + end;
   }
 
   private async findUnoccupiedSectors(occupiedSectors: Sector[]): Promise<Sector[]> {
@@ -181,60 +218,43 @@ export class CirclePacker {
     // Step 1: Join overlapping occupied sectors
     const joinedOccupied = this.joinSectors(occupiedSectors);
 
-    // broken step 2: assume only one unoccupied segment
-    // FIXME: this does eventually need to handle multiple, but works very nicely
-    // this way for now since circles are added approximately radially outward
-    const unoccupied = [{
-      startAngle: joinedOccupied[0].endAngle,
-      endAngle: joinedOccupied[0].startAngle,
-      width: joinedOccupied[0].startAngle - joinedOccupied[0].endAngle,
-    }]
+    const createSector = (startAngle: number, endAngle: number): Sector => {
+      const width = this.getCounterclockwiseArcWidth(startAngle, endAngle);
 
-    //// Step 2: Find gaps between joined occupied sectors
-    //const unoccupied: Sector[] = [];
-    //let currentAngle = 0;
-    //
-    //for (const sector of joinedOccupied) {
-    //  // Handle wrap-around sectors
-    //  if (sector.endAngle < sector.startAngle) {
-    //    // This is a wrap-around sector like [5.5, 1.2]
-    //    // Gap before: [currentAngle, startAngle]
-    //    if (currentAngle < sector.startAngle) {
-    //      unoccupied.push({
-    //        startAngle: currentAngle,
-    //        endAngle: sector.startAngle,
-    //        width: sector.startAngle - currentAngle
-    //      });
-    //    }
-    //    // Gap after wrapping: [endAngle, TAU] is handled at the end
-    //    currentAngle = sector.endAngle;
-    //  } else {
-    //    // Normal sector
-    //    if (currentAngle < sector.startAngle) {
-    //      unoccupied.push({
-    //        startAngle: currentAngle,
-    //        endAngle: sector.startAngle,
-    //        width: sector.startAngle - currentAngle
-    //      });
-    //    }
-    //    currentAngle = Math.max(currentAngle, sector.endAngle);
-    //  }
-    //}
-    //
-    //// Check for final gap to TAU
-    //if (currentAngle < TAU) {
-    //  unoccupied.push({
-    //    startAngle: currentAngle,
-    //    endAngle: TAU,
-    //    width: TAU - currentAngle
-    //  });
-    //}
+      return { startAngle, endAngle, width };
+    }
+
+    // joinedOccupied is sorted by startAngle, so we can just join ends to starts
+    // TODO: this can probably just be the loop w/o the first conditional b/c/o the way `at` works
+    // after the final iteration, but the TAU check would need to be here in any case
+    const unoccupied: Sector[] = [];
+    if (joinedOccupied[0].width !== TAU) {
+      for (let i = 0; i < joinedOccupied.length - 1; i++) {
+        const currSector = joinedOccupied[i];
+        const nextSector = joinedOccupied[i + 1];
+
+        unoccupied.push(createSector(
+          currSector.endAngle,
+          nextSector.startAngle,
+        ))
+      }
+
+      unoccupied.push(createSector(
+        joinedOccupied.at(-1)!.endAngle,
+        joinedOccupied.at(0)!.startAngle,
+      ))
+    }
 
     if (this.onAddCircle) {
       await this.onAddCircle({
         unoccupiedSectors: unoccupied
       });
     }
+
+    const totalJoinedArcSpace = joinedOccupied.reduce((total, { width }) => total + width, 0);
+    const totalUnoccupiedArcSpace = unoccupied.reduce((total, { width }) => total + width, 0);
+
+    if (totalJoinedArcSpace + totalUnoccupiedArcSpace !== TAU) debugger;
 
     debugger;
 
