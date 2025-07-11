@@ -2,7 +2,7 @@
 
 import { FC, memo, ReactNode, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
 import clsx from "clsx";
-import { SimpleFaker } from "@faker-js/faker";
+import { randomLcg, randomUniform } from "d3-random";
 
 import {
   findVectorSegmentsInRoundedShape,
@@ -38,8 +38,6 @@ import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
 import { useResizeValue } from "@/app/hooks/useResizeValue";
 import { useBatchedAnimation } from "@/app/hooks/useBatchedAnimation";
 import { getAbsoluteOffset } from "@/app/utils/dom";
-
-const faker = new SimpleFaker();
 
 const DEFAULT_ROUNDING = 24;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
@@ -80,17 +78,12 @@ type BubbleMeta = Inset & {
 
 const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState => {
   if (randomize) {
-    if (seed) faker.seed(seed);
+    const { min, max } = INSET_OPTIONS;
+    const random = randomUniform.source(randomLcg(seed))(min, max);
 
     return {
-      offset: createVec2(
-        faker.number.int(INSET_OPTIONS),
-        faker.number.int(INSET_OPTIONS)
-      ),
-      lerpedOffset: createVec2(
-        faker.number.int(INSET_OPTIONS),
-        faker.number.int(INSET_OPTIONS)
-      ),
+      offset: createVec2(random(), random()),
+      lerpedOffset: createVec2(random(), random()),
       velocity: createVec2(),
     }
   } else {
@@ -101,8 +94,6 @@ const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState 
     }
   }
 };
-
-// Moved to mutableVector.ts as applyForcesMutable
 
 type HoverBubbleProps = {
   children?: ReactNode;

@@ -2,7 +2,6 @@ import { client } from "@/app/utils/contentful/client";
 import { getAllPosts } from "@/app/queries/getAllPosts";
 import { GetAllPostsQuery } from "@/app/graphql/graphql";
 import { PostBubble } from "@/app/components/PostBubble";
-import { FakePostList } from "@/app/components/FakePostList";
 import { BatchedAnimationContextProvider } from "@/app/hooks/useBatchedAnimation";
 
 // TODO: Basic pagination logic, not gonna matter for a super long time
@@ -19,7 +18,7 @@ const getPosts = (skip: number, limit: number) => {
   });
 }
 
-const RealPostList = async () => {
+const PostList = async () => {
   const res = await getPosts(0, LIMIT);
 
   const realPosts = res.data.blogPostCollection?.items ?? [];
@@ -41,8 +40,7 @@ export default async function Home() {
     <div>
       <ul className="grid sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 justify-center items-center gap-4 max-w-7xl">
         <BatchedAnimationContextProvider>
-          <RealPostList />
-          <FakePostList />
+          <PostList />
         </BatchedAnimationContextProvider>
       </ul>
     </div>

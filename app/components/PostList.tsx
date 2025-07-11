@@ -1,14 +1,37 @@
-"use client";
+"use server";
 
-import { FakePostList } from "@/app/components/FakePostList";
-import { RealPostList } from "@/app/components/RealPostList";
-import { BatchedAnimationContextProvider } from "@/app/hooks/useBatchedAnimation";
+import { client } from "@/app/utils/contentful/client";
+import { getAllPosts } from "@/app/queries/getAllPosts";
+import { GetAllPostsQuery } from "@/app/graphql/graphql";
+import { PostBubble } from "@/app/components/PostBubble";
 
-export const PostList = () => {
+// TODO: Basic pagination logic, not gonna matter for a super long time
+const LIMIT = 20;
+
+const getPosts = (skip: number, limit: number) => {
+  return client.query<GetAllPostsQuery>({
+    query: getAllPosts,
+    variables: {
+      preview: process.env.NODE_ENV === 'development',
+      skip,
+      limit,
+    }
+  });
+}
+
+export const RealPostList = async () => {
+  const res = await getPosts(0, LIMIT);
+
+  const realPosts = res.data.blogPostCollection?.items ?? [];
+
   return (
-    <BatchedAnimationContextProvider>
-      <RealPostList />
-      <FakePostList />
-    </BatchedAnimationContextProvider>
+    <>
+      {realPosts.map(post => post?.slug && (
+        <PostBubble
+          post={post}
+          key={post.sys.id}
+        />
+      ))}
+    </>
   );
 }
