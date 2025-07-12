@@ -35,8 +35,8 @@ export const multiplyVecMutable = (vec: Vec2, by: number): Vec2 => {
 };
 
 export const segmentToVec2Mutable = (segment: LineSegment, target: Vec2): Vec2 => {
-  target[0] = segment.start.x - segment.end.x;
-  target[1] = segment.start.y - segment.end.y;
+  target[0] = segment.startX - segment.endX;
+  target[1] = segment.startY - segment.endY;
   return target;
 };
 

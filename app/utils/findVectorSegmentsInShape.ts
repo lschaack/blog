@@ -1,12 +1,9 @@
 // Thanks Claude
-export interface Point {
-  x: number;
-  y: number;
-}
-
 export interface LineSegment {
-  start: Point;
-  end: Point;
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
 }
 
 export interface RoundedRectangle {
@@ -29,31 +26,31 @@ export class RoundedShapeWithHole {
     this.hole.radius = Math.min(this.hole.radius, this.hole.width / 2, this.hole.height / 2);
   }
 
-  containsPoint(p: Point): boolean {
-    return this.isInRoundedRect(p, this.outer) && !this.isInRoundedRect(p, this.hole);
+  containsPoint(x: number, y: number): boolean {
+    return this.isInRoundedRect(x, y, this.outer) && !this.isInRoundedRect(x, y, this.hole);
   }
 
-  private isInRoundedRect(p: Point, rect: RoundedRectangle): boolean {
+  private isInRoundedRect(x: number, y: number, rect: RoundedRectangle): boolean {
     // Check if point is in the rectangular region
-    const inRect = p.x >= rect.x && p.x <= rect.x + rect.width &&
-      p.y >= rect.y && p.y <= rect.y + rect.height;
+    const inRect = x >= rect.x && x <= rect.x + rect.width &&
+      y >= rect.y && y <= rect.y + rect.height;
 
     if (!inRect) return false;
     if (rect.radius === 0) return true;
 
     // Check if point is in a corner region that needs radius checking
-    if (p.x < rect.x + rect.radius && p.y < rect.y + rect.radius) {
+    if (x < rect.x + rect.radius && y < rect.y + rect.radius) {
       // Top-left corner
-      return this.distanceSquared(p.x, p.y, rect.x + rect.radius, rect.y + rect.radius) <= rect.radius * rect.radius;
-    } else if (p.x > rect.x + rect.width - rect.radius && p.y < rect.y + rect.radius) {
+      return this.distanceSquared(x, y, rect.x + rect.radius, rect.y + rect.radius) <= rect.radius * rect.radius;
+    } else if (x > rect.x + rect.width - rect.radius && y < rect.y + rect.radius) {
       // Top-right corner
-      return this.distanceSquared(p.x, p.y, rect.x + rect.width - rect.radius, rect.y + rect.radius) <= rect.radius * rect.radius;
-    } else if (p.x > rect.x + rect.width - rect.radius && p.y > rect.y + rect.height - rect.radius) {
+      return this.distanceSquared(x, y, rect.x + rect.width - rect.radius, rect.y + rect.radius) <= rect.radius * rect.radius;
+    } else if (x > rect.x + rect.width - rect.radius && y > rect.y + rect.height - rect.radius) {
       // Bottom-right corner
-      return this.distanceSquared(p.x, p.y, rect.x + rect.width - rect.radius, rect.y + rect.height - rect.radius) <= rect.radius * rect.radius;
-    } else if (p.x < rect.x + rect.radius && p.y > rect.y + rect.height - rect.radius) {
+      return this.distanceSquared(x, y, rect.x + rect.width - rect.radius, rect.y + rect.height - rect.radius) <= rect.radius * rect.radius;
+    } else if (x < rect.x + rect.radius && y > rect.y + rect.height - rect.radius) {
       // Bottom-left corner
-      return this.distanceSquared(p.x, p.y, rect.x + rect.radius, rect.y + rect.height - rect.radius) <= rect.radius * rect.radius;
+      return this.distanceSquared(x, y, rect.x + rect.radius, rect.y + rect.height - rect.radius) <= rect.radius * rect.radius;
     }
 
     return true;
@@ -66,11 +63,11 @@ export class RoundedShapeWithHole {
   }
 }
 
-function lineCircleIntersections(start: Point, end: Point, center: Point, radius: number, results: Point[]): number {
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
-  const fx = start.x - center.x;
-  const fy = start.y - center.y;
+function lineCircleIntersections(startX: number, startY: number, endX: number, endY: number, centerX: number, centerY: number, radius: number, results: number[]): number {
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const fx = startX - centerX;
+  const fy = startY - centerY;
 
   const a = dx * dx + dy * dy;
   const b = 2 * (fx * dx + fy * dy);
@@ -85,129 +82,155 @@ function lineCircleIntersections(start: Point, end: Point, center: Point, radius
 
   let count = 0;
   if (t1 >= 0 && t1 <= 1) {
-    results[count++] = {
-      x: start.x + t1 * dx,
-      y: start.y + t1 * dy
-    };
+    results[count * 2] = startX + t1 * dx;
+    results[count * 2 + 1] = startY + t1 * dy;
+    count++;
   }
 
   if (t2 >= 0 && t2 <= 1 && Math.abs(t2 - t1) > 1e-10) {
-    results[count++] = {
-      x: start.x + t2 * dx,
-      y: start.y + t2 * dy
-    };
+    results[count * 2] = startX + t2 * dx;
+    results[count * 2 + 1] = startY + t2 * dy;
+    count++;
   }
 
   return count;
 }
 
-function lineSegmentIntersection(p1: Point, p2: Point, p3: Point, p4: Point): Point | null {
-  const dx1 = p2.x - p1.x;
-  const dy1 = p2.y - p1.y;
-  const dx2 = p4.x - p3.x;
-  const dy2 = p4.y - p3.y;
+function lineSegmentIntersection(p1x: number, p1y: number, p2x: number, p2y: number, p3x: number, p3y: number, p4x: number, p4y: number, result: number[]): boolean {
+  const dx1 = p2x - p1x;
+  const dy1 = p2y - p1y;
+  const dx2 = p4x - p3x;
+  const dy2 = p4y - p3y;
 
   const denominator = dx1 * dy2 - dy1 * dx2;
-  if (Math.abs(denominator) < 1e-10) return null;
+  if (Math.abs(denominator) < 1e-10) return false;
 
-  const t = ((p3.x - p1.x) * dy2 - (p3.y - p1.y) * dx2) / denominator;
-  const u = ((p3.x - p1.x) * dy1 - (p3.y - p1.y) * dx1) / denominator;
+  const t = ((p3x - p1x) * dy2 - (p3y - p1y) * dx2) / denominator;
+  const u = ((p3x - p1x) * dy1 - (p3y - p1y) * dx1) / denominator;
 
   if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-    return {
-      x: p1.x + t * dx1,
-      y: p1.y + t * dy1
-    };
+    result[0] = p1x + t * dx1;
+    result[1] = p1y + t * dy1;
+    return true;
   }
 
-  return null;
+  return false;
 }
 
-function lineRoundedRectangleIntersections(start: Point, end: Point, rect: RoundedRectangle, results: Point[]): number {
+function lineRoundedRectangleIntersections(startX: number, startY: number, endX: number, endY: number, rect: RoundedRectangle, results: number[]): number {
   let count = 0;
+  const tempIntersection = [0, 0];
 
   if (rect.radius === 0) {
     // Simple rectangle case - check 4 edges directly
-    let intersection = lineSegmentIntersection(start, end,
-      { x: rect.x, y: rect.y }, { x: rect.x + rect.width, y: rect.y });
-    if (intersection) results[count++] = intersection;
+    if (lineSegmentIntersection(startX, startY, endX, endY, rect.x, rect.y, rect.x + rect.width, rect.y, tempIntersection)) {
+      results[count * 2] = tempIntersection[0];
+      results[count * 2 + 1] = tempIntersection[1];
+      count++;
+    }
 
-    intersection = lineSegmentIntersection(start, end,
-      { x: rect.x + rect.width, y: rect.y }, { x: rect.x + rect.width, y: rect.y + rect.height });
-    if (intersection) results[count++] = intersection;
+    if (lineSegmentIntersection(startX, startY, endX, endY, rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + rect.height, tempIntersection)) {
+      results[count * 2] = tempIntersection[0];
+      results[count * 2 + 1] = tempIntersection[1];
+      count++;
+    }
 
-    intersection = lineSegmentIntersection(start, end,
-      { x: rect.x + rect.width, y: rect.y + rect.height }, { x: rect.x, y: rect.y + rect.height });
-    if (intersection) results[count++] = intersection;
+    if (lineSegmentIntersection(startX, startY, endX, endY, rect.x + rect.width, rect.y + rect.height, rect.x, rect.y + rect.height, tempIntersection)) {
+      results[count * 2] = tempIntersection[0];
+      results[count * 2 + 1] = tempIntersection[1];
+      count++;
+    }
 
-    intersection = lineSegmentIntersection(start, end,
-      { x: rect.x, y: rect.y + rect.height }, { x: rect.x, y: rect.y });
-    if (intersection) results[count++] = intersection;
+    if (lineSegmentIntersection(startX, startY, endX, endY, rect.x, rect.y + rect.height, rect.x, rect.y, tempIntersection)) {
+      results[count * 2] = tempIntersection[0];
+      results[count * 2 + 1] = tempIntersection[1];
+      count++;
+    }
   } else {
     // Rounded rectangle case
     const r = rect.radius;
 
     // Check straight edge intersections directly
-    let intersection = lineSegmentIntersection(start, end,
-      { x: rect.x + r, y: rect.y }, { x: rect.x + rect.width - r, y: rect.y });
-    if (intersection) results[count++] = intersection;
+    if (lineSegmentIntersection(startX, startY, endX, endY, rect.x + r, rect.y, rect.x + rect.width - r, rect.y, tempIntersection)) {
+      results[count * 2] = tempIntersection[0];
+      results[count * 2 + 1] = tempIntersection[1];
+      count++;
+    }
 
-    intersection = lineSegmentIntersection(start, end,
-      { x: rect.x + rect.width, y: rect.y + r }, { x: rect.x + rect.width, y: rect.y + rect.height - r });
-    if (intersection) results[count++] = intersection;
+    if (lineSegmentIntersection(startX, startY, endX, endY, rect.x + rect.width, rect.y + r, rect.x + rect.width, rect.y + rect.height - r, tempIntersection)) {
+      results[count * 2] = tempIntersection[0];
+      results[count * 2 + 1] = tempIntersection[1];
+      count++;
+    }
 
-    intersection = lineSegmentIntersection(start, end,
-      { x: rect.x + rect.width - r, y: rect.y + rect.height }, { x: rect.x + r, y: rect.y + rect.height });
-    if (intersection) results[count++] = intersection;
+    if (lineSegmentIntersection(startX, startY, endX, endY, rect.x + rect.width - r, rect.y + rect.height, rect.x + r, rect.y + rect.height, tempIntersection)) {
+      results[count * 2] = tempIntersection[0];
+      results[count * 2 + 1] = tempIntersection[1];
+      count++;
+    }
 
-    intersection = lineSegmentIntersection(start, end,
-      { x: rect.x, y: rect.y + rect.height - r }, { x: rect.x, y: rect.y + r });
-    if (intersection) results[count++] = intersection;
+    if (lineSegmentIntersection(startX, startY, endX, endY, rect.x, rect.y + rect.height - r, rect.x, rect.y + r, tempIntersection)) {
+      results[count * 2] = tempIntersection[0];
+      results[count * 2 + 1] = tempIntersection[1];
+      count++;
+    }
 
     // Check corner arc intersections - reuse temp array
-    const tempIntersections: Point[] = [{ x: 0, y: 0 }, { x: 0, y: 0 }];
-
+    const tempCircleIntersections = new Array(4); // Max 2 intersections * 2 coords
+    
     // Top-left corner
-    const tlCount = lineCircleIntersections(start, end, { x: rect.x + r, y: rect.y + r }, r, tempIntersections);
+    const tlCount = lineCircleIntersections(startX, startY, endX, endY, rect.x + r, rect.y + r, r, tempCircleIntersections);
     for (let i = 0; i < tlCount; i++) {
-      const p = tempIntersections[i];
-      const angle = Math.atan2(p.y - (rect.y + r), p.x - (rect.x + r));
+      const px = tempCircleIntersections[i * 2];
+      const py = tempCircleIntersections[i * 2 + 1];
+      const angle = Math.atan2(py - (rect.y + r), px - (rect.x + r));
       const normalizedAngle = angle < 0 ? angle + 2 * Math.PI : angle;
       if (normalizedAngle >= Math.PI && normalizedAngle <= 1.5 * Math.PI) {
-        results[count++] = p;
+        results[count * 2] = px;
+        results[count * 2 + 1] = py;
+        count++;
       }
     }
 
     // Top-right corner
-    const trCount = lineCircleIntersections(start, end, { x: rect.x + rect.width - r, y: rect.y + r }, r, tempIntersections);
+    const trCount = lineCircleIntersections(startX, startY, endX, endY, rect.x + rect.width - r, rect.y + r, r, tempCircleIntersections);
     for (let i = 0; i < trCount; i++) {
-      const p = tempIntersections[i];
-      const angle = Math.atan2(p.y - (rect.y + r), p.x - (rect.x + rect.width - r));
+      const px = tempCircleIntersections[i * 2];
+      const py = tempCircleIntersections[i * 2 + 1];
+      const angle = Math.atan2(py - (rect.y + r), px - (rect.x + rect.width - r));
       const normalizedAngle = angle < 0 ? angle + 2 * Math.PI : angle;
       if (normalizedAngle >= 1.5 * Math.PI && normalizedAngle <= 2 * Math.PI) {
-        results[count++] = p;
+        results[count * 2] = px;
+        results[count * 2 + 1] = py;
+        count++;
       }
     }
 
     // Bottom-right corner
-    const brCount = lineCircleIntersections(start, end, { x: rect.x + rect.width - r, y: rect.y + rect.height - r }, r, tempIntersections);
+    const brCount = lineCircleIntersections(startX, startY, endX, endY, rect.x + rect.width - r, rect.y + rect.height - r, r, tempCircleIntersections);
     for (let i = 0; i < brCount; i++) {
-      const p = tempIntersections[i];
-      const angle = Math.atan2(p.y - (rect.y + rect.height - r), p.x - (rect.x + rect.width - r));
+      const px = tempCircleIntersections[i * 2];
+      const py = tempCircleIntersections[i * 2 + 1];
+      const angle = Math.atan2(py - (rect.y + rect.height - r), px - (rect.x + rect.width - r));
       const normalizedAngle = angle < 0 ? angle + 2 * Math.PI : angle;
       if (normalizedAngle >= 0 && normalizedAngle <= 0.5 * Math.PI) {
-        results[count++] = p;
+        results[count * 2] = px;
+        results[count * 2 + 1] = py;
+        count++;
       }
     }
 
     // Bottom-left corner
-    const blCount = lineCircleIntersections(start, end, { x: rect.x + r, y: rect.y + rect.height - r }, r, tempIntersections);
+    const blCount = lineCircleIntersections(startX, startY, endX, endY, rect.x + r, rect.y + rect.height - r, r, tempCircleIntersections);
     for (let i = 0; i < blCount; i++) {
-      const p = tempIntersections[i];
-      const angle = Math.atan2(p.y - (rect.y + rect.height - r), p.x - (rect.x + r));
+      const px = tempCircleIntersections[i * 2];
+      const py = tempCircleIntersections[i * 2 + 1];
+      const angle = Math.atan2(py - (rect.y + rect.height - r), px - (rect.x + r));
       const normalizedAngle = angle < 0 ? angle + 2 * Math.PI : angle;
       if (normalizedAngle >= 0.5 * Math.PI && normalizedAngle <= Math.PI) {
-        results[count++] = p;
+        results[count * 2] = px;
+        results[count * 2 + 1] = py;
+        count++;
       }
     }
   }
@@ -216,66 +239,97 @@ function lineRoundedRectangleIntersections(start: Point, end: Point, rect: Round
 }
 
 export function findVectorSegmentsInRoundedShape(
-  start: Point,
-  end: Point,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
   shape: RoundedShapeWithHole
 ): LineSegment[] {
   const segments: LineSegment[] = [];
 
-  // Reuse arrays for intersections
-  const outerIntersections: Point[] = new Array(8); // Max 8 intersections for rounded rect
-  const holeIntersections: Point[] = new Array(8);
+  // Reuse arrays for intersections - store as flat x,y coordinates
+  const outerIntersections = new Array(16); // Max 8 intersections * 2 coords
+  const holeIntersections = new Array(16);
+  
+  const outerCount = lineRoundedRectangleIntersections(startX, startY, endX, endY, shape.outer, outerIntersections);
+  const holeCount = lineRoundedRectangleIntersections(startX, startY, endX, endY, shape.hole, holeIntersections);
 
-  const outerCount = lineRoundedRectangleIntersections(start, end, shape.outer, outerIntersections);
-  const holeCount = lineRoundedRectangleIntersections(start, end, shape.hole, holeIntersections);
-
-  // Pre-allocate combined points array
-  const allPoints: Point[] = new Array(2 + outerCount + holeCount);
-  allPoints[0] = start;
-
-  let pointIndex = 1;
+  // Pre-allocate combined points array as flat coordinates
+  const totalPoints = 2 + outerCount + holeCount;
+  const allCoords = new Array(totalPoints * 2);
+  allCoords[0] = startX;
+  allCoords[1] = startY;
+  
+  let coordIndex = 2;
   for (let i = 0; i < outerCount; i++) {
-    allPoints[pointIndex++] = outerIntersections[i];
+    allCoords[coordIndex++] = outerIntersections[i * 2];
+    allCoords[coordIndex++] = outerIntersections[i * 2 + 1];
   }
   for (let i = 0; i < holeCount; i++) {
-    allPoints[pointIndex++] = holeIntersections[i];
+    allCoords[coordIndex++] = holeIntersections[i * 2];
+    allCoords[coordIndex++] = holeIntersections[i * 2 + 1];
   }
-  allPoints[pointIndex] = end;
+  allCoords[coordIndex++] = endX;
+  allCoords[coordIndex] = endY;
 
   // Sort points along vector
-  const dx = end.x - start.x;
-  const dy = end.y - start.y;
+  const dx = endX - startX;
+  const dy = endY - startY;
   const lengthSquared = dx * dx + dy * dy;
 
-  allPoints.sort((a, b) => {
-    const ta = ((a.x - start.x) * dx + (a.y - start.y) * dy) / lengthSquared;
-    const tb = ((b.x - start.x) * dx + (b.y - start.y) * dy) / lengthSquared;
+  // Create indices for sorting
+  const indices = new Array(totalPoints);
+  for (let i = 0; i < totalPoints; i++) {
+    indices[i] = i;
+  }
+
+  indices.sort((a, b) => {
+    const ax = allCoords[a * 2];
+    const ay = allCoords[a * 2 + 1];
+    const bx = allCoords[b * 2];
+    const by = allCoords[b * 2 + 1];
+    
+    const ta = ((ax - startX) * dx + (ay - startY) * dy) / lengthSquared;
+    const tb = ((bx - startX) * dx + (by - startY) * dy) / lengthSquared;
     return ta - tb;
   });
 
-  // Remove duplicates in-place
-  let uniqueCount = 1;
-  for (let i = 1; i < allPoints.length; i++) {
-    const curr = allPoints[i];
-    const prev = allPoints[uniqueCount - 1];
-    if (Math.abs(curr.x - prev.x) > 1e-10 || Math.abs(curr.y - prev.y) > 1e-10) {
-      allPoints[uniqueCount++] = curr;
+  // Remove duplicates using sorted indices
+  const uniqueIndices = [indices[0]];
+  for (let i = 1; i < indices.length; i++) {
+    const currIdx = indices[i];
+    const prevIdx = uniqueIndices[uniqueIndices.length - 1];
+    
+    const currX = allCoords[currIdx * 2];
+    const currY = allCoords[currIdx * 2 + 1];
+    const prevX = allCoords[prevIdx * 2];
+    const prevY = allCoords[prevIdx * 2 + 1];
+    
+    if (Math.abs(currX - prevX) > 1e-10 || Math.abs(currY - prevY) > 1e-10) {
+      uniqueIndices.push(currIdx);
     }
   }
 
   // Check segments
-  for (let i = 0; i < uniqueCount - 1; i++) {
-    const p1 = allPoints[i];
-    const p2 = allPoints[i + 1];
-
+  for (let i = 0; i < uniqueIndices.length - 1; i++) {
+    const idx1 = uniqueIndices[i];
+    const idx2 = uniqueIndices[i + 1];
+    
+    const p1x = allCoords[idx1 * 2];
+    const p1y = allCoords[idx1 * 2 + 1];
+    const p2x = allCoords[idx2 * 2];
+    const p2y = allCoords[idx2 * 2 + 1];
+    
     // Reuse midpoint calculation without object allocation
-    const midX = (p1.x + p2.x) / 2;
-    const midY = (p1.y + p2.y) / 2;
-
-    if (shape.containsPoint({ x: midX, y: midY })) {
+    const midX = (p1x + p2x) / 2;
+    const midY = (p1y + p2y) / 2;
+    
+    if (shape.containsPoint(midX, midY)) {
       segments.push({
-        start: p1,
-        end: p2
+        startX: p1x,
+        startY: p1y,
+        endX: p2x,
+        endY: p2y
       });
     }
   }
