@@ -200,6 +200,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       updateDomMeasurements,
       INIT_DOM_MEASUREMENTS,
       getElementsToObserve,
+      false,
       20,
     );
 

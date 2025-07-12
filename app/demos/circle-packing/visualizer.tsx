@@ -26,8 +26,8 @@ interface CanvasVisualizerProps {
 export default function CirclePackerVisualizer({
   width = 1024,
   height = 1024,
-  minRadius = 32,
-  maxRadius = 96,
+  minRadius = 16,
+  maxRadius = 256,
 }: CanvasVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [circles, setCircles] = useState<Circle[]>([]);

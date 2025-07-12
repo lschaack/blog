@@ -78,7 +78,7 @@ export class CirclePacker {
 
     while (this.stack.length > 0 && iter < MAX_ITERS) {
       // FIXME: optimize this...
-      const current = this.stack.shift()!;
+      const current = this.stack.pop()!;
       if (this.onAddCircle) {
         await this.onAddCircle({ currentCircle: current });
       }

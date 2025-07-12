@@ -35,6 +35,7 @@ export const useResizeValue = <TValue>(
   getValue: () => TValue,
   initValue: TValue,
   toObserve: Array<ElementPossibly> | (() => Array<ElementPossibly>),
+  runOnMount?: boolean,
   debounceMs?: number,
 ) => {
   const [value, setValue] = useState<TValue>(initValue);

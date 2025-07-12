@@ -52,7 +52,7 @@ export default function Demo() {
   const [packedCircles, setPackedCircles] = useState<Circle[]>();
 
   useEffect(() => {
-    (new CirclePacker({ width: WIDTH, height: HEIGHT, minRadius: 16, maxRadius: 32 }))
+    (new CirclePacker({ width: WIDTH, height: HEIGHT, minRadius: 16, maxRadius: 128 }))
       .pack()
       .then(circles => setPackedCircles(circles))
   }, []);

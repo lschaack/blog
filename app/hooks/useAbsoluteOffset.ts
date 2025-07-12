@@ -19,5 +19,10 @@ export const useAbsoluteOffset = (element: HTMLElement | null | undefined) => {
     window?.document.documentElement
   ], [element?.parentElement]);
 
-  return useResizeValue(getOffset, DEFAULT_OFFSET, getElementsToObserve);
+  return useResizeValue(
+    getOffset,
+    DEFAULT_OFFSET,
+    getElementsToObserve,
+    false,
+  );
 }
