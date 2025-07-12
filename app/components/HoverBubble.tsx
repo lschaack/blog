@@ -5,8 +5,7 @@ import clsx from "clsx";
 import { randomLcg, randomUniform } from "d3-random";
 
 import {
-  populateVectorSegmentsInRoundedShape,
-  LineSegment,
+  populateVectorSegmentsPrimitive,
   RoundedRectangle,
   RoundedShapeWithHole,
 } from "@/app/utils/findVectorSegmentsInShape";
@@ -24,7 +23,6 @@ import {
   magnitude,
   addVec2Mutable,
   multiplyVecMutable,
-  segmentToVec2Mutable,
   clampVecMutable,
   copyVec2,
   createVec2,
@@ -152,9 +150,15 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const activeImpulses = useRef<Vec2[]>([]);
     const poolIndex = useRef(0);
 
-    // Pre-allocated segments array for mutable API
+    // Pre-allocated primitive coordinate arrays for zero-allocation segments
     const MAX_SEGMENTS = 20;
-    const segmentsPool = useRef<LineSegment[]>(Array.from({ length: MAX_SEGMENTS }, () => ({ startX: 0, startY: 0, endX: 0, endY: 0 })));
+    const segmentStartX = useRef<Float64Array>(new Float64Array(MAX_SEGMENTS));
+    const segmentStartY = useRef<Float64Array>(new Float64Array(MAX_SEGMENTS));
+    const segmentEndX = useRef<Float64Array>(new Float64Array(MAX_SEGMENTS));
+    const segmentEndY = useRef<Float64Array>(new Float64Array(MAX_SEGMENTS));
+
+    // Pre-allocated shape to eliminate object creation on every call
+    const shapeWithHole = useRef<RoundedShapeWithHole | null>(null);
 
     const bubbleMeta = useRef<BubbleMeta>({
       top: 0,
@@ -321,21 +325,36 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         inner.height = outer.height - doubleBoundary;
         inner.radius = rounding - boundary;
 
-        const segmentCount = populateVectorSegmentsInRoundedShape(
-          segmentsPool.current,
+        shapeWithHole.current = new RoundedShapeWithHole(outer, inner);
+        //// Reuse pre-allocated shape instead of creating new object
+        //if (!shapeWithHole.current) {
+        //  shapeWithHole.current = new RoundedShapeWithHole(outer, inner);
+        //} else {
+        //  // Update references instead of creating new object
+        //  shapeWithHole.current.outer = outer;
+        //  shapeWithHole.current.hole = inner;
+        //}
+
+        const segmentCount = populateVectorSegmentsPrimitive(
+          segmentStartX.current,
+          segmentStartY.current,
+          segmentEndX.current,
+          segmentEndY.current,
           MAX_SEGMENTS,
           currMouseX,
           currMouseY,
           prevMouseX,
           prevMouseY,
-          new RoundedShapeWithHole(outer, inner)
+          shapeWithHole.current
         );
 
         if (segmentCount > 0) {
           zeroVec2(intersectionVec.current);
 
           for (let i = 0; i < segmentCount; i++) {
-            segmentToVec2Mutable(segmentsPool.current[i], tempVec.current);
+            // Convert primitive coordinates to vector manually - zero allocations
+            tempVec.current[0] = segmentStartX.current[i] - segmentEndX.current[i];
+            tempVec.current[1] = segmentStartY.current[i] - segmentEndY.current[i];
             addVec2Mutable(intersectionVec.current, tempVec.current);
           }
 

@@ -313,6 +313,118 @@ function populateLineRoundedRectangleIntersections(
   return count;
 }
 
+// Zero-allocation version that populates primitive coordinate arrays
+export function populateVectorSegmentsPrimitive(
+  resultStartX: Float64Array,
+  resultStartY: Float64Array,
+  resultEndX: Float64Array,
+  resultEndY: Float64Array,
+  maxResults: number,
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  shape: RoundedShapeWithHole
+): number {
+  // Reset pools at start of operation
+  resetPools();
+
+  // Populate start point
+  WORKING_ALL_X[0] = startX;
+  WORKING_ALL_Y[0] = startY;
+  let allPointsCount = 1;
+
+  // Get outer intersections
+  const outerCount = populateLineRoundedRectangleIntersections(
+    WORKING_ALL_X, WORKING_ALL_Y, allPointsCount,
+    startX, startY, endX, endY, shape.outer
+  );
+  allPointsCount += outerCount;
+
+  // Get hole intersections
+  const holeCount = populateLineRoundedRectangleIntersections(
+    WORKING_ALL_X, WORKING_ALL_Y, allPointsCount,
+    startX, startY, endX, endY, shape.hole
+  );
+  allPointsCount += holeCount;
+
+  // Add end point
+  WORKING_ALL_X[allPointsCount] = endX;
+  WORKING_ALL_Y[allPointsCount] = endY;
+  allPointsCount++;
+
+  // Sort points along vector using manual sorting with primitive arrays
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const lengthSquared = dx * dx + dy * dy;
+
+  // Simple insertion sort with primitive coordinates
+  for (let i = 1; i < allPointsCount; i++) {
+    const currentX = WORKING_ALL_X[i];
+    const currentY = WORKING_ALL_Y[i];
+    const currentT = ((currentX - startX) * dx + (currentY - startY) * dy) / lengthSquared;
+    
+    let j = i - 1;
+    while (j >= 0) {
+      const compareX = WORKING_ALL_X[j];
+      const compareY = WORKING_ALL_Y[j];
+      const compareT = ((compareX - startX) * dx + (compareY - startY) * dy) / lengthSquared;
+      
+      if (compareT <= currentT) break;
+      
+      // Swap coordinates
+      WORKING_ALL_X[j + 1] = WORKING_ALL_X[j];
+      WORKING_ALL_Y[j + 1] = WORKING_ALL_Y[j];
+      j--;
+    }
+    WORKING_ALL_X[j + 1] = currentX;
+    WORKING_ALL_Y[j + 1] = currentY;
+  }
+
+  // Remove duplicates using primitive coordinates
+  let uniqueCount = 0;
+  for (let i = 0; i < allPointsCount; i++) {
+    const currentX = WORKING_ALL_X[i];
+    const currentY = WORKING_ALL_Y[i];
+    
+    if (uniqueCount === 0) {
+      WORKING_UNIQUE_X[uniqueCount] = currentX;
+      WORKING_UNIQUE_Y[uniqueCount] = currentY;
+      uniqueCount++;
+    } else {
+      const lastX = WORKING_UNIQUE_X[uniqueCount - 1];
+      const lastY = WORKING_UNIQUE_Y[uniqueCount - 1];
+      if (Math.abs(currentX - lastX) > 1e-10 || Math.abs(currentY - lastY) > 1e-10) {
+        WORKING_UNIQUE_X[uniqueCount] = currentX;
+        WORKING_UNIQUE_Y[uniqueCount] = currentY;
+        uniqueCount++;
+      }
+    }
+  }
+
+  // Build segments directly into caller's primitive arrays - zero property assignments
+  let segmentCount = 0;
+  for (let i = 0; i < uniqueCount - 1 && segmentCount < maxResults; i++) {
+    const startPtX = WORKING_UNIQUE_X[i];
+    const startPtY = WORKING_UNIQUE_Y[i];
+    const endPtX = WORKING_UNIQUE_X[i + 1];
+    const endPtY = WORKING_UNIQUE_Y[i + 1];
+    const midpointX = (startPtX + endPtX) / 2;
+    const midpointY = (startPtY + endPtY) / 2;
+
+    if (shape.containsPoint(midpointX, midpointY)) {
+      // Direct primitive array writes - no objects, no property assignments
+      resultStartX[segmentCount] = startPtX;
+      resultStartY[segmentCount] = startPtY;
+      resultEndX[segmentCount] = endPtX;
+      resultEndY[segmentCount] = endPtY;
+      segmentCount++;
+    }
+  }
+
+  return segmentCount;
+}
+
 export function populateVectorSegmentsInRoundedShape(
   resultSegments: LineSegment[],
   maxResults: number,
