@@ -23,7 +23,6 @@ import {
   magnitude,
   addVec2Mutable,
   multiplyVecMutable,
-  segmentToVec2Mutable,
   clampVecMutable,
   copyVec2,
   createVec2,
