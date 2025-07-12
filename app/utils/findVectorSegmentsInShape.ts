@@ -32,19 +32,39 @@ export interface RoundedRectangle {
 }
 
 export class RoundedShapeWithHole {
-  outer: RoundedRectangle;
-  hole: RoundedRectangle;
+  private _outer: RoundedRectangle;
+  private _hole: RoundedRectangle;
 
   constructor(outer: RoundedRectangle, hole: RoundedRectangle) {
-    this.outer = outer;
-    this.hole = hole;
+    this._outer = outer;
+    this._hole = hole;
     // Ensure radius doesn't exceed half of smallest dimension
-    this.outer.radius = Math.min(this.outer.radius, this.outer.width / 2, this.outer.height / 2);
-    this.hole.radius = Math.min(this.hole.radius, this.hole.width / 2, this.hole.height / 2);
+    this._outer.radius = Math.min(this._outer.radius, this._outer.width / 2, this._outer.height / 2);
+    this._outer.radius = Math.min(this._outer.radius, this._outer.width / 2, this._outer.height / 2);
+  }
+
+  get outer() {
+    return this._outer;
+  }
+
+  set outer(next: RoundedRectangle) {
+    this._outer = next;
+    // Ensure radius doesn't exceed half of smallest dimension
+    this._outer.radius = Math.min(this._outer.radius, this._outer.width / 2, this._outer.height / 2);
+  }
+
+  get hole() {
+    return this._hole;
+  }
+
+  set hole(next: RoundedRectangle) {
+    this._hole = next;
+    // Ensure radius doesn't exceed half of smallest dimension
+    this._hole.radius = Math.min(this._hole.radius, this._hole.width / 2, this._hole.height / 2);
   }
 
   containsPoint(x: number, y: number): boolean {
-    return this.isInRoundedRect(x, y, this.outer) && !this.isInRoundedRect(x, y, this.hole);
+    return this.isInRoundedRect(x, y, this._outer) && !this.isInRoundedRect(x, y, this._hole);
   }
 
   private isInRoundedRect(x: number, y: number, rect: RoundedRectangle): boolean {
@@ -363,15 +383,15 @@ export function populateVectorSegmentsPrimitive(
     const currentX = WORKING_ALL_X[i];
     const currentY = WORKING_ALL_Y[i];
     const currentT = ((currentX - startX) * dx + (currentY - startY) * dy) / lengthSquared;
-    
+
     let j = i - 1;
     while (j >= 0) {
       const compareX = WORKING_ALL_X[j];
       const compareY = WORKING_ALL_Y[j];
       const compareT = ((compareX - startX) * dx + (compareY - startY) * dy) / lengthSquared;
-      
+
       if (compareT <= currentT) break;
-      
+
       // Swap coordinates
       WORKING_ALL_X[j + 1] = WORKING_ALL_X[j];
       WORKING_ALL_Y[j + 1] = WORKING_ALL_Y[j];
@@ -386,7 +406,7 @@ export function populateVectorSegmentsPrimitive(
   for (let i = 0; i < allPointsCount; i++) {
     const currentX = WORKING_ALL_X[i];
     const currentY = WORKING_ALL_Y[i];
-    
+
     if (uniqueCount === 0) {
       WORKING_UNIQUE_X[uniqueCount] = currentX;
       WORKING_UNIQUE_Y[uniqueCount] = currentY;
@@ -471,15 +491,15 @@ export function populateVectorSegmentsInRoundedShape(
     const currentX = WORKING_ALL_X[i];
     const currentY = WORKING_ALL_Y[i];
     const currentT = ((currentX - startX) * dx + (currentY - startY) * dy) / lengthSquared;
-    
+
     let j = i - 1;
     while (j >= 0) {
       const compareX = WORKING_ALL_X[j];
       const compareY = WORKING_ALL_Y[j];
       const compareT = ((compareX - startX) * dx + (compareY - startY) * dy) / lengthSquared;
-      
+
       if (compareT <= currentT) break;
-      
+
       // Swap coordinates
       WORKING_ALL_X[j + 1] = WORKING_ALL_X[j];
       WORKING_ALL_Y[j + 1] = WORKING_ALL_Y[j];
@@ -494,7 +514,7 @@ export function populateVectorSegmentsInRoundedShape(
   for (let i = 0; i < allPointsCount; i++) {
     const currentX = WORKING_ALL_X[i];
     const currentY = WORKING_ALL_Y[i];
-    
+
     if (uniqueCount === 0) {
       WORKING_UNIQUE_X[uniqueCount] = currentX;
       WORKING_UNIQUE_Y[uniqueCount] = currentY;
@@ -545,7 +565,7 @@ export function findVectorSegmentsInRoundedShape(
   // Use a temporary array for backward compatibility
   const tempSegments: LineSegment[] = Array.from({ length: 20 }, () => ({ startX: 0, startY: 0, endX: 0, endY: 0 }));
   const count = populateVectorSegmentsInRoundedShape(tempSegments, 20, startX, startY, endX, endY, shape);
-  
+
   // Return only the used portion (still creates new array, but reduces object creation)
   return tempSegments.slice(0, count);
 }

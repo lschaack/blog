@@ -325,15 +325,14 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         inner.height = outer.height - doubleBoundary;
         inner.radius = rounding - boundary;
 
-        shapeWithHole.current = new RoundedShapeWithHole(outer, inner);
-        //// Reuse pre-allocated shape instead of creating new object
-        //if (!shapeWithHole.current) {
-        //  shapeWithHole.current = new RoundedShapeWithHole(outer, inner);
-        //} else {
-        //  // Update references instead of creating new object
-        //  shapeWithHole.current.outer = outer;
-        //  shapeWithHole.current.hole = inner;
-        //}
+        // Reuse pre-allocated shape instead of creating new object
+        if (!shapeWithHole.current) {
+          shapeWithHole.current = new RoundedShapeWithHole(outer, inner);
+        } else {
+          // Update references instead of creating new object
+          shapeWithHole.current.outer = outer;
+          shapeWithHole.current.hole = inner;
+        }
 
         const segmentCount = populateVectorSegmentsPrimitive(
           segmentStartX.current,
