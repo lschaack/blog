@@ -19,12 +19,14 @@ export type Vec2 = [number, number];
 export const add = (a: number, b: number) => a + b;
 export const addVec2 = (a: Vec2, b: Vec2) => zipWith(a, b, add) as Vec2;
 export const negate = (n: number) => -n;
+export const multiply = (a: number, b: number) => a * b;
 export const multiplyBy = (by: number) => (n: number) => n * by;
 export const multiplyVec = <T extends number[]>(v: T, by: number) => v.map(multiplyBy(by)) as T;
+export const dotProduct = <T extends number[]>(a: T, b: T) => zipWith(a, b, multiply).reduce(add);
 export const segmentToVec2 = (segment: LineSegment) => (
   [
-    segment.start.x - segment.end.x,
-    segment.start.y - segment.end.y,
+    segment.startX - segment.endX,
+    segment.startY - segment.endY,
   ] as Vec2
 )
 
@@ -70,3 +72,4 @@ export const clampVec = <T extends number[]>(vector: T, min: number, max: number
 
   return multiplyVec(direction, clamp(length, min, max));
 }
+

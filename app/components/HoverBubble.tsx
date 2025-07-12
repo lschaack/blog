@@ -104,6 +104,7 @@ type HoverBubbleProps = {
   moveOnMount?: boolean;
   className?: string;
   bubbleClassname?: string;
+  backgroundColor?: string;
   insetFilter?: (direction: number) => number;
   // TODO: This property is pretty hacked together for the demos
   showIndicators?: boolean;
@@ -120,6 +121,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     moveOnMount = false,
     className,
     bubbleClassname,
+    backgroundColor,
     insetFilter = asymmetricFilter,
     showIndicators = false,
   }) {
@@ -471,6 +473,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
           style={{
             borderRadius: rounding,
             borderWidth: boundary,
+            backgroundColor,
           }}
         />
         <div

@@ -6,7 +6,7 @@ import {
   Vec2
 } from "@/app/utils/vector";
 
-export const DECAY = 0.997;
+export const DECAY = 0.999;
 export const VELOCITY_ANIMATION_THRESHOLD = 0.01;
 export const OFFSET_ANIMATION_THRESHOLD = 0.1;
 export const SPRING_STIFFNESS = 0.001;
