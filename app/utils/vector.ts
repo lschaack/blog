@@ -25,8 +25,8 @@ export const multiplyVec = <T extends number[]>(v: T, by: number) => v.map(multi
 export const dotProduct = <T extends number[]>(a: T, b: T) => zipWith(a, b, multiply).reduce(add);
 export const segmentToVec2 = (segment: LineSegment) => (
   [
-    segment.start.x - segment.end.x,
-    segment.start.y - segment.end.y,
+    segment.startX - segment.endX,
+    segment.startY - segment.endY,
   ] as Vec2
 )
 
