@@ -42,7 +42,7 @@ export const useResizeValue = <TValue>(
 
   const handleResize = useCallback(() => setValue(getValue()), [getValue]);
 
-  useResizeEffect(handleResize, toObserve, true, debounceMs);
+  useResizeEffect(handleResize, toObserve, runOnMount, debounceMs);
 
   return value;
 }

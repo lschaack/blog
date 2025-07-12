@@ -6,6 +6,7 @@ import { randomLcg, randomUniform } from "d3-random";
 
 import {
   findVectorSegmentsInRoundedShape,
+  Point,
   RoundedRectangle,
   RoundedShapeWithHole,
 } from "@/app/utils/findVectorSegmentsInShape";
@@ -23,6 +24,7 @@ import {
   magnitude,
   addVec2Mutable,
   multiplyVecMutable,
+  segmentToVec2Mutable,
   clampVecMutable,
   copyVec2,
   createVec2,
@@ -292,7 +294,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     });
 
     useEffect(() => {
-      const handleMouseMove = (currMouseX: number, currMouseY: number, prevMouseX: number, prevMouseY: number) => {
+      const handleMouseMove = (currMousePos: Point, prevMousePos: Point) => {
         const {
           top: bubbleTop,
           left: bubbleLeft,
@@ -316,10 +318,8 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         inner.radius = rounding - boundary;
 
         const intersectingSegments = findVectorSegmentsInRoundedShape(
-          currMouseX,
-          currMouseY,
-          prevMouseX,
-          prevMouseY,
+          currMousePos,
+          prevMousePos,
           new RoundedShapeWithHole(outer, inner)
         );
 
@@ -327,8 +327,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
           zeroVec2(intersectionVec.current);
 
           for (const segment of intersectingSegments) {
-            tempVec.current[0] = segment.startX - segment.endX;
-            tempVec.current[1] = segment.startY - segment.endY;
+            segmentToVec2Mutable(segment, tempVec.current);
             addVec2Mutable(intersectionVec.current, tempVec.current);
           }
 

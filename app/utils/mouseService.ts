@@ -1,32 +1,32 @@
 "use client";
 
+import { Point } from "@/app/utils/findVectorSegmentsInShape";
+
 type MouseSubscriber = {
   id: string;
-  callback: (currentX: number, currentY: number, previousX: number, previousY: number) => void;
+  callback: (current: Point, previous: Point) => void;
 };
 
 class MouseTrackingService {
   private subscribers = new Map<string, MouseSubscriber>();
-  private currentX = 0;
-  private currentY = 0;
-  private previousX = 0;
-  private previousY = 0;
+  private currentPos: Point = { x: 0, y: 0 };
+  private previousPos: Point = { x: 0, y: 0 };
   private isListening = false;
 
   private handleMouseMove = (event: MouseEvent) => {
     const { pageX, pageY, movementX, movementY } = event;
 
-    this.previousX = pageX - movementX;
-    this.previousY = pageY - movementY;
-    this.currentX = pageX;
-    this.currentY = pageY;
+    this.previousPos.x = pageX - movementX;
+    this.previousPos.y = pageY - movementY;
+    this.currentPos.x = pageX;
+    this.currentPos.y = pageY;
 
     for (const subscriber of this.subscribers.values()) {
-      subscriber.callback(this.currentX, this.currentY, this.previousX, this.previousY);
+      subscriber.callback(this.currentPos, this.previousPos);
     }
   };
 
-  subscribe(id: string, callback: (currentX: number, currentY: number, previousX: number, previousY: number) => void) {
+  subscribe(id: string, callback: (current: Point, previous: Point) => void) {
     this.subscribers.set(id, { id, callback });
 
     if (!this.isListening) {
@@ -46,12 +46,12 @@ class MouseTrackingService {
     }
   }
 
-  getCurrentPosition(): [number, number] {
-    return [this.currentX, this.currentY];
+  getCurrentPosition(): Point {
+    return this.currentPos;
   }
 
-  getPreviousPosition(): [number, number] {
-    return [this.previousX, this.previousY];
+  getPreviousPosition(): Point {
+    return this.previousPos;
   }
 }
 
