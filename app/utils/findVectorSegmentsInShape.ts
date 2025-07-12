@@ -6,43 +6,21 @@ export interface LineSegment {
   endY: number;
 }
 
-interface Point {
-  x: number;
-  y: number;
-}
+// Pre-allocated memory pools using primitive arrays to eliminate ALL object allocations
+const WORKING_ARRAY_SIZE = 100;
 
-// Pre-allocated memory pools to eliminate runtime allocations
-const POINT_POOL_SIZE = 50;
-const WORKING_ARRAY_SIZE = 50;
+// Working arrays using primitive coordinates - no object allocations ever
+const WORKING_X = new Float64Array(WORKING_ARRAY_SIZE);
+const WORKING_Y = new Float64Array(WORKING_ARRAY_SIZE);
+const WORKING_ALL_X = new Float64Array(WORKING_ARRAY_SIZE);
+const WORKING_ALL_Y = new Float64Array(WORKING_ARRAY_SIZE);
+const WORKING_UNIQUE_X = new Float64Array(WORKING_ARRAY_SIZE);
+const WORKING_UNIQUE_Y = new Float64Array(WORKING_ARRAY_SIZE);
 
-// Object pools
-const POINT_POOL: Point[] = Array.from({ length: POINT_POOL_SIZE }, () => ({ x: 0, y: 0 }));
-// SEGMENT_POOL removed - segments are now populated directly into caller's array
-
-// Pre-allocated working arrays
-const WORKING_INTERSECTIONS: Point[] = new Array(WORKING_ARRAY_SIZE);
-const WORKING_ALL_POINTS: Point[] = new Array(WORKING_ARRAY_SIZE);
-const WORKING_UNIQUE_POINTS: Point[] = new Array(WORKING_ARRAY_SIZE);
-
-// Pool management
-let pointPoolIndex = 0;
-
-// Helper functions for pool management
-function getPooledPoint(x: number, y: number): Point {
-  if (pointPoolIndex >= POINT_POOL_SIZE) {
-    pointPoolIndex = 0; // Wrap around - reuse from beginning
-  }
-  const point = POINT_POOL[pointPoolIndex++];
-  point.x = x;
-  point.y = y;
-  return point;
-}
-
-// Note: getPooledSegment removed - segments are now populated directly into caller's array
+// Note: Pool management removed - coordinates are written directly to working arrays, no pooling needed
 
 function resetPools(): void {
-  pointPoolIndex = 0;
-  // segmentPoolIndex not needed anymore since segments are populated directly
+  // No pools to reset - all operations use working arrays directly
 }
 
 export interface RoundedRectangle {
@@ -113,7 +91,8 @@ export class RoundedShapeWithHole {
 }
 
 function populateLineCircleIntersections(
-  targetArray: Point[],
+  targetXArray: Float64Array,
+  targetYArray: Float64Array,
   targetIndex: number,
   startX: number,
   startY: number,
@@ -142,18 +121,14 @@ function populateLineCircleIntersections(
   const t2 = (-b + sqrt_discriminant) / (2 * a);
 
   if (t1 >= 0 && t1 <= 1) {
-    targetArray[targetIndex + count] = getPooledPoint(
-      startX + t1 * dx,
-      startY + t1 * dy
-    );
+    targetXArray[targetIndex + count] = startX + t1 * dx;
+    targetYArray[targetIndex + count] = startY + t1 * dy;
     count++;
   }
 
   if (t2 >= 0 && t2 <= 1 && Math.abs(t2 - t1) > 1e-10) {
-    targetArray[targetIndex + count] = getPooledPoint(
-      startX + t2 * dx,
-      startY + t2 * dy
-    );
+    targetXArray[targetIndex + count] = startX + t2 * dx;
+    targetYArray[targetIndex + count] = startY + t2 * dy;
     count++;
   }
 
@@ -161,7 +136,8 @@ function populateLineCircleIntersections(
 }
 
 function tryAddLineSegmentIntersection(
-  targetArray: Point[],
+  targetXArray: Float64Array,
+  targetYArray: Float64Array,
   targetIndex: number,
   x1: number,
   y1: number,
@@ -184,10 +160,8 @@ function tryAddLineSegmentIntersection(
   const u = ((x3 - x1) * dy1 - (y3 - y1) * dx1) / denominator;
 
   if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-    targetArray[targetIndex] = getPooledPoint(
-      x1 + t * dx1,
-      y1 + t * dy1
-    );
+    targetXArray[targetIndex] = x1 + t * dx1;
+    targetYArray[targetIndex] = y1 + t * dy1;
     return 1;
   }
 
@@ -195,7 +169,8 @@ function tryAddLineSegmentIntersection(
 }
 
 function populateLineRoundedRectangleIntersections(
-  targetArray: Point[],
+  targetXArray: Float64Array,
+  targetYArray: Float64Array,
   targetIndex: number,
   startX: number,
   startY: number,
@@ -209,25 +184,25 @@ function populateLineRoundedRectangleIntersections(
     // Simple rectangle case
     // Top edge
     count += tryAddLineSegmentIntersection(
-      targetArray, targetIndex + count,
+      targetXArray, targetYArray, targetIndex + count,
       startX, startY, endX, endY,
       rect.x, rect.y, rect.x + rect.width, rect.y
     );
     // Right edge
     count += tryAddLineSegmentIntersection(
-      targetArray, targetIndex + count,
+      targetXArray, targetYArray, targetIndex + count,
       startX, startY, endX, endY,
       rect.x + rect.width, rect.y, rect.x + rect.width, rect.y + rect.height
     );
     // Bottom edge
     count += tryAddLineSegmentIntersection(
-      targetArray, targetIndex + count,
+      targetXArray, targetYArray, targetIndex + count,
       startX, startY, endX, endY,
       rect.x + rect.width, rect.y + rect.height, rect.x, rect.y + rect.height
     );
     // Left edge
     count += tryAddLineSegmentIntersection(
-      targetArray, targetIndex + count,
+      targetXArray, targetYArray, targetIndex + count,
       startX, startY, endX, endY,
       rect.x, rect.y + rect.height, rect.x, rect.y
     );
@@ -238,25 +213,25 @@ function populateLineRoundedRectangleIntersections(
     // Check straight edge intersections
     // Top edge
     count += tryAddLineSegmentIntersection(
-      targetArray, targetIndex + count,
+      targetXArray, targetYArray, targetIndex + count,
       startX, startY, endX, endY,
       rect.x + r, rect.y, rect.x + rect.width - r, rect.y
     );
     // Right edge
     count += tryAddLineSegmentIntersection(
-      targetArray, targetIndex + count,
+      targetXArray, targetYArray, targetIndex + count,
       startX, startY, endX, endY,
       rect.x + rect.width, rect.y + r, rect.x + rect.width, rect.y + rect.height - r
     );
     // Bottom edge
     count += tryAddLineSegmentIntersection(
-      targetArray, targetIndex + count,
+      targetXArray, targetYArray, targetIndex + count,
       startX, startY, endX, endY,
       rect.x + rect.width - r, rect.y + rect.height, rect.x + r, rect.y + rect.height
     );
     // Left edge
     count += tryAddLineSegmentIntersection(
-      targetArray, targetIndex + count,
+      targetXArray, targetYArray, targetIndex + count,
       startX, startY, endX, endY,
       rect.x, rect.y + rect.height - r, rect.x, rect.y + r
     );
@@ -264,64 +239,72 @@ function populateLineRoundedRectangleIntersections(
     // Check corner arc intersections
     // Top-left corner
     const tlCount = populateLineCircleIntersections(
-      WORKING_INTERSECTIONS, 0,
+      WORKING_X, WORKING_Y, 0,
       startX, startY, endX, endY,
       rect.x + r, rect.y + r, r
     );
     for (let i = 0; i < tlCount; i++) {
-      const p = WORKING_INTERSECTIONS[i];
-      const angle = Math.atan2(p.y - (rect.y + r), p.x - (rect.x + r));
+      const px = WORKING_X[i];
+      const py = WORKING_Y[i];
+      const angle = Math.atan2(py - (rect.y + r), px - (rect.x + r));
       const normalizedAngle = angle < 0 ? angle + 2 * Math.PI : angle;
       if (normalizedAngle >= Math.PI && normalizedAngle <= 1.5 * Math.PI) {
-        targetArray[targetIndex + count] = p;
+        targetXArray[targetIndex + count] = px;
+        targetYArray[targetIndex + count] = py;
         count++;
       }
     }
 
     // Top-right corner
     const trCount = populateLineCircleIntersections(
-      WORKING_INTERSECTIONS, 0,
+      WORKING_X, WORKING_Y, 0,
       startX, startY, endX, endY,
       rect.x + rect.width - r, rect.y + r, r
     );
     for (let i = 0; i < trCount; i++) {
-      const p = WORKING_INTERSECTIONS[i];
-      const angle = Math.atan2(p.y - (rect.y + r), p.x - (rect.x + rect.width - r));
+      const px = WORKING_X[i];
+      const py = WORKING_Y[i];
+      const angle = Math.atan2(py - (rect.y + r), px - (rect.x + rect.width - r));
       const normalizedAngle = angle < 0 ? angle + 2 * Math.PI : angle;
       if (normalizedAngle >= 1.5 * Math.PI && normalizedAngle <= 2 * Math.PI) {
-        targetArray[targetIndex + count] = p;
+        targetXArray[targetIndex + count] = px;
+        targetYArray[targetIndex + count] = py;
         count++;
       }
     }
 
     // Bottom-right corner
     const brCount = populateLineCircleIntersections(
-      WORKING_INTERSECTIONS, 0,
+      WORKING_X, WORKING_Y, 0,
       startX, startY, endX, endY,
       rect.x + rect.width - r, rect.y + rect.height - r, r
     );
     for (let i = 0; i < brCount; i++) {
-      const p = WORKING_INTERSECTIONS[i];
-      const angle = Math.atan2(p.y - (rect.y + rect.height - r), p.x - (rect.x + rect.width - r));
+      const px = WORKING_X[i];
+      const py = WORKING_Y[i];
+      const angle = Math.atan2(py - (rect.y + rect.height - r), px - (rect.x + rect.width - r));
       const normalizedAngle = angle < 0 ? angle + 2 * Math.PI : angle;
       if (normalizedAngle >= 0 && normalizedAngle <= 0.5 * Math.PI) {
-        targetArray[targetIndex + count] = p;
+        targetXArray[targetIndex + count] = px;
+        targetYArray[targetIndex + count] = py;
         count++;
       }
     }
 
     // Bottom-left corner
     const blCount = populateLineCircleIntersections(
-      WORKING_INTERSECTIONS, 0,
+      WORKING_X, WORKING_Y, 0,
       startX, startY, endX, endY,
       rect.x + r, rect.y + rect.height - r, r
     );
     for (let i = 0; i < blCount; i++) {
-      const p = WORKING_INTERSECTIONS[i];
-      const angle = Math.atan2(p.y - (rect.y + rect.height - r), p.x - (rect.x + r));
+      const px = WORKING_X[i];
+      const py = WORKING_Y[i];
+      const angle = Math.atan2(py - (rect.y + rect.height - r), px - (rect.x + r));
       const normalizedAngle = angle < 0 ? angle + 2 * Math.PI : angle;
       if (normalizedAngle >= 0.5 * Math.PI && normalizedAngle <= Math.PI) {
-        targetArray[targetIndex + count] = p;
+        targetXArray[targetIndex + count] = px;
+        targetYArray[targetIndex + count] = py;
         count++;
       }
     }
@@ -342,62 +325,75 @@ export function populateVectorSegmentsInRoundedShape(
   // Reset pools at start of operation
   resetPools();
 
-  // Populate intersection points
-  WORKING_ALL_POINTS[0] = getPooledPoint(startX, startY);
+  // Populate start point
+  WORKING_ALL_X[0] = startX;
+  WORKING_ALL_Y[0] = startY;
   let allPointsCount = 1;
 
   // Get outer intersections
   const outerCount = populateLineRoundedRectangleIntersections(
-    WORKING_ALL_POINTS, allPointsCount,
+    WORKING_ALL_X, WORKING_ALL_Y, allPointsCount,
     startX, startY, endX, endY, shape.outer
   );
   allPointsCount += outerCount;
 
   // Get hole intersections
   const holeCount = populateLineRoundedRectangleIntersections(
-    WORKING_ALL_POINTS, allPointsCount,
+    WORKING_ALL_X, WORKING_ALL_Y, allPointsCount,
     startX, startY, endX, endY, shape.hole
   );
   allPointsCount += holeCount;
 
   // Add end point
-  WORKING_ALL_POINTS[allPointsCount] = getPooledPoint(endX, endY);
+  WORKING_ALL_X[allPointsCount] = endX;
+  WORKING_ALL_Y[allPointsCount] = endY;
   allPointsCount++;
 
-  // Sort points along vector using manual sorting to avoid array slice allocations
+  // Sort points along vector using manual sorting with primitive arrays
   const dx = endX - startX;
   const dy = endY - startY;
   const lengthSquared = dx * dx + dy * dy;
 
-  // Simple insertion sort (efficient for small arrays)
+  // Simple insertion sort with primitive coordinates
   for (let i = 1; i < allPointsCount; i++) {
-    const current = WORKING_ALL_POINTS[i];
-    const currentT = ((current.x - startX) * dx + (current.y - startY) * dy) / lengthSquared;
+    const currentX = WORKING_ALL_X[i];
+    const currentY = WORKING_ALL_Y[i];
+    const currentT = ((currentX - startX) * dx + (currentY - startY) * dy) / lengthSquared;
     
     let j = i - 1;
     while (j >= 0) {
-      const comparePoint = WORKING_ALL_POINTS[j];
-      const compareT = ((comparePoint.x - startX) * dx + (comparePoint.y - startY) * dy) / lengthSquared;
+      const compareX = WORKING_ALL_X[j];
+      const compareY = WORKING_ALL_Y[j];
+      const compareT = ((compareX - startX) * dx + (compareY - startY) * dy) / lengthSquared;
       
       if (compareT <= currentT) break;
       
-      WORKING_ALL_POINTS[j + 1] = WORKING_ALL_POINTS[j];
+      // Swap coordinates
+      WORKING_ALL_X[j + 1] = WORKING_ALL_X[j];
+      WORKING_ALL_Y[j + 1] = WORKING_ALL_Y[j];
       j--;
     }
-    WORKING_ALL_POINTS[j + 1] = current;
+    WORKING_ALL_X[j + 1] = currentX;
+    WORKING_ALL_Y[j + 1] = currentY;
   }
 
-  // Remove duplicates using manual indexing
+  // Remove duplicates using primitive coordinates
   let uniqueCount = 0;
   for (let i = 0; i < allPointsCount; i++) {
-    const current = WORKING_ALL_POINTS[i];
+    const currentX = WORKING_ALL_X[i];
+    const currentY = WORKING_ALL_Y[i];
     
     if (uniqueCount === 0) {
-      WORKING_UNIQUE_POINTS[uniqueCount++] = current;
+      WORKING_UNIQUE_X[uniqueCount] = currentX;
+      WORKING_UNIQUE_Y[uniqueCount] = currentY;
+      uniqueCount++;
     } else {
-      const last = WORKING_UNIQUE_POINTS[uniqueCount - 1];
-      if (Math.abs(current.x - last.x) > 1e-10 || Math.abs(current.y - last.y) > 1e-10) {
-        WORKING_UNIQUE_POINTS[uniqueCount++] = current;
+      const lastX = WORKING_UNIQUE_X[uniqueCount - 1];
+      const lastY = WORKING_UNIQUE_Y[uniqueCount - 1];
+      if (Math.abs(currentX - lastX) > 1e-10 || Math.abs(currentY - lastY) > 1e-10) {
+        WORKING_UNIQUE_X[uniqueCount] = currentX;
+        WORKING_UNIQUE_Y[uniqueCount] = currentY;
+        uniqueCount++;
       }
     }
   }
@@ -405,17 +401,19 @@ export function populateVectorSegmentsInRoundedShape(
   // Build segments directly into caller's array
   let segmentCount = 0;
   for (let i = 0; i < uniqueCount - 1 && segmentCount < maxResults; i++) {
-    const start = WORKING_UNIQUE_POINTS[i];
-    const end = WORKING_UNIQUE_POINTS[i + 1];
-    const midpointX = (start.x + end.x) / 2;
-    const midpointY = (start.y + end.y) / 2;
+    const startPtX = WORKING_UNIQUE_X[i];
+    const startPtY = WORKING_UNIQUE_Y[i];
+    const endPtX = WORKING_UNIQUE_X[i + 1];
+    const endPtY = WORKING_UNIQUE_Y[i + 1];
+    const midpointX = (startPtX + endPtX) / 2;
+    const midpointY = (startPtY + endPtY) / 2;
 
     if (shape.containsPoint(midpointX, midpointY)) {
       // Populate the caller's pre-allocated segment instead of creating new object
-      resultSegments[segmentCount].startX = start.x;
-      resultSegments[segmentCount].startY = start.y;
-      resultSegments[segmentCount].endX = end.x;
-      resultSegments[segmentCount].endY = end.y;
+      resultSegments[segmentCount].startX = startPtX;
+      resultSegments[segmentCount].startY = startPtY;
+      resultSegments[segmentCount].endX = endPtX;
+      resultSegments[segmentCount].endY = endPtY;
       segmentCount++;
     }
   }
