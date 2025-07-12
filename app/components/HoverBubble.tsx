@@ -5,7 +5,8 @@ import clsx from "clsx";
 import { randomLcg, randomUniform } from "d3-random";
 
 import {
-  findVectorSegmentsInRoundedShape,
+  populateVectorSegmentsInRoundedShape,
+  LineSegment,
   RoundedRectangle,
   RoundedShapeWithHole,
 } from "@/app/utils/findVectorSegmentsInShape";
@@ -150,6 +151,10 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const impulsesPool = useRef<Vec2[]>(Array.from({ length: MAX_IMPULSES }, () => createVec2()));
     const activeImpulses = useRef<Vec2[]>([]);
     const poolIndex = useRef(0);
+
+    // Pre-allocated segments array for mutable API
+    const MAX_SEGMENTS = 20;
+    const segmentsPool = useRef<LineSegment[]>(Array.from({ length: MAX_SEGMENTS }, () => ({ startX: 0, startY: 0, endX: 0, endY: 0 })));
 
     const bubbleMeta = useRef<BubbleMeta>({
       top: 0,
@@ -316,7 +321,9 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         inner.height = outer.height - doubleBoundary;
         inner.radius = rounding - boundary;
 
-        const intersectingSegments = findVectorSegmentsInRoundedShape(
+        const segmentCount = populateVectorSegmentsInRoundedShape(
+          segmentsPool.current,
+          MAX_SEGMENTS,
           currMouseX,
           currMouseY,
           prevMouseX,
@@ -324,11 +331,11 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
           new RoundedShapeWithHole(outer, inner)
         );
 
-        if (intersectingSegments.length) {
+        if (segmentCount > 0) {
           zeroVec2(intersectionVec.current);
 
-          for (const segment of intersectingSegments) {
-            segmentToVec2Mutable(segment, tempVec.current);
+          for (let i = 0; i < segmentCount; i++) {
+            segmentToVec2Mutable(segmentsPool.current[i], tempVec.current);
             addVec2Mutable(intersectionVec.current, tempVec.current);
           }
 

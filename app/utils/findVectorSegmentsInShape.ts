@@ -13,22 +13,19 @@ interface Point {
 
 // Pre-allocated memory pools to eliminate runtime allocations
 const POINT_POOL_SIZE = 50;
-const SEGMENT_POOL_SIZE = 20;
 const WORKING_ARRAY_SIZE = 50;
 
 // Object pools
 const POINT_POOL: Point[] = Array.from({ length: POINT_POOL_SIZE }, () => ({ x: 0, y: 0 }));
-const SEGMENT_POOL: LineSegment[] = Array.from({ length: SEGMENT_POOL_SIZE }, () => ({ startX: 0, startY: 0, endX: 0, endY: 0 }));
+// SEGMENT_POOL removed - segments are now populated directly into caller's array
 
 // Pre-allocated working arrays
 const WORKING_INTERSECTIONS: Point[] = new Array(WORKING_ARRAY_SIZE);
 const WORKING_ALL_POINTS: Point[] = new Array(WORKING_ARRAY_SIZE);
 const WORKING_UNIQUE_POINTS: Point[] = new Array(WORKING_ARRAY_SIZE);
-const WORKING_SEGMENTS: LineSegment[] = new Array(SEGMENT_POOL_SIZE);
 
 // Pool management
 let pointPoolIndex = 0;
-let segmentPoolIndex = 0;
 
 // Helper functions for pool management
 function getPooledPoint(x: number, y: number): Point {
@@ -41,21 +38,11 @@ function getPooledPoint(x: number, y: number): Point {
   return point;
 }
 
-function getPooledSegment(startX: number, startY: number, endX: number, endY: number): LineSegment {
-  if (segmentPoolIndex >= SEGMENT_POOL_SIZE) {
-    segmentPoolIndex = 0; // Wrap around - reuse from beginning
-  }
-  const segment = SEGMENT_POOL[segmentPoolIndex++];
-  segment.startX = startX;
-  segment.startY = startY;
-  segment.endX = endX;
-  segment.endY = endY;
-  return segment;
-}
+// Note: getPooledSegment removed - segments are now populated directly into caller's array
 
 function resetPools(): void {
   pointPoolIndex = 0;
-  segmentPoolIndex = 0;
+  // segmentPoolIndex not needed anymore since segments are populated directly
 }
 
 export interface RoundedRectangle {
@@ -343,13 +330,15 @@ function populateLineRoundedRectangleIntersections(
   return count;
 }
 
-export function findVectorSegmentsInRoundedShape(
+export function populateVectorSegmentsInRoundedShape(
+  resultSegments: LineSegment[],
+  maxResults: number,
   startX: number,
   startY: number,
   endX: number,
   endY: number,
   shape: RoundedShapeWithHole
-): LineSegment[] {
+): number {
   // Reset pools at start of operation
   resetPools();
 
@@ -413,31 +402,40 @@ export function findVectorSegmentsInRoundedShape(
     }
   }
 
-  // Build segments using pre-allocated array
+  // Build segments directly into caller's array
   let segmentCount = 0;
-  for (let i = 0; i < uniqueCount - 1; i++) {
+  for (let i = 0; i < uniqueCount - 1 && segmentCount < maxResults; i++) {
     const start = WORKING_UNIQUE_POINTS[i];
     const end = WORKING_UNIQUE_POINTS[i + 1];
     const midpointX = (start.x + end.x) / 2;
     const midpointY = (start.y + end.y) / 2;
 
     if (shape.containsPoint(midpointX, midpointY)) {
-      WORKING_SEGMENTS[segmentCount] = getPooledSegment(start.x, start.y, end.x, end.y);
+      // Populate the caller's pre-allocated segment instead of creating new object
+      resultSegments[segmentCount].startX = start.x;
+      resultSegments[segmentCount].startY = start.y;
+      resultSegments[segmentCount].endX = end.x;
+      resultSegments[segmentCount].endY = end.y;
       segmentCount++;
     }
   }
 
-  // Copy results to return array (only allocation we can't avoid)
-  const result: LineSegment[] = new Array(segmentCount);
-  for (let i = 0; i < segmentCount; i++) {
-    const seg = WORKING_SEGMENTS[i];
-    result[i] = {
-      startX: seg.startX,
-      startY: seg.startY,
-      endX: seg.endX,
-      endY: seg.endY
-    };
-  }
+  return segmentCount;
+}
 
-  return result;
+// Keep the old API for backward compatibility, but mark as deprecated
+/** @deprecated Use populateVectorSegmentsInRoundedShape for better memory efficiency */
+export function findVectorSegmentsInRoundedShape(
+  startX: number,
+  startY: number,
+  endX: number,
+  endY: number,
+  shape: RoundedShapeWithHole
+): LineSegment[] {
+  // Use a temporary array for backward compatibility
+  const tempSegments: LineSegment[] = Array.from({ length: 20 }, () => ({ startX: 0, startY: 0, endX: 0, endY: 0 }));
+  const count = populateVectorSegmentsInRoundedShape(tempSegments, 20, startX, startY, endX, endY, shape);
+  
+  // Return only the used portion (still creates new array, but reduces object creation)
+  return tempSegments.slice(0, count);
 }
