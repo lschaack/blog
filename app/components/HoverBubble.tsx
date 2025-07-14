@@ -33,9 +33,9 @@ import {
 import { mouseService } from "@/app/utils/mouseService";
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
-import { useResizeValue } from "@/app/hooks/useResizeValue";
 import { useBatchedAnimation } from "@/app/hooks/useBatchedAnimation";
 import { getAbsoluteOffset } from "@/app/utils/dom";
+import { resizeService } from "@/app/utils/resizeService";
 
 const DEFAULT_ROUNDING = 24;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
@@ -174,45 +174,38 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const intersectionVec = useRef<Vec2>(createVec2());
     const clampTempVec = useRef<Vec2>(createVec2());
 
+    const [{
+      bubbleOffsetWidth,
+      bubbleOffsetHeight,
+      containerOffsetTop,
+      containerOffsetLeft,
+    }, setDomMeasurements] = useState(INIT_DOM_MEASUREMENTS);
+
     const updateDomMeasurements = useCallback(() => {
       const currentContainer = containerElement.current;
 
       if (currentContainer) {
         const { offsetTop, offsetLeft } = getAbsoluteOffset(currentContainer);
 
-        return {
+        setDomMeasurements({
           bubbleOffsetWidth: bubbleElement.current?.offsetWidth ?? 0,
           bubbleOffsetHeight: bubbleElement.current?.offsetHeight ?? 0,
           containerOffsetTop: Math.round(offsetTop),
           containerOffsetLeft: Math.round(offsetLeft),
-        };
-      }
-
-      return {
-        bubbleOffsetWidth: 0,
-        bubbleOffsetHeight: 0,
-        containerOffsetTop: 0,
-        containerOffsetLeft: 0,
+        });
       }
     }, []);
 
-    const getElementsToObserve = useCallback(() => [
-      containerElement.current?.parentElement,
-      window?.document.documentElement
-    ], []);
+    useEffect(() => {
+      if (containerElement.current?.parentElement) {
+        const unsubscribe = resizeService.subscribe(
+          containerElement.current.parentElement,
+          updateDomMeasurements,
+        );
 
-    const {
-      bubbleOffsetWidth,
-      bubbleOffsetHeight,
-      containerOffsetTop,
-      containerOffsetLeft,
-    } = useResizeValue(
-      updateDomMeasurements,
-      INIT_DOM_MEASUREMENTS,
-      getElementsToObserve,
-      false,
-      20,
-    );
+        return unsubscribe;
+      }
+    }, [updateDomMeasurements]);
 
     const updateStyles = useCallback(() => {
       const bubbleStyle = bubbleElement.current?.style;
