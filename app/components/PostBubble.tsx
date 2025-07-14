@@ -5,7 +5,6 @@ import { DeepPartial } from "@apollo/client/utilities";
 
 import { BlogPost } from "@/app/graphql/graphql";
 import { HoverBubble } from "@/app/components/HoverBubble";
-import clsx from "clsx";
 
 type PostBubbleContentsProps = {
   post: DeepPartial<BlogPost>;
@@ -45,33 +44,23 @@ const PostBubbleContents = memo(function PostBubbleContents({ post }: PostBubble
 
 type PostBubbleProps = {
   post: DeepPartial<BlogPost>;
-  fake?: boolean;
   moveOnMount?: boolean;
   className?: string;
 };
 export const PostBubble = memo(function PostBubble({
   post,
-  fake = false,
   moveOnMount,
   className
 }: PostBubbleProps) {
-  if (fake) {
-    return (
+  return (
+    <Link
+      href={`/posts/${post.slug}`}
+      className={className}
+    >
       <HoverBubble moveOnMount={moveOnMount}>
         <PostBubbleContents post={post} />
       </HoverBubble>
-    );
-  } else {
-    return (
-      <Link
-        href={fake ? post.slug! : `/posts/${post.slug}`}
-        className={clsx(fake && 'pointer-events-none', className)}
-      >
-        <HoverBubble moveOnMount={moveOnMount}>
-          <PostBubbleContents post={post} />
-        </HoverBubble>
-      </Link>
-    );
-  }
+    </Link>
+  );
 });
 
