@@ -80,24 +80,17 @@ export const zeroVec2 = (vec: Vec2): Vec2 => {
   return vec;
 };
 
-export const applyForcesMutable = (
+export const applyForceMutable = (
   velocity: Vec2,
-  forces: Vec2[],
+  force: Vec2,
   delta: number,
-  tempVec: Vec2
 ): Vec2 => {
-  zeroVec2(tempVec);
-
-  for (let i = 0; i < forces.length; i++) {
-    addVec2Mutable(tempVec, forces[i]);
-  }
-
-  multiplyVecMutable(tempVec, delta);
+  multiplyVecMutable(force, delta);
   multiplyVecMutable(
     velocity,
     getDecay(delta),
   );
-  addVec2Mutable(velocity, tempVec);
+  addVec2Mutable(velocity, force);
 
   return velocity;
 };

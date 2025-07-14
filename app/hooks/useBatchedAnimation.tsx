@@ -24,31 +24,19 @@ class AnimationBatch {
     this.fps = 60;
   }
 
-  private deltaify = (callback: FrameRequestCallback) => {
-    return (currTime: number) => {
-      const delta = this.prevTime ? currTime - this.prevTime : AnimationBatch.EXPECTED_FRAME_RATE_MS;
+  private runBatch = (currTime: number) => {
+    const delta = this.prevTime ? currTime - this.prevTime : AnimationBatch.EXPECTED_FRAME_RATE_MS;
 
-      this.prevTime = currTime;
+    this.prevTime = currTime;
 
-      callback(delta);
-    }
-  }
+    const momentaryFps = 1000 / delta;
 
-  private extractFrameRate = (callback: AnimationCallback) => {
-    return (delta: number) => {
-      const momentaryFps = 1000 / delta;
+    // avoid getting stuck at Infinity when currTime === prevTime,
+    // not sure why it happens but very rare
+    if (momentaryFps < Infinity) this.fps = lerp(this.fps, momentaryFps, 0.05);
 
-      // avoid getting stuck at Infinity when currTime === prevTime,
-      // not sure why it happens but very rare
-      if (momentaryFps < Infinity) this.fps = lerp(this.fps, momentaryFps, 0.05);
-
-      callback(delta);
-    }
-  }
-
-  private _runBatch = (currTime: number) => {
     for (const callback of this.callbacks) {
-      callback(currTime);
+      callback(delta);
     }
   }
 
@@ -57,17 +45,9 @@ class AnimationBatch {
 
     this.running = true;
 
-    const runBatch = (
-      this.deltaify(
-        this.extractFrameRate(
-          this._runBatch
-        )
-      )
-    );
-
     const iterate = (currTime: number) => {
       if (this.callbacks.size) {
-        runBatch(currTime);
+        this.runBatch(currTime);
 
         this.frameId = requestAnimationFrame(iterate);
       } else {

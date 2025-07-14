@@ -17,6 +17,7 @@ import {
   SPRING_STIFFNESS,
   getSpringForceVec2,
   BUBBLE_BOUNDARY,
+  getSpringForceVec2Mutable,
 } from "@/app/utils/physicsConsts";
 import {
   Vec2,
@@ -144,11 +145,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
     const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
 
-    // Optimize impulses with pre-allocated array pool
-    const MAX_IMPULSES = 10; // Conservative estimate for max forces per frame
-    const impulsesPool = useRef<Vec2[]>(Array.from({ length: MAX_IMPULSES }, () => createVec2()));
-    const activeImpulses = useRef<Vec2[]>([]);
-    const poolIndex = useRef(0);
+    const currentImpulse = useRef<Vec2>([0, 0]);
 
     // Pre-allocated primitive coordinate arrays for zero-allocation segments
     const MAX_SEGMENTS = 20;
@@ -198,12 +195,19 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
 
     useEffect(() => {
       if (containerElement.current?.parentElement) {
-        const unsubscribe = resizeService.subscribe(
+        const unsubscribeToParent = resizeService.subscribe(
           containerElement.current.parentElement,
           updateDomMeasurements,
         );
+        const unsubscribeToDocument = resizeService.subscribe(
+          document.documentElement,
+          updateDomMeasurements,
+        );
 
-        return unsubscribe;
+        return () => {
+          unsubscribeToParent();
+          unsubscribeToDocument();
+        }
       }
     }, [updateDomMeasurements]);
 
@@ -353,13 +357,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
           clampVecMutable(intersectionVec.current, -doubleBoundary, doubleBoundary, clampTempVec.current);
           multiplyVecMutable(intersectionVec.current, BUBBLE_STIFFNESS);
 
-          // Use pooled vector instead of creating new one
-          if (poolIndex.current < MAX_IMPULSES) {
-            const pooledVec = impulsesPool.current[poolIndex.current];
-            copyVec2(intersectionVec.current, pooledVec);
-            activeImpulses.current.push(pooledVec);
-            poolIndex.current++;
-          }
+          addVec2Mutable(currentImpulse.current, intersectionVec.current);
 
           if (!isUpdatePending) setIsUpdatePending(true);
         }
@@ -380,27 +378,23 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     ]);
 
     const populateSpringForce = useCallback(() => {
-      // apply spring physics and use pooled vector
-      if (poolIndex.current < MAX_IMPULSES) {
-        const pooledVec = impulsesPool.current[poolIndex.current];
-        const springForce = getSpringForceVec2(physicsState.current.offset, springStiffness);
-        copyVec2(springForce, pooledVec);
-        activeImpulses.current.push(pooledVec);
-        poolIndex.current++;
-      }
+      getSpringForceVec2Mutable(
+        tempVec.current,
+        physicsState.current.offset,
+        springStiffness,
+      );
+
+      addVec2Mutable(currentImpulse.current, tempVec.current);
     }, [springStiffness]);
 
     const consumeForces = useCallback((delta: number) => {
       applyForcesMutable(
         physicsState.current.velocity,
-        activeImpulses.current,
+        currentImpulse.current,
         delta,
-        tempVec.current
       );
 
-      // Reset active impulses array and pool index instead of creating new arrays
-      activeImpulses.current.length = 0;
-      poolIndex.current = 0;
+      zeroVec2(currentImpulse.current);
 
       // jump to still at low values or else this will basically never end
       const shouldStop = (
@@ -445,8 +439,9 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     // NOTE: All ref state updates are performed in their corresponding update_ method
     const update = useCallback((delta: number) => {
       populateSpringForce();
+      const impulse = currentImpulse.current;
 
-      const shouldUpdate = Boolean(activeImpulses.current.length);
+      const shouldUpdate = !(impulse[0] === 0 && impulse[1] === 0);
 
       consumeForces(delta);
 

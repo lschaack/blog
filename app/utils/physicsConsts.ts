@@ -1,8 +1,11 @@
 import {
+  copyVec2,
   magnitude,
   multiplyBy,
+  multiplyVecMutable,
   negate,
   normalizeVec,
+  normalizeVecMutable,
   Vec2
 } from "@/app/utils/vector";
 
@@ -24,6 +27,19 @@ export const getSpringForceVec2 = (offset: Vec2, stiffness: number) => {
   const force = direction.map(multiplyBy(forceVal));
 
   return force as Vec2;
+}
+
+export const getSpringForceVec2Mutable = (target: Vec2, offset: Vec2, stiffness: number) => {
+  const length = magnitude(offset);
+  const forceVal = length * stiffness;
+
+  copyVec2(offset, target);
+  target[0] = -target[0];
+  target[1] = -target[1];
+  normalizeVecMutable(target);
+  multiplyVecMutable(target, forceVal);
+
+  return target as Vec2;
 }
 
 export const getSpringForce = (length: number, stiffness: number, target = 0) => {

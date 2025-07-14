@@ -42,7 +42,7 @@ export {
   clampVecMutable,
   lerpVec2Mutable,
   zeroVec2,
-  applyForcesMutable
+  applyForceMutable as applyForcesMutable
 } from "@/app/utils/mutableVector";
 
 export const magnitude = <T extends number[]>(vector: T) => {

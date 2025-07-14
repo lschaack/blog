@@ -7,6 +7,7 @@ import clamp from "lodash/clamp";
 import { CirclePacker } from "@/app/utils/circlePacker";
 import { HoverBubble } from "@/app/components/HoverBubble";
 import { magnitude } from "@/app/utils/mutableVector";
+import { BatchedAnimationContextProvider } from "../hooks/useBatchedAnimation";
 
 const virginiaSky400 = {
   r: 74,
@@ -58,31 +59,33 @@ export default function Demo() {
   }, []);
 
   return (
-    <div className="relative" style={{ width: WIDTH, height: HEIGHT }}>
-      {packedCircles?.map((circle, index) => {
-        const pos = magnitude([circle.x, circle.y]) / DIAGONAL_LENGTH;
+    <BatchedAnimationContextProvider>
+      <div className="relative" style={{ width: WIDTH, height: HEIGHT }}>
+        {packedCircles?.map((circle, index) => {
+          const pos = magnitude([circle.x, circle.y]) / DIAGONAL_LENGTH;
 
-        return (
-          <div
-            key={`bubble-${index}`}
-            style={{
-              position: 'absolute',
-              top: circle.y,
-              left: circle.x,
-              width: circle.r * 2,
-              height: circle.r * 2,
-            }}
-          >
-            <HoverBubble
-              className="absolute -top-1/2 -left-1/2 h-full w-full"
-              rounding={9999}
-              boundary={8}
-              overkill={2}
-              backgroundColor={`rgb(${Object.values(getColor(pos)).join(', ')})`}
-            />
-          </div>
-        )
-      })}
-    </div>
+          return (
+            <div
+              key={`bubble-${index}`}
+              style={{
+                position: 'absolute',
+                top: circle.y,
+                left: circle.x,
+                width: circle.r * 2,
+                height: circle.r * 2,
+              }}
+            >
+              <HoverBubble
+                className="absolute -top-1/2 -left-1/2 h-full w-full"
+                rounding={9999}
+                boundary={8}
+                overkill={2}
+                backgroundColor={`rgb(${Object.values(getColor(pos)).join(', ')})`}
+              />
+            </div>
+          )
+        })}
+      </div>
+    </BatchedAnimationContextProvider>
   );
 }
