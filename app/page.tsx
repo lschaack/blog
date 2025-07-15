@@ -21,11 +21,11 @@ const getPosts = (skip: number, limit: number) => {
 const PostList = async () => {
   const res = await getPosts(0, LIMIT);
 
-  const realPosts = res.data.blogPostCollection?.items ?? [];
+  const posts = res.data.blogPostCollection?.items ?? [];
 
   return (
     <>
-      {realPosts.map(post => post?.slug && (
+      {posts.map(post => post?.slug && (
         <PostBubble
           post={post}
           key={post.sys.id}
@@ -38,7 +38,7 @@ const PostList = async () => {
 export default async function Home() {
   return (
     <div>
-      <ul className="grid sm:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 justify-center items-center gap-4 max-w-7xl">
+      <ul className="grid auto-cols-fr justify-center items-center gap-4 max-w-7xl">
         <BatchedAnimationContextProvider>
           <PostList />
         </BatchedAnimationContextProvider>

@@ -355,6 +355,7 @@ export type BlogPost = Entry & _Node & {
   author?: Maybe<Author>;
   body?: Maybe<BlogPostBody>;
   contentfulMetadata: ContentfulMetadata;
+  heroDemo?: Maybe<Demo>;
   heroImage?: Maybe<Asset>;
   linkedFrom?: Maybe<BlogPostLinkingCollections>;
   slug?: Maybe<Scalars['String']['output']>;
@@ -376,6 +377,14 @@ export type BlogPostAuthorArgs = {
 /** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
 export type BlogPostBodyArgs = {
   locale?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/blogPost) */
+export type BlogPostHeroDemoArgs = {
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  where?: InputMaybe<DemoFilter>;
 };
 
 
@@ -480,6 +489,8 @@ export type BlogPostFilter = {
   body_exists?: InputMaybe<Scalars['Boolean']['input']>;
   body_not_contains?: InputMaybe<Scalars['String']['input']>;
   contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  heroDemo?: InputMaybe<CfDemoNestedFilter>;
+  heroDemo_exists?: InputMaybe<Scalars['Boolean']['input']>;
   heroImage_exists?: InputMaybe<Scalars['Boolean']['input']>;
   slug?: InputMaybe<Scalars['String']['input']>;
   slug_contains?: InputMaybe<Scalars['String']['input']>;
@@ -820,7 +831,17 @@ export type DemoFilter = {
 
 export type DemoLinkingCollections = {
   __typename?: 'DemoLinkingCollections';
+  blogPostCollection?: Maybe<BlogPostCollection>;
   entryCollection?: Maybe<EntryCollection>;
+};
+
+
+export type DemoLinkingCollectionsBlogPostCollectionArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locale?: InputMaybe<Scalars['String']['input']>;
+  order?: InputMaybe<Array<InputMaybe<DemoLinkingCollectionsBlogPostCollectionOrder>>>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
 };
 
 
@@ -830,6 +851,23 @@ export type DemoLinkingCollectionsEntryCollectionArgs = {
   preview?: InputMaybe<Scalars['Boolean']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
 };
+
+export enum DemoLinkingCollectionsBlogPostCollectionOrder {
+  SlugAsc = 'slug_ASC',
+  SlugDesc = 'slug_DESC',
+  SubtitleAsc = 'subtitle_ASC',
+  SubtitleDesc = 'subtitle_DESC',
+  SysFirstPublishedAtAsc = 'sys_firstPublishedAt_ASC',
+  SysFirstPublishedAtDesc = 'sys_firstPublishedAt_DESC',
+  SysIdAsc = 'sys_id_ASC',
+  SysIdDesc = 'sys_id_DESC',
+  SysPublishedAtAsc = 'sys_publishedAt_ASC',
+  SysPublishedAtDesc = 'sys_publishedAt_DESC',
+  SysPublishedVersionAsc = 'sys_publishedVersion_ASC',
+  SysPublishedVersionDesc = 'sys_publishedVersion_DESC',
+  TitleAsc = 'title_ASC',
+  TitleDesc = 'title_DESC'
+}
 
 export enum DemoOrder {
   IdAsc = 'id_ASC',
@@ -1203,6 +1241,20 @@ export type CfAuthorNestedFilter = {
   sys?: InputMaybe<SysFilter>;
 };
 
+export type CfDemoNestedFilter = {
+  AND?: InputMaybe<Array<InputMaybe<CfDemoNestedFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<CfDemoNestedFilter>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  id?: InputMaybe<Scalars['String']['input']>;
+  id_contains?: InputMaybe<Scalars['String']['input']>;
+  id_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  id_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  id_not?: InputMaybe<Scalars['String']['input']>;
+  id_not_contains?: InputMaybe<Scalars['String']['input']>;
+  id_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  sys?: InputMaybe<SysFilter>;
+};
+
 export type GetAllPostsQueryVariables = Exact<{
   preview?: InputMaybe<Scalars['Boolean']['input']>;
   skip?: InputMaybe<Scalars['Int']['input']>;
@@ -1210,7 +1262,7 @@ export type GetAllPostsQueryVariables = Exact<{
 }>;
 
 
-export type GetAllPostsQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', total: number, items: Array<{ __typename?: 'BlogPost', title?: string | null, subtitle?: string | null, tags?: Array<string | null> | null, slug?: string | null, sys: { __typename?: 'Sys', id: string, firstPublishedAt?: any | null, publishedAt?: any | null }, heroImage?: { __typename?: 'Asset', url?: string | null, description?: string | null, width?: number | null, height?: number | null } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
+export type GetAllPostsQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', total: number, items: Array<{ __typename?: 'BlogPost', title?: string | null, subtitle?: string | null, tags?: Array<string | null> | null, slug?: string | null, sys: { __typename?: 'Sys', id: string, firstPublishedAt?: any | null, publishedAt?: any | null }, heroImage?: { __typename?: 'Asset', url?: string | null, description?: string | null, width?: number | null, height?: number | null } | null, heroDemo?: { __typename?: 'Demo', id?: string | null } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
 
 export type GetBlogPostWithSlugQueryVariables = Exact<{
   preview?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1218,7 +1270,7 @@ export type GetBlogPostWithSlugQueryVariables = Exact<{
 }>;
 
 
-export type GetBlogPostWithSlugQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', items: Array<{ __typename?: 'BlogPost', title?: string | null, slug?: string | null, sys: { __typename?: 'Sys', publishedAt?: any | null }, body?: { __typename?: 'BlogPostBody', json: any, links: { __typename?: 'BlogPostBodyLinks', entries: { __typename?: 'BlogPostBodyEntries', block: Array<{ __typename?: 'Author', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'BlogPost', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CaptionedImage', caption?: string | null, image?: { __typename?: 'Asset', url?: string | null, width?: number | null, height?: number | null, description?: string | null } | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CodeBlock', language?: string | null, code?: string | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'Demo', id?: string | null, sys: { __typename?: 'Sys', id: string } } | null> }, assets: { __typename?: 'BlogPostBodyAssets', block: Array<{ __typename?: 'Asset', url?: string | null, title?: string | null, width?: number | null, height?: number | null, description?: string | null, sys: { __typename?: 'Sys', id: string } } | null> } } } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
+export type GetBlogPostWithSlugQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', items: Array<{ __typename?: 'BlogPost', title?: string | null, subtitle?: string | null, slug?: string | null, sys: { __typename?: 'Sys', publishedAt?: any | null }, body?: { __typename?: 'BlogPostBody', json: any, links: { __typename?: 'BlogPostBodyLinks', entries: { __typename?: 'BlogPostBodyEntries', block: Array<{ __typename?: 'Author', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'BlogPost', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CaptionedImage', caption?: string | null, image?: { __typename?: 'Asset', url?: string | null, width?: number | null, height?: number | null, description?: string | null } | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CodeBlock', language?: string | null, code?: string | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'Demo', id?: string | null, sys: { __typename?: 'Sys', id: string } } | null> }, assets: { __typename?: 'BlogPostBodyAssets', block: Array<{ __typename?: 'Asset', url?: string | null, title?: string | null, width?: number | null, height?: number | null, description?: string | null, sys: { __typename?: 'Sys', id: string } } | null> } } } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
 
 export class TypedDocumentString<TResult, TVariables>
   extends String
@@ -1259,6 +1311,9 @@ export const GetAllPostsDocument = new TypedDocumentString(`
         width
         height
       }
+      heroDemo {
+        id
+      }
       author {
         ... on Author {
           sys {
@@ -1283,6 +1338,7 @@ export const GetBlogPostWithSlugDocument = new TypedDocumentString(`
         publishedAt
       }
       title
+      subtitle
       slug
       body {
         json

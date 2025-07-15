@@ -3,17 +3,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { DeepPartial } from "@apollo/client/utilities";
 
-import { BlogPost } from "@/app/graphql/graphql";
+import { BlogPost, Demo as DemoType } from "@/app/graphql/graphql";
 import { HoverBubble } from "@/app/components/HoverBubble";
+import { Demo } from "@/app/demos";
 
 type PostBubbleContentsProps = {
   post: DeepPartial<BlogPost>;
 }
 const PostBubbleContents = memo(function PostBubbleContents({ post }: PostBubbleContentsProps) {
   return (
-    <li className="w-full max-w-96 relative overflow-hidden rounded-[inherit]">
+    <li className="w-full min-w-64 max-w-96 relative overflow-hidden rounded-[inherit]">
       <div className="relative w-full aspect-2/1">
-        {post.heroImage && (
+        {post.heroDemo ? (
+          <div className="p-2 m-auto">
+            <Demo entry={post.heroDemo as DemoType} />
+          </div>
+        ) : post.heroImage ? (
           <Image
             src={post.heroImage.url!}
             alt={post.heroImage.description!}
@@ -21,6 +26,8 @@ const PostBubbleContents = memo(function PostBubbleContents({ post }: PostBubble
             sizes="384px"
             fill
           />
+        ) : (
+          null
         )}
       </div>
       <div className="p-3">

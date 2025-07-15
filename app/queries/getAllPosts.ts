@@ -20,6 +20,9 @@ export const getAllPosts = gql`
           width
           height
         }
+        heroDemo {
+          id
+        }
         author {
           ... on Author {
             sys {

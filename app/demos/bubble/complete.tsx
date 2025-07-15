@@ -6,7 +6,7 @@ import { BatchedAnimationContextProvider } from "@/app/hooks/useBatchedAnimation
 export default function Demo() {
   return (
     <BatchedAnimationContextProvider>
-      <div className="w-full p-12 flex justify-center items-center">
+      <div className="w-full flex justify-center items-center">
         <HoverBubble
           boundary={8}
           rounding={9999}

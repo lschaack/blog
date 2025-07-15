@@ -212,6 +212,7 @@ type BlogPost implements Entry & _Node {
   author(locale: String, preview: Boolean, where: AuthorFilter): Author
   body(locale: String): BlogPostBody
   contentfulMetadata: ContentfulMetadata!
+  heroDemo(locale: String, preview: Boolean, where: DemoFilter): Demo
   heroImage(locale: String, preview: Boolean): Asset
   linkedFrom(allowedLocales: [String]): BlogPostLinkingCollections
   slug(locale: String): String
@@ -277,6 +278,8 @@ input BlogPostFilter {
   body_exists: Boolean
   body_not_contains: String
   contentfulMetadata: ContentfulMetadataFilter
+  heroDemo: cfDemoNestedFilter
+  heroDemo_exists: Boolean
   heroImage_exists: Boolean
   slug: String
   slug_contains: String
@@ -534,7 +537,25 @@ input DemoFilter {
 }
 
 type DemoLinkingCollections {
+  blogPostCollection(limit: Int = 100, locale: String, order: [DemoLinkingCollectionsBlogPostCollectionOrder], preview: Boolean, skip: Int = 0): BlogPostCollection
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum DemoLinkingCollectionsBlogPostCollectionOrder {
+  slug_ASC
+  slug_DESC
+  subtitle_ASC
+  subtitle_DESC
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
 }
 
 enum DemoOrder {
@@ -799,5 +820,19 @@ input cfAuthorNestedFilter {
   name_not_contains: String
   name_not_in: [String]
   profilePicture_exists: Boolean
+  sys: SysFilter
+}
+
+input cfDemoNestedFilter {
+  AND: [cfDemoNestedFilter]
+  OR: [cfDemoNestedFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  id: String
+  id_contains: String
+  id_exists: Boolean
+  id_in: [String]
+  id_not: String
+  id_not_contains: String
+  id_not_in: [String]
   sys: SysFilter
 }
