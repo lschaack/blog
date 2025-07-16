@@ -29,7 +29,7 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
     ),
     [BLOCKS.HEADING_1]: (node, children) => (
       <h1
-        className="text-3xl font-bold mt-9 mb-3"
+        className="text-4xl font-bold mt-9 mb-3"
         id={kebabCase(documentToPlainTextString(node))}
       >
         {children}
@@ -37,7 +37,7 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
     ),
     [BLOCKS.HEADING_2]: (node, children) => (
       <h2
-        className="text-2xl font-bold mt-7 mb-1"
+        className="text-3xl font-bold mt-7 mb-1"
         id={kebabCase(documentToPlainTextString(node))}
       >
         {children}
@@ -45,7 +45,7 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
     ),
     [BLOCKS.HEADING_3]: (node, children) => (
       <h3
-        className="text-xl font-bold mt-4 mb-1"
+        className="text-2xl font-bold mt-7 mb-1"
         id={kebabCase(documentToPlainTextString(node))}
       >
         {children}
@@ -53,7 +53,7 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
     ),
     [BLOCKS.HEADING_4]: (node, children) => (
       <h4
-        className="text-lg font-bold mt-2"
+        className="text-xl font-bold mt-7"
         id={kebabCase(documentToPlainTextString(node))}
       >
         {children}
