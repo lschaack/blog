@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { RefObject, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Circle } from "@timohausmann/quadtree-ts";
 import clamp from "lodash/clamp";
 
@@ -8,6 +8,7 @@ import { CirclePacker } from "@/app/utils/circlePacker";
 import { HoverBubble } from "@/app/components/HoverBubble";
 import { magnitude } from "@/app/utils/mutableVector";
 import { BatchedAnimationContextProvider } from "../hooks/useBatchedAnimation";
+import { useResizeValue } from "../hooks/useResizeValue";
 
 const virginiaSky400 = {
   r: 74,
@@ -51,16 +52,37 @@ const DIAGONAL_LENGTH = magnitude([WIDTH, HEIGHT]);
 // - max_iters
 export default function Demo() {
   const [packedCircles, setPackedCircles] = useState<Circle[]>();
+  const container = useRef<HTMLDivElement>(null);
+  const prevWidth = useRef(0);
+  const containerWidth = useResizeValue(
+    () => container.current?.clientWidth,
+    0,
+    () => [container.current],
+    true
+  );
 
   useEffect(() => {
-    (new CirclePacker({ width: WIDTH, height: HEIGHT, minRadius: 16, maxRadius: 128 }))
-      .pack()
-      .then(circles => setPackedCircles(circles))
-  }, []);
+    if (containerWidth && containerWidth !== prevWidth.current) {
+      (new CirclePacker({
+        width: containerWidth,
+        height: containerWidth,
+        minRadius: 16,
+        maxRadius: 128
+      }))
+        .pack()
+        .then(circles => setPackedCircles(circles))
+
+      prevWidth.current = containerWidth;
+    }
+  }, [containerWidth]);
 
   return (
     <BatchedAnimationContextProvider>
-      <div className="relative" style={{ width: WIDTH, height: HEIGHT }}>
+      <div
+        ref={container}
+        className="relative aspect-square w-screen"
+        style={{ maxWidth: WIDTH }}
+      >
         {packedCircles?.map((circle, index) => {
           const pos = magnitude([circle.x, circle.y]) / DIAGONAL_LENGTH;
 
