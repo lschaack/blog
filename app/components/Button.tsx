@@ -15,7 +15,7 @@ export const Button: FC<ButtonProps> = ({ label, onClick, className }) => {
         className,
         "text-base/loose text-text-extralight font-geist-mono font-semibold",
         "w-full p-2 rounded-[10px] cursor-pointer bg-bold",
-        "pop-focus",
+        "pop-active",
       )}
     >
       {label}

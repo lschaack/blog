@@ -126,7 +126,7 @@ export const ExclusiveOptions = ({
 
   return (
     <ExclusiveOptionsContext.Provider value={context}>
-      <fieldset className="flex flex-col font-geist-mono">
+      <fieldset className="flex flex-col font-geist-mono contain-layout">
         <div
           className="w-full cursor-pointer flex gap-8 justify-between items-baseline"
           style={{ transform: `translateY(${-legendPosition}px)` }}

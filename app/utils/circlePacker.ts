@@ -23,6 +23,8 @@ interface PackingArea {
   maxRadius: number;
 }
 
+export type PackingStrategy = 'shift' | 'pop';
+
 const TAU = 2 * Math.PI;
 
 export class CirclePacker {
@@ -34,8 +36,9 @@ export class CirclePacker {
   // TODO: check if this needs to be called as randomRadius(parameters)() b/c/o currying
   // or b/c it's expensive to create the random thunk
   private randomRadius: RandomUniform;
+  private strategy: PackingStrategy;
 
-  constructor(area: PackingArea, onAddCircle?: (state: Partial<PackingState>) => Promise<void>, seed?: number) {
+  constructor(area: PackingArea, strategy?: PackingStrategy, onAddCircle?: (state: Partial<PackingState>) => Promise<void>, seed?: number) {
     this.area = area;
     this.onAddCircle = onAddCircle;
     this.quadtree = new Quadtree<Circle>({
@@ -46,6 +49,7 @@ export class CirclePacker {
     });
     this.validateConstraints();
     this.randomRadius = randomUniform.source(randomLcg(seed));
+    this.strategy = strategy ?? 'pop';
   }
 
   private validateConstraints(): void {
@@ -78,7 +82,7 @@ export class CirclePacker {
 
     while (this.stack.length > 0 && iter < MAX_ITERS) {
       // FIXME: optimize this...
-      const current = this.stack.pop()!;
+      const current = this.strategy === 'pop' ? this.stack.pop()! : this.stack.shift()!;
       if (this.onAddCircle) {
         await this.onAddCircle({ currentCircle: current });
       }
@@ -120,7 +124,7 @@ export class CirclePacker {
             width: this.getCounterclockwiseArcWidth(newStartAngle, updatedSector.endAngle),
           };
 
-          if (updatedSector.width < 0 && Math.abs(updatedSector.width - 0) > 0.00000001) debugger;
+          if (updatedSector.width < 0 && !nearlyEqual(updatedSector.width, 0)) debugger;
 
           availableRadius = this.thetaToRadius(current.r, updatedSector.width);
           effectiveMaxRadius = this.calculateEffectiveMaxRadius(current, availableRadius);
@@ -259,7 +263,7 @@ export class CirclePacker {
     const totalJoinedArcSpace = joinedOccupied.reduce((total, { width }) => total + width, 0);
     const totalUnoccupiedArcSpace = unoccupied.reduce((total, { width }) => total + width, 0);
 
-    if (totalJoinedArcSpace + totalUnoccupiedArcSpace !== TAU) debugger;
+    if (!nearlyEqual(totalJoinedArcSpace + totalUnoccupiedArcSpace, TAU)) debugger;
     if (VERBOSE_DEBUG) debugger;
 
     return unoccupied;

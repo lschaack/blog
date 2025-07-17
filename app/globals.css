@@ -158,12 +158,14 @@
 @layer components {
 
   .pop-focus,
-  .pop-focus-within {
+  .pop-focus-within,
+  .pop-active {
     transition: scale 0.2s ease;
   }
 
   .pop-focus:focus,
-  .pop-focus-within:focus-within {
+  .pop-focus-within:focus-within,
+  .pop-active:active {
     /* Scale needs to be the reciprocal of a power of 2 (e.g. 1/16 = 6.25%)
      * to avoid sub-pixel issues with the absolutely-positioned filled track
      * since root rem is the default 16px */
