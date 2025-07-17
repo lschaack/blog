@@ -1,6 +1,7 @@
 import { Quadtree, Circle } from '@timohausmann/quadtree-ts';
-import { randomLcg, RandomUniform, randomUniform } from 'd3-random';
+import { randomBates, randomExponential, randomLcg, randomUniform } from 'd3-random';
 import { nearlyEqual } from '@/app/utils/precision';
+import clamp from 'lodash/clamp';
 
 const VERBOSE_DEBUG = false;
 
@@ -24,6 +25,37 @@ interface PackingArea {
 }
 
 export type PackingStrategy = 'shift' | 'pop';
+export type RandomStrategy = 'uniform' | 'exponential' | 'bates';
+
+type RandomRadius = (min: number, max: number) => number;
+
+export const RANDOM_RADIUS_FNS: Record<RandomStrategy, (source: () => number) => RandomRadius> = {
+  uniform: source => {
+    const sourced = randomUniform.source(source);
+
+    return (min, max) => sourced(min, max)();
+  },
+  exponential: source => {
+    const sourced = randomExponential.source(source);
+
+    return (min, max) => {
+      const expectedValue = min;
+      // make expectedValue the median
+      const lambda = Math.LN2 / expectedValue;
+
+      return clamp(sourced(lambda)(), min, max);
+    }
+  },
+  bates: source => {
+    const sourced = randomBates.source(source);
+
+    return (min, max) => {
+      const diff = max - min;
+
+      return min + sourced(3)() * diff;
+    }
+  },
+}
 
 const TAU = 2 * Math.PI;
 
@@ -33,12 +65,16 @@ export class CirclePacker {
   private placedCircles: Circle[] = [];
   private stack: Circle[] = [];
   private onAddCircle?: (state: Partial<PackingState>) => Promise<void>;
-  // TODO: check if this needs to be called as randomRadius(parameters)() b/c/o currying
-  // or b/c it's expensive to create the random thunk
-  private randomRadius: RandomUniform;
+  private randomRadius: RandomRadius;
   private strategy: PackingStrategy;
 
-  constructor(area: PackingArea, strategy?: PackingStrategy, onAddCircle?: (state: Partial<PackingState>) => Promise<void>, seed?: number) {
+  constructor(
+    area: PackingArea,
+    packingStrategy?: PackingStrategy,
+    randomStrategy?: RandomStrategy,
+    onAddCircle?: (state: Partial<PackingState>) => Promise<void>,
+    seed?: number
+  ) {
     this.area = area;
     this.onAddCircle = onAddCircle;
     this.quadtree = new Quadtree<Circle>({
@@ -48,8 +84,9 @@ export class CirclePacker {
       maxLevels: 4
     });
     this.validateConstraints();
-    this.randomRadius = randomUniform.source(randomLcg(seed));
-    this.strategy = strategy ?? 'pop';
+    // FIXME: I think it will actually cause problems if these aren't truly constrained
+    this.randomRadius = RANDOM_RADIUS_FNS[randomStrategy ?? 'uniform'](randomLcg(seed));
+    this.strategy = packingStrategy ?? 'pop';
   }
 
   private validateConstraints(): void {
@@ -66,7 +103,7 @@ export class CirclePacker {
     // Create initial circle in center
     const centerX = this.area.width / 2;
     const centerY = this.area.height / 2;
-    const initialRadius = this.randomRadius(this.area.minRadius, this.area.maxRadius)();
+    const initialRadius = this.randomRadius(this.area.minRadius, this.area.maxRadius);
     const initialCircle = new Circle({ x: centerX, y: centerY, r: initialRadius });
 
     this.placedCircles.push(initialCircle);
@@ -313,7 +350,7 @@ export class CirclePacker {
     if (availableArcWidth >= effectiveMaxArcWidth + minArcWidth) {
       // can fit at least two circles regardless of random choice
       // still use effectiveMax instead of max to account for distance to edge
-      return this.randomRadius(minRadius, effectiveMaxRadius)();
+      return this.randomRadius(minRadius, effectiveMaxRadius);
     } else if (availableArcWidth < effectiveMaxArcWidth || nearlyEqual(availableArcWidth, effectiveMaxArcWidth)) {
       // if it's possible to fill the space with one circle, do it
       return effectiveMaxRadius;
@@ -322,7 +359,7 @@ export class CirclePacker {
       // i.e. eliminate the possibility of an unfillable remainder
       const limitedRadius = this.thetaToRadius(perspectiveRadius, availableArcWidth - minArcWidth);
 
-      return this.randomRadius(minRadius, limitedRadius)();
+      return this.randomRadius(minRadius, limitedRadius);
     } else {
       // we're fucked
       if (VERBOSE_DEBUG) debugger;

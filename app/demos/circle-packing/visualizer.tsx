@@ -54,7 +54,7 @@ export default function CirclePackerVisualizer({
         await new Promise(resolve => setTimeout(resolve, 20));
       };
 
-      const packer = new CirclePacker(params, 'pop', onAddCircle, 2);
+      const packer = new CirclePacker(params, 'pop', undefined, onAddCircle, 2);
       const packedCircles = await packer.pack();
       setCircles(packedCircles);
     } catch (error) {

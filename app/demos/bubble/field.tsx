@@ -6,13 +6,14 @@ import clamp from "lodash/clamp";
 import { randomInt } from "d3-random";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-import { CirclePacker, PackingStrategy } from "@/app/utils/circlePacker";
+import { CirclePacker, PackingStrategy, RANDOM_RADIUS_FNS, RandomStrategy } from "@/app/utils/circlePacker";
 import { HoverBubble } from "@/app/components/HoverBubble";
 import { magnitude } from "@/app/utils/mutableVector";
 import { BatchedAnimationContextProvider } from "@/app/hooks/useBatchedAnimation";
 import { useResizeValue } from "@/app/hooks/useResizeValue";
 import { Button } from "@/app/components/Button";
 import { Toggle } from "@/app/components/Toggle";
+import { ExclusiveOptions, Option } from "@/app/components/ExclusiveOptions";
 
 const virginiaSky400 = {
   r: 74,
@@ -48,10 +49,16 @@ const getColor = (pos: number) => {
 
 type PackedBubbleProps = {
   seed: number;
-  strategy: PackingStrategy;
+  packingStrategy: PackingStrategy;
+  randomStrategy: RandomStrategy;
   maxWidth: number;
 }
-const PackedBubbles: FC<PackedBubbleProps> = ({ seed, strategy, maxWidth }) => {
+const PackedBubbles: FC<PackedBubbleProps> = ({
+  seed,
+  packingStrategy,
+  randomStrategy,
+  maxWidth
+}) => {
   const [packedCircles, setPackedCircles] = useState<Circle[]>();
 
   const container = useRef<HTMLDivElement>(null);
@@ -69,11 +76,11 @@ const PackedBubbles: FC<PackedBubbleProps> = ({ seed, strategy, maxWidth }) => {
         height: containerWidth,
         minRadius: 16,
         maxRadius: 128
-      }, strategy, undefined, seed))
+      }, packingStrategy, randomStrategy, undefined, seed))
         .pack()
         .then(circles => setPackedCircles(circles))
     }
-  }, [containerWidth, strategy, seed]);
+  }, [containerWidth, packingStrategy, randomStrategy, seed]);
 
   const diagonalLength = magnitude([containerWidth, containerWidth]);
 
@@ -129,6 +136,7 @@ export default function BubbleField() {
   const requestedSeed = searchParams.get('seed');
 
   const [packingStrategy, setPackingStrategy] = useState<PackingStrategy>('pop');
+  const [randomStrategy, setRandomStrategy] = useState<RandomStrategy>('uniform');
   const seed = requestedSeed && parseInt(requestedSeed);
 
   const setRandomSeed = useCallback(() => {
@@ -147,10 +155,25 @@ export default function BubbleField() {
       <div className="flex flex-col gap-8">
         <PackedBubbles
           seed={seed}
-          strategy={packingStrategy}
+          packingStrategy={packingStrategy}
+          randomStrategy={randomStrategy}
           maxWidth={512}
         />
         <div className="flex flex-col gap-8 mx-8 min-[550px]:mx-0">
+          <ExclusiveOptions
+            name="Random strategy"
+            onChange={e => setRandomStrategy(e.target.value as RandomStrategy)}
+            color="indigo"
+            value={randomStrategy}
+          >
+            {Object.keys(RANDOM_RADIUS_FNS).map(fnName => (
+              <Option
+                key={fnName}
+                value={fnName}
+                label={fnName}
+              />
+            ))}
+          </ExclusiveOptions>
           <Toggle
             className="w-full"
             label="Packing strategy"
