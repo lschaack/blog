@@ -108,7 +108,7 @@ const PackedBubbles: FC<PackedBubbleProps> = ({
               <HoverBubble
                 className="absolute -top-1/2 -left-1/2 h-full w-full"
                 rounding={9999}
-                boundary={8}
+                boundary={4}
                 overkill={2}
                 backgroundColor={`rgb(${Object.values(getColor(pos)).join(', ')})`}
               />
@@ -175,7 +175,7 @@ export default function BubbleField() {
             ))}
           </ExclusiveOptions>
           <Toggle
-            className="w-full"
+            className="w-full flex-row justify-between items-center"
             label="Packing strategy"
             id="packing-strategy"
             value={packingStrategy === 'pop'}

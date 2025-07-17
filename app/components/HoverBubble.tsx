@@ -105,6 +105,7 @@ type HoverBubbleProps = {
   moveOnMount?: boolean;
   className?: string;
   bubbleClassname?: string;
+  backgroundClassname?: string;
   backgroundColor?: string;
   insetFilter?: (direction: number) => number;
   // TODO: This property is pretty hacked together for the demos
@@ -122,6 +123,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     moveOnMount = false,
     className,
     bubbleClassname,
+    backgroundClassname,
     backgroundColor,
     insetFilter = asymmetricFilter,
     showIndicators = false,
@@ -478,10 +480,11 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         <div
           ref={bubbleElement}
           className={clsx(
-            "absolute overflow-hidden inset-0 border-deep-200/25 bg-extralight",
+            "absolute overflow-hidden inset-0 border-deep-200/50",
             "transition-colors duration-500 ease-out",
             isUpdatePending && debug && "border-saguaro-200!",
             doAnimate && "will-change-transform",
+            backgroundClassname ?? "bg-extralight",
             bubbleClassname,
           )}
           style={{
