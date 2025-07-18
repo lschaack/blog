@@ -96,7 +96,7 @@ export const ExclusiveOptions = ({
 
   const isOpen = direction === EasingDirection.UP;
 
-  const { easingFactor: springEasingFactor, trigger: triggerSpring } = useEaseTrigger(400, 'springInPlace')
+  const { easingFactor: springEasingFactor, trigger: triggerSpring } = useEaseTrigger(400, 'springInPlace', 25);
 
   useLayoutEffect(() => {
     setWrapperHeight(optionWrapper.current?.scrollHeight ?? 0);
@@ -157,30 +157,31 @@ export const ExclusiveOptions = ({
             {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
           </div>
           <div className={clsx(
-            "absolute bottom-0 -left-0.5 -right-0.5",
+            "absolute bottom-0 -left-0.5 -right-0.5 -mb-0.5",
             !isOpen && "pointer-events-none",
           )}>
-            <div className="relative w-full">
-              <div className="absolute w-full overflow-hidden" style={{ height: wrapperHeight }}>
-                <ul
-                  ref={optionWrapper}
-                  className="absolute w-full transition-transform duration-200"
-                  style={{
-                    height: wrapperHeight,
-                    transform: direction === EasingDirection.UP ? `translateY(0)` : `translateY(-${wrapperHeight}px)`
-                  }}
-                  onFocus={() => toggleOpenClose(EasingDirection.UP)}
-                  onBlur={e => {
-                    const isLeavingOptionList = !optionWrapper.current?.contains(e.relatedTarget);
+            <div
+              className="absolute w-full overflow-hidden"
+              style={{ height: wrapperHeight }}
+            >
+              <ul
+                ref={optionWrapper}
+                className="relative bottom-full w-full transition-transform duration-200"
+                style={{
+                  height: wrapperHeight,
+                  transform: direction === EasingDirection.UP ? `translateY(${wrapperHeight}px)` : `translateY(0)`
+                }}
+                onFocus={() => toggleOpenClose(EasingDirection.UP)}
+                onBlur={e => {
+                  const isLeavingOptionList = !optionWrapper.current?.contains(e.relatedTarget);
 
-                    if (isLeavingOptionList) {
-                      toggleOpenClose(EasingDirection.DOWN)
-                    }
-                  }}
-                >
-                  {children}
-                </ul>
-              </div>
+                  if (isLeavingOptionList) {
+                    toggleOpenClose(EasingDirection.DOWN)
+                  }
+                }}
+              >
+                {children}
+              </ul>
             </div>
           </div>
         </div>
