@@ -121,7 +121,7 @@ export const ExclusiveOptions = ({
 
   return (
     <ExclusiveOptionsContext.Provider value={context}>
-      <fieldset className="flex flex-col gap-1 font-geist-mono contain-layout">
+      <fieldset className="flex flex-col gap-1 font-geist-mono z-50">
         <div className="flex justify-between text-base/loose">
           <legend>
             {context.name}
@@ -142,7 +142,10 @@ export const ExclusiveOptions = ({
           onClick={() => toggleOpenClose()}
         >
           <p className="p-2">{context.value}</p>
-          <div className="absolute bottom-0 -left-0.5 -right-0.5">
+          <div className={clsx(
+            "absolute bottom-0 -left-0.5 -right-0.5",
+            !isOpen && "pointer-events-none",
+          )}>
             <div className="relative w-full">
               <div className="absolute w-full overflow-hidden" style={{ height: wrapperHeight }}>
                 <ul
