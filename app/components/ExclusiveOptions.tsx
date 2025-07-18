@@ -1,5 +1,6 @@
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
+import { createContext, ReactNode, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import clsx from "clsx";
+import { ChevronUp, ChevronDown } from 'lucide-react';
 
 import { EasingDirection } from "@/app/utils/requestEasingFrames";
 import { useEaseUpDown } from "@/app/hooks/useEaseUpDown";
@@ -58,7 +59,7 @@ export const Option = <T extends OptionValue>({
         }}
         className={clsx(
           "cursor-pointer w-full p-2 block transition-colors duration-200 outline-none",
-          "bg-deep-100 focus:bg-deep-200",
+          "bg-deep-100 focus:bg-deep-200 hover:bg-deep-200",
           isSelected ? "font-bold" : "font-normal",
           disabled && "bg-gray-100! cursor-not-allowed!",
         )}
@@ -71,16 +72,21 @@ export const Option = <T extends OptionValue>({
 
 const LEGEND_DISPLACEMENT = 5;
 
+// TODO: This component is pretty hacky in a number of ways...
+// needs some attention when I have more time
 type ExclusiveOptionsProps = ExclusiveOptionsContextType & {
   children: ReactNode;
+  className?: string;
 }
 export const ExclusiveOptions = ({
   children,
+  className,
   ...context
 }: ExclusiveOptionsProps) => {
   const optionWrapper = useRef<HTMLUListElement>(null);
   const [direction, setDirection] = useState(EasingDirection.DOWN);
   const [wrapperHeight, setWrapperHeight] = useState(0);
+  const [wrapperWidth, setWrapperWidth] = useState(0);
   const [firedLegendImpulse, setFiredLegendImpulse] = useState(true);
   const easingFactor = useEaseUpDown(
     100,
@@ -92,8 +98,9 @@ export const ExclusiveOptions = ({
 
   const { easingFactor: springEasingFactor, trigger: triggerSpring } = useEaseTrigger(400, 'springInPlace')
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setWrapperHeight(optionWrapper.current?.scrollHeight ?? 0);
+    setWrapperWidth(optionWrapper.current?.scrollWidth ?? 0);
   }, []);
 
   if (easingFactor === 0 && !firedLegendImpulse) {
@@ -118,21 +125,25 @@ export const ExclusiveOptions = ({
   };
 
   const legendPosition = springEasingFactor * LEGEND_DISPLACEMENT;
+  const legendId = `exclusive-options-${context.name}`;
 
   return (
     <ExclusiveOptionsContext.Provider value={context}>
-      <fieldset className="flex flex-col gap-1 font-geist-mono z-50">
-        <div className="flex justify-between text-base/loose">
-          <legend>
-            {context.name}
-          </legend>
-          <pre>
-            {context.value}
-          </pre>
-        </div>
+      <div
+        role="group"
+        aria-labelledby={legendId}
+        className={clsx(
+          "flex flex-col gap-1 font-geist-mono z-50",
+          wrapperWidth ? "opacity-100" : "opacity-0",
+          className,
+        )}
+      >
+        <legend id={legendId} className="shrink-0 overflow-ellipsis">
+          {context.name}
+        </legend>
         <div
           className={clsx(
-            "w-full cursor-pointer",
+            "w-min cursor-pointer",
             "flex flex-col justify-between items-baseline",
             "border-2 border-deep-500 bg-deep-100",
             "rounded-lg duration-100 delay-100 transition-[border-radius]",
@@ -141,7 +152,10 @@ export const ExclusiveOptions = ({
           style={{ transform: `translateY(${-legendPosition}px)` }}
           onClick={() => toggleOpenClose()}
         >
-          <p className="p-2">{context.value}</p>
+          <div className="p-2 flex justify-between items-center gap-2" style={{ minWidth: wrapperWidth }}>
+            <p>{context.value}</p>
+            {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+          </div>
           <div className={clsx(
             "absolute bottom-0 -left-0.5 -right-0.5",
             !isOpen && "pointer-events-none",
@@ -170,7 +184,7 @@ export const ExclusiveOptions = ({
             </div>
           </div>
         </div>
-      </fieldset>
+      </div>
     </ExclusiveOptionsContext.Provider>
   )
 }

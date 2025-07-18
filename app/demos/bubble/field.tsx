@@ -164,6 +164,7 @@ export default function BubbleField() {
             name="Random strategy"
             onChange={e => setRandomStrategy(e.target.value as RandomStrategy)}
             value={randomStrategy}
+            className="flex-row justify-between items-center"
           >
             {Object.keys(RANDOM_RADIUS_FNS).map(fnName => (
               <Option
