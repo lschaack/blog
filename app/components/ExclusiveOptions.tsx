@@ -1,7 +1,6 @@
-import { createContext, ReactNode, useContext, useRef, useState } from "react";
+import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 
-import { inputColorClasses } from "@/app/utils/colors";
 import { EasingDirection } from "@/app/utils/requestEasingFrames";
 import { useEaseUpDown } from "@/app/hooks/useEaseUpDown";
 import { useEaseTrigger } from "@/app/hooks/useEaseTrigger";
@@ -11,7 +10,6 @@ type OptionValue = string | number | readonly string[];
 type ExclusiveOptionsContextType = {
   name: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  color: keyof typeof inputColorClasses;
   value: OptionValue;
 }
 const ExclusiveOptionsContext = createContext<ExclusiveOptionsContextType | null>(null);
@@ -27,12 +25,6 @@ export const Option = <T extends OptionValue>({
   disabled,
 }: OptionProps<T>) => {
   const context = useContext(ExclusiveOptionsContext);
-  const [isFocused, setIsFocused] = useState(false);
-  const focusEasingFactor = useEaseUpDown(
-    100,
-    isFocused ? EasingDirection.UP : EasingDirection.DOWN,
-    'easeOut'
-  );
 
   if (!context) {
     throw new Error('Option must be used within an ExclusiveOptions');
@@ -43,7 +35,10 @@ export const Option = <T extends OptionValue>({
   const isSelected = value === currValue;
 
   return (
-    <div>
+    <li className={clsx(
+      "overflow-hidden w-full",
+      "border-deep-500 border-x-2 last-of-type:border-b-2 last-of-type:rounded-b-lg",
+    )}>
       <input
         type="radio"
         id={id}
@@ -58,25 +53,19 @@ export const Option = <T extends OptionValue>({
       <label
         htmlFor={id}
         tabIndex={disabled ? -1 : 0}
-        onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
         onKeyUp={e => {
           if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click();
         }}
         className={clsx(
           "cursor-pointer w-full p-2 block transition-colors duration-200 outline-none",
-          inputColorClasses[context.color].track,
-          isSelected && inputColorClasses[context.color].filled,
-          isSelected && "text-white",
+          "bg-deep-100 focus:bg-deep-200",
+          isSelected ? "font-bold" : "font-normal",
           disabled && "bg-gray-100! cursor-not-allowed!",
         )}
-        style={{
-          marginLeft: `${focusEasingFactor * 24}px`,
-        }}
       >
         {label}
       </label>
-    </div>
+    </li>
   );
 }
 
@@ -89,16 +78,23 @@ export const ExclusiveOptions = ({
   children,
   ...context
 }: ExclusiveOptionsProps) => {
-  const optionWrapper = useRef<HTMLDivElement>(null);
+  const optionWrapper = useRef<HTMLUListElement>(null);
   const [direction, setDirection] = useState(EasingDirection.DOWN);
+  const [wrapperHeight, setWrapperHeight] = useState(0);
   const [firedLegendImpulse, setFiredLegendImpulse] = useState(true);
   const easingFactor = useEaseUpDown(
-    300,
+    100,
     direction,
     direction === EasingDirection.UP ? 'easeInOut' : 'easeIn'
   );
 
+  const isOpen = direction === EasingDirection.UP;
+
   const { easingFactor: springEasingFactor, trigger: triggerSpring } = useEaseTrigger(400, 'springInPlace')
+
+  useEffect(() => {
+    setWrapperHeight(optionWrapper.current?.scrollHeight ?? 0);
+  }, []);
 
   if (easingFactor === 0 && !firedLegendImpulse) {
     setFiredLegendImpulse(true);
@@ -121,42 +117,55 @@ export const ExclusiveOptions = ({
     }
   };
 
-  const wrapperHeight = easingFactor * (optionWrapper.current?.scrollHeight ?? 0);
   const legendPosition = springEasingFactor * LEGEND_DISPLACEMENT;
 
   return (
     <ExclusiveOptionsContext.Provider value={context}>
-      <fieldset className="flex flex-col font-geist-mono contain-layout">
+      <fieldset className="flex flex-col gap-1 font-geist-mono contain-layout">
+        <div className="flex justify-between text-base/loose">
+          <legend>
+            {context.name}
+          </legend>
+          <pre>
+            {context.value}
+          </pre>
+        </div>
         <div
-          className="w-full cursor-pointer flex gap-8 justify-between items-baseline"
+          className={clsx(
+            "w-full cursor-pointer",
+            "flex flex-col justify-between items-baseline",
+            "border-2 border-deep-500 bg-deep-100",
+            "rounded-lg duration-100 delay-100 transition-[border-radius]",
+            isOpen && "rounded-b-none duration-[0ms] delay-[0ms]",
+          )}
           style={{ transform: `translateY(${-legendPosition}px)` }}
           onClick={() => toggleOpenClose()}
         >
-          <legend
-            className={clsx(
-              "font-bold p-1 border-l-4",
-              inputColorClasses[context.color].border,
-            )}
-          >
-            {context.name}
-          </legend>
-          <p>{context.value}</p>
-        </div>
-        <div
-          ref={optionWrapper}
-          className="overflow-hidden"
-          style={{ height: wrapperHeight }}
-          onFocus={() => toggleOpenClose(EasingDirection.UP)}
-          onBlur={e => {
-            const isKeyboardNav = e.relatedTarget !== null;
-            const isLeavingOptionList = !optionWrapper.current?.contains(e.relatedTarget);
+          <p className="p-2">{context.value}</p>
+          <div className="absolute bottom-0 -left-0.5 -right-0.5">
+            <div className="relative w-full">
+              <div className="absolute w-full overflow-hidden" style={{ height: wrapperHeight }}>
+                <ul
+                  ref={optionWrapper}
+                  className="absolute w-full transition-transform duration-200"
+                  style={{
+                    height: wrapperHeight,
+                    transform: direction === EasingDirection.UP ? `translateY(0)` : `translateY(-${wrapperHeight}px)`
+                  }}
+                  onFocus={() => toggleOpenClose(EasingDirection.UP)}
+                  onBlur={e => {
+                    const isLeavingOptionList = !optionWrapper.current?.contains(e.relatedTarget);
 
-            if (isKeyboardNav && isLeavingOptionList) {
-              toggleOpenClose(EasingDirection.DOWN)
-            }
-          }}
-        >
-          {children}
+                    if (isLeavingOptionList) {
+                      toggleOpenClose(EasingDirection.DOWN)
+                    }
+                  }}
+                >
+                  {children}
+                </ul>
+              </div>
+            </div>
+          </div>
         </div>
       </fieldset>
     </ExclusiveOptionsContext.Provider>

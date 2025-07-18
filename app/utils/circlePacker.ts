@@ -1,9 +1,10 @@
 import { Quadtree, Circle } from '@timohausmann/quadtree-ts';
-import { randomBates, randomExponential, randomLcg, randomUniform } from 'd3-random';
+import { randomPareto, randomBates, randomExponential, randomLcg, randomUniform } from 'd3-random';
 import { nearlyEqual } from '@/app/utils/precision';
 import clamp from 'lodash/clamp';
 
 const VERBOSE_DEBUG = false;
+export const DEFAULT_RANDOM_STRATEGY: RandomStrategy = 'exponential';
 
 interface Sector {
   startAngle: number;
@@ -25,7 +26,7 @@ interface PackingArea {
 }
 
 export type PackingStrategy = 'shift' | 'pop';
-export type RandomStrategy = 'uniform' | 'exponential' | 'bates';
+export type RandomStrategy = 'uniform' | 'exponential' | 'bates' | 'pareto';
 
 type RandomRadius = (min: number, max: number) => number;
 
@@ -39,11 +40,25 @@ export const RANDOM_RADIUS_FNS: Record<RandomStrategy, (source: () => number) =>
     const sourced = randomExponential.source(source);
 
     return (min, max) => {
-      const expectedValue = min;
-      // make expectedValue the median
-      const lambda = Math.LN2 / expectedValue;
+      const diff = max - min;
+      const expectedValue = min + diff / 2;
+      // make expectedValue the average
+      const lambda = 1 / expectedValue;
+      const getValue = sourced(lambda);
 
-      return clamp(sourced(lambda)(), min, max);
+      return clamp(getValue(), min, max);
+    }
+  },
+  pareto: source => {
+    const sourced = randomPareto.source(source);
+
+    return (min, max) => {
+      const diff = max - min;
+      const expectedValue = min + diff / 2;
+      // make expected value the average
+      const alpha = expectedValue / (expectedValue - 1);
+
+      return clamp(sourced(alpha)(), min, max);
     }
   },
   bates: source => {
@@ -84,8 +99,7 @@ export class CirclePacker {
       maxLevels: 4
     });
     this.validateConstraints();
-    // FIXME: I think it will actually cause problems if these aren't truly constrained
-    this.randomRadius = RANDOM_RADIUS_FNS[randomStrategy ?? 'uniform'](randomLcg(seed));
+    this.randomRadius = RANDOM_RADIUS_FNS[randomStrategy ?? DEFAULT_RANDOM_STRATEGY](randomLcg(seed));
     this.strategy = packingStrategy ?? 'pop';
   }
 

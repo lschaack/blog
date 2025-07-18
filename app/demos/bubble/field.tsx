@@ -6,7 +6,7 @@ import clamp from "lodash/clamp";
 import { randomInt } from "d3-random";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
-import { CirclePacker, PackingStrategy, RANDOM_RADIUS_FNS, RandomStrategy } from "@/app/utils/circlePacker";
+import { CirclePacker, DEFAULT_RANDOM_STRATEGY, PackingStrategy, RANDOM_RADIUS_FNS, RandomStrategy } from "@/app/utils/circlePacker";
 import { HoverBubble } from "@/app/components/HoverBubble";
 import { magnitude } from "@/app/utils/mutableVector";
 import { BatchedAnimationContextProvider } from "@/app/hooks/useBatchedAnimation";
@@ -136,7 +136,7 @@ export default function BubbleField() {
   const requestedSeed = searchParams.get('seed');
 
   const [packingStrategy, setPackingStrategy] = useState<PackingStrategy>('pop');
-  const [randomStrategy, setRandomStrategy] = useState<RandomStrategy>('uniform');
+  const [randomStrategy, setRandomStrategy] = useState<RandomStrategy>(DEFAULT_RANDOM_STRATEGY);
   const seed = requestedSeed && parseInt(requestedSeed);
 
   const setRandomSeed = useCallback(() => {
@@ -163,7 +163,6 @@ export default function BubbleField() {
           <ExclusiveOptions
             name="Random strategy"
             onChange={e => setRandomStrategy(e.target.value as RandomStrategy)}
-            color="indigo"
             value={randomStrategy}
           >
             {Object.keys(RANDOM_RADIUS_FNS).map(fnName => (
