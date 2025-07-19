@@ -4,7 +4,7 @@ import { nearlyEqual } from '@/app/utils/precision';
 import clamp from 'lodash/clamp';
 
 const VERBOSE_DEBUG = false;
-export const DEFAULT_RANDOM_STRATEGY: RandomStrategy = 'exponential';
+export const DEFAULT_RANDOM_STRATEGY: RandomStrategy = 'pareto';
 
 interface Sector {
   startAngle: number;

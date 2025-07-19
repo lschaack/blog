@@ -58,13 +58,15 @@ export const Option = <T extends OptionValue>({
           if (e.key === 'Enter' || e.key === ' ') e.currentTarget.click();
         }}
         className={clsx(
-          "cursor-pointer w-full p-2 block transition-colors duration-200 outline-none",
+          "cursor-pointer w-full block transition-colors duration-200 outline-none",
           "bg-deep-100 focus:bg-deep-200 hover:bg-deep-200",
+          "p-2 flex justify-between items-center gap-2",
           isSelected ? "font-bold" : "font-normal",
           disabled && "bg-gray-100! cursor-not-allowed!",
         )}
       >
-        {label}
+        <span>{label}</span>
+        <div className="w-6 h-6" />
       </label>
     </li>
   );
@@ -100,7 +102,7 @@ export const ExclusiveOptions = ({
 
   useLayoutEffect(() => {
     setWrapperHeight(optionWrapper.current?.scrollHeight ?? 0);
-    setWrapperWidth(optionWrapper.current?.scrollWidth ?? 0);
+    setWrapperWidth(optionWrapper.current?.clientWidth ?? 0);
   }, []);
 
   if (easingFactor === 0 && !firedLegendImpulse) {
@@ -149,24 +151,28 @@ export const ExclusiveOptions = ({
             "rounded-lg duration-100 delay-100 transition-[border-radius]",
             isOpen && "rounded-b-none duration-[0ms] delay-[0ms]",
           )}
-          style={{ transform: `translateY(${-legendPosition}px)` }}
+          style={{ transform: `translateY(${-legendPosition}px)`, width: wrapperWidth }}
           onClick={() => toggleOpenClose()}
         >
-          <div className="p-2 flex justify-between items-center gap-2" style={{ minWidth: wrapperWidth }}>
+          {/* menu head representing current value */}
+          <div className="w-full p-2 flex justify-between items-center gap-2">
             <p>{context.value}</p>
             {isOpen ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
           </div>
+          {/* establish a full width (including border) basis for the menu surface */}
           <div className={clsx(
             "absolute bottom-0 -left-0.5 -right-0.5 -mb-0.5",
             !isOpen && "pointer-events-none",
           )}>
+            {/* create a full-height surface exactly below the head */}
             <div
               className="absolute w-full overflow-hidden"
               style={{ height: wrapperHeight }}
             >
+              {/* place the menu content above the surface when closed, completely in overflow */}
               <ul
                 ref={optionWrapper}
-                className="relative bottom-full w-full transition-transform duration-200"
+                className="relative bottom-full w-min transition-transform duration-200 will-change-transform"
                 style={{
                   height: wrapperHeight,
                   transform: direction === EasingDirection.UP ? `translateY(${wrapperHeight}px)` : `translateY(0)`
