@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createContext, ReactNode, useContext, useLayoutEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import { ChevronUp, ChevronDown } from 'lucide-react';
 
@@ -102,7 +102,7 @@ export const ExclusiveOptions = ({
 
   useLayoutEffect(() => {
     setWrapperHeight(optionWrapper.current?.scrollHeight ?? 0);
-    setWrapperWidth(optionWrapper.current?.clientWidth ?? 0);
+    setWrapperWidth(optionWrapper.current?.getBoundingClientRect().width ?? 0);
   }, []);
 
   if (easingFactor === 0 && !firedLegendImpulse) {
@@ -169,7 +169,7 @@ export const ExclusiveOptions = ({
               className="absolute w-full overflow-hidden"
               style={{ height: wrapperHeight }}
             >
-              {/* place the menu content above the surface when closed, completely in overflow */}
+              {/* place the menu content above the surface when closed */}
               <ul
                 ref={optionWrapper}
                 className="relative bottom-full w-min transition-transform duration-200 will-change-transform"

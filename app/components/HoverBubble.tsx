@@ -15,7 +15,6 @@ import {
   OFFSET_ANIMATION_THRESHOLD,
   BUBBLE_OVERKILL,
   SPRING_STIFFNESS,
-  getSpringForceVec2,
   BUBBLE_BOUNDARY,
   getSpringForceVec2Mutable,
 } from "@/app/utils/physicsConsts";
@@ -25,7 +24,6 @@ import {
   addVec2Mutable,
   multiplyVecMutable,
   clampVecMutable,
-  copyVec2,
   createVec2,
   lerpVec2Mutable,
   zeroVec2,

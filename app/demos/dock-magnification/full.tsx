@@ -42,13 +42,11 @@ export default function Demo() {
           id="runLfo"
           label="Run LFO"
           onChange={value => setRunLfo(value)}
-          color="rose"
           value={runLfo}
         />
         <ExclusiveOptions
           name="Shift strategy"
           onChange={e => setShiftStrategy(e.target.value as ShiftStrategy)}
-          color="lime"
           value={shiftStrategy}
         >
           <Option<ShiftStrategy>
@@ -73,7 +71,6 @@ export default function Demo() {
 
             if (!STABLE_SCALE_STRATEGIES.has(strategy)) setShiftStrategy('accurate');
           }}
-          color="indigo"
           value={scaleStrategy}
         >
           <Option<ScaleStrategy> value="cosEaseInOut" label="Ease In/Out" />
