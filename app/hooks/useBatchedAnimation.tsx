@@ -58,6 +58,10 @@ class AnimationBatch {
     this.frameId = requestAnimationFrame(iterate);
   }
 
+  resetDelta = () => {
+    this.prevTime = undefined;
+  }
+
   stop = () => {
     if (this.frameId) {
       cancelAnimationFrame(this.frameId);
@@ -91,14 +95,9 @@ export const BatchedAnimationContextProvider: FC<{ children?: ReactNode }> = ({ 
   const [batch] = useState<AnimationBatch>(new AnimationBatch());
 
   useEffect(() => {
-    const pauseOrResume = () => {
-      if (document.hidden) batch.stop();
-      else if (batch.getSize()) batch.resume();
-    };
+    document.addEventListener('visibilitychange', batch.resetDelta);
 
-    document.addEventListener('visibilitychange', pauseOrResume);
-
-    return () => document.removeEventListener('visibilitychange', pauseOrResume);
+    return () => document.removeEventListener('visibilitychange', batch.resetDelta);
   }, [batch]);
 
   return (
