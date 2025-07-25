@@ -90,7 +90,7 @@ export const Navigator: FC<{ post: NonNullable<BlogPost>; className?: string }> 
       'p-4 max-w-xs bg-extralight rounded-2xl hidden xl:flex flex-col gap-4',
       className
     )}>
-      <div className="w-full flex justify-between font-medium text-sm leading-none">
+      <div className="w-full flex justify-between gap-16 font-medium text-sm leading-none">
         <button
           role="link"
           className="text-deep-600 cursor-pointer"
