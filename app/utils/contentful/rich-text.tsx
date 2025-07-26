@@ -84,6 +84,11 @@ export const DEFAULT_RICH_TEXT_OPTIONS: Options = {
         }
       })
     ),
+    [BLOCKS.QUOTE]: (_, children) => (
+      <blockquote className="pl-4 border-l-4 border-deep-300">
+        {children}
+      </blockquote>
+    ),
     [INLINES.HYPERLINK]: (node, children) => (
       <a
         href={node.data.uri}
