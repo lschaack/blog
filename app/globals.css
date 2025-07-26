@@ -157,12 +157,14 @@
 
 @layer components {
 
+  .pop-hover,
   .pop-focus,
   .pop-focus-within,
   .pop-active {
-    transition: scale 0.2s ease;
+    transition: scale 0.2s ease, filter 0.2s ease;
   }
 
+  .pop-hover:hover,
   .pop-focus:focus,
   .pop-focus-within:focus-within,
   .pop-active:active {
@@ -170,7 +172,7 @@
      * to avoid sub-pixel issues with the absolutely-positioned filled track
      * since root rem is the default 16px */
     scale: 1.0625;
-    filter: brightness(115%);
+    filter: brightness(105%);
     outline: 0;
   }
 

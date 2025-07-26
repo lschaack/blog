@@ -41,7 +41,7 @@ export const Expandable: FC<ExpandableProps> = ({
   return (
     <div className={className}>
       <button
-        className="pop-focus cursor-pointer transition-transform duration-200 focus:scale-[1.02]! hover:scale-[1.02]"
+        className="pop-focus pop-hover cursor-pointer"
         onClick={() => dialogElement.current?.showModal()}
       >
         {children}
