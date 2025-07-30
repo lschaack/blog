@@ -12,9 +12,9 @@ interface Sector {
   width: number;
 }
 
-interface PackingState {
+export interface PackingState {
   circles: Circle[];
-  currentCircle: Circle;
+  currentCircle: Circle | undefined;
   unoccupiedSectors: Sector[];
 }
 
@@ -79,19 +79,22 @@ export class CirclePacker {
   private quadtree: Quadtree<Circle>;
   private placedCircles: Circle[] = [];
   private stack: Circle[] = [];
-  private onAddCircle?: (state: Partial<PackingState>) => Promise<void>;
+  private onStateChange?: (state: PackingState) => Promise<void>;
   private randomRadius: RandomRadius;
   private strategy: PackingStrategy;
+  private cancelled: boolean;
+
+  public state: PackingState;
 
   constructor(
     area: PackingArea,
     packingStrategy?: PackingStrategy,
     randomStrategy?: RandomStrategy,
-    onAddCircle?: (state: Partial<PackingState>) => Promise<void>,
+    onAddCircle?: (state: PackingState) => Promise<void>,
     seed?: number
   ) {
     this.area = area;
-    this.onAddCircle = onAddCircle;
+    this.onStateChange = onAddCircle;
     this.quadtree = new Quadtree<Circle>({
       width: area.width,
       height: area.height,
@@ -101,6 +104,12 @@ export class CirclePacker {
     this.validateConstraints();
     this.randomRadius = RANDOM_RADIUS_FNS[randomStrategy ?? DEFAULT_RANDOM_STRATEGY](randomLcg(seed));
     this.strategy = packingStrategy ?? 'pop';
+    this.state = {
+      circles: [],
+      currentCircle: undefined,
+      unoccupiedSectors: [],
+    };
+    this.cancelled = false;
   }
 
   private validateConstraints(): void {
@@ -111,6 +120,16 @@ export class CirclePacker {
     if (maxRadius < minRadius * 2) {
       throw new Error('maxRadius must be at least minRadius * 2');
     }
+  }
+
+  private updatePublicState(nextState: Partial<PackingState>) {
+    Object.assign(this.state, nextState);
+
+    return this.onStateChange?.(this.state);
+  }
+
+  public cancel = () => {
+    this.cancelled = true;
   }
 
   async pack(): Promise<Circle[]> {
@@ -124,19 +143,16 @@ export class CirclePacker {
     this.quadtree.insert(initialCircle);
     this.stack.push(initialCircle);
 
-    if (this.onAddCircle) {
-      await this.onAddCircle({ circles: this.placedCircles });
-    }
+    await this.updatePublicState({ circles: this.placedCircles });
 
     const MAX_ITERS = 500;
     let iter = 0;
 
-    while (this.stack.length > 0 && iter < MAX_ITERS) {
+    while (this.stack.length > 0 && iter < MAX_ITERS && !this.cancelled) {
       // FIXME: optimize this...
       const current = this.strategy === 'pop' ? this.stack.pop()! : this.stack.shift()!;
-      if (this.onAddCircle) {
-        await this.onAddCircle({ currentCircle: current });
-      }
+      await this.updatePublicState({ currentCircle: current });
+
       const nearby = this.findNearbyCircles(current);
       const unoccupiedSectors = await this.calculateUnoccupiedSectors(current, nearby);
 
@@ -153,9 +169,7 @@ export class CirclePacker {
           this.quadtree.insert(newCircle);
           this.stack.push(newCircle);
 
-          if (this.onAddCircle) {
-            await this.onAddCircle({ circles: this.placedCircles });
-          }
+          await this.updatePublicState({ circles: this.placedCircles });
 
           // account for new circle in sector and update effectiveMaxRadius
           const newlyOccupiedSector = this.getSectorForCircle(current, newCircle);
@@ -186,6 +200,8 @@ export class CirclePacker {
 
       iter += 1;
     }
+
+    this.cancelled = false;
 
     return this.placedCircles;
   }
@@ -305,11 +321,7 @@ export class CirclePacker {
       ))
     }
 
-    if (this.onAddCircle) {
-      await this.onAddCircle({
-        unoccupiedSectors: unoccupied
-      });
-    }
+    await this.updatePublicState({ unoccupiedSectors: unoccupied });
 
     const totalJoinedArcSpace = joinedOccupied.reduce((total, { width }) => total + width, 0);
     const totalUnoccupiedArcSpace = unoccupied.reduce((total, { width }) => total + width, 0);
