@@ -97,7 +97,7 @@ export const InputRange: FC<InputRangeProps> = ({
       className={className}
     >
       {/* Custom track */}
-      <div ref={trackRef} className="pop-focus-within relative w-full h-6 rounded-sm bg-light">
+      <div ref={trackRef} className="pop-active relative w-full h-6 rounded-sm bg-light">
         <input
           tabIndex={0}
           type="range"

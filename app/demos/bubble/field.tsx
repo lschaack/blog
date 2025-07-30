@@ -1,10 +1,9 @@
 "use client";
 
-import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { FC, useEffect, useRef, useState } from "react";
 import { Circle } from "@timohausmann/quadtree-ts";
 import clamp from "lodash/clamp";
 import { randomInt } from "d3-random";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 import { CirclePacker, DEFAULT_RANDOM_STRATEGY, PackingStrategy, RANDOM_RADIUS_FNS, RandomStrategy } from "@/app/utils/circlePacker";
 import { HoverBubble } from "@/app/components/HoverBubble";
@@ -14,6 +13,7 @@ import { useResizeValue } from "@/app/hooks/useResizeValue";
 import { Button } from "@/app/components/Button";
 import { Toggle } from "@/app/components/Toggle";
 import { ExclusiveOptions, Option } from "@/app/components/ExclusiveOptions";
+import { useQueryState } from "@/app/hooks/useQueryState";
 
 const virginiaSky400 = {
   r: 74,
@@ -122,33 +122,11 @@ const PackedBubbles: FC<PackedBubbleProps> = ({
 
 const getRandomSeed = randomInt(999_999_999);
 
-// TODO:
-// make configurable:
-// - seed
-// - algorithm
-// - decay
-// - max_iters
 export default function BubbleField() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-
-  const requestedSeed = searchParams.get('seed');
+  const [seed, setSeed] = useQueryState<number>('seed', getRandomSeed);
 
   const [packingStrategy, setPackingStrategy] = useState<PackingStrategy>('pop');
   const [randomStrategy, setRandomStrategy] = useState<RandomStrategy>(DEFAULT_RANDOM_STRATEGY);
-  const seed = requestedSeed && parseInt(requestedSeed);
-
-  const setRandomSeed = useCallback(() => {
-    const writeableParams = new URLSearchParams(searchParams.toString());
-    writeableParams.set('seed', getRandomSeed().toString());
-
-    router.push(`${pathname}?${writeableParams}`)
-  }, [pathname, router, searchParams]);
-
-  useEffect(() => {
-    if (!seed) setRandomSeed();
-  }, [pathname, requestedSeed, router, searchParams, seed, setRandomSeed]);
 
   if (seed) {
     return (
@@ -159,7 +137,7 @@ export default function BubbleField() {
           randomStrategy={randomStrategy}
           maxWidth={512}
         />
-        <div className="flex flex-col gap-8 mx-8 min-[550px]:mx-0">
+        <div className="flex flex-col gap-4 mx-8 min-[550px]:mx-0">
           <ExclusiveOptions
             name="Random strategy"
             onChange={e => setRandomStrategy(e.target.value as RandomStrategy)}
@@ -187,7 +165,7 @@ export default function BubbleField() {
           />
           <Button
             label="Reroll"
-            onClick={setRandomSeed}
+            onClick={() => setSeed(getRandomSeed())}
           />
         </div>
       </div>

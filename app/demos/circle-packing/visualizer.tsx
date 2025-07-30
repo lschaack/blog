@@ -1,9 +1,14 @@
 'use client'
 
 import React, { useRef, useEffect, useState, FC, useCallback } from 'react';
+import { randomInt } from "d3-random";
+
 import { CirclePacker, PackingState } from '@/app/utils/circlePacker';
 import { InputNumber } from '@/app/components/InputNumber';
 import { Button } from '@/app/components/Button';
+import { useQueryState } from '@/app/hooks/useQueryState';
+import { RichTextError } from '@/app/components/RichTextError';
+import { InputRange } from '@/app/components/InputRange';
 
 type CirclePackerOptions = {
   width: number;
@@ -114,16 +119,26 @@ const drawCircles = (state: CirclePacker['state'], canvas: HTMLCanvasElement, pa
   }
 };
 
+const getRandomSeed = randomInt(999_999_999);
+// NOTE: These are flipped (min > max) b/c they represent a delay passed to setTimeout
+const MAX_SPEED_MS = 0;
+const MIN_SPEED_MS = 100;
+const _DEFAULT_SPEED_VALUE = 20;
+const DEFAULT_SPEED_MS = MIN_SPEED_MS - _DEFAULT_SPEED_VALUE;
+
 export default function CirclePackerVisualizer() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [options, setOptions] = useState(DEFAULT_CIRCLE_PACKER_OPTIONS);
+  const [seed, setSeed] = useQueryState<number>('seed', getRandomSeed);
+  const [error, setError] = useState<string | undefined>();
+  const speed = useRef(DEFAULT_SPEED_MS);
 
   const onUpdate = useCallback((state: PackingState) => {
     if (canvasRef.current) {
       drawCircles(state, canvasRef.current, options);
       // Small delay to allow rendering
-      return new Promise<void>(resolve => setTimeout(resolve, 20));
+      return new Promise<void>(resolve => setTimeout(resolve, MIN_SPEED_MS - speed.current));
     }
 
     return Promise.resolve();
@@ -134,18 +149,26 @@ export default function CirclePackerVisualizer() {
     'pop',
     undefined,
     onUpdate,
-    2,
+    seed,
   ));
 
   const generateCircles = useCallback(() => {
-    setPacker(new CirclePacker(
-      options,
-      'pop',
-      undefined,
-      onUpdate,
-      2,
-    ));
-  }, [onUpdate, options]);
+    setError(undefined);
+
+    try {
+      const nextPacker = new CirclePacker(
+        options,
+        'pop',
+        undefined,
+        onUpdate,
+        seed,
+      );
+
+      setPacker(nextPacker);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }, [onUpdate, options, seed]);
 
   useEffect(() => {
     setIsGenerating(true);
@@ -163,26 +186,26 @@ export default function CirclePackerVisualizer() {
     <div className="flex flex-col gap-4 p-4 max-w-full" >
       <div className="flex flex-wrap gap-12 items-center justify-between" >
         <InputNumber
-          id="width"
           label="Width"
+          id="width"
           value={options.width}
           onChange={nextValue => setOptions(prev => ({ ...prev, width: Number(nextValue) }))}
-          min={100}
-          max={1200}
+          min={256}
+          max={2560}
         />
 
         <InputNumber
-          id="height"
           label="Height"
+          id="height"
           value={options.height}
           onChange={nextValue => setOptions(prev => ({ ...prev, height: Number(nextValue) }))}
-          min={100}
-          max={1200}
+          min={256}
+          max={2560}
         />
 
         <InputNumber
-          id="minRadius"
           label="Min radius"
+          id="minRadius"
           value={options.minRadius}
           onChange={nextValue => setOptions(prev => ({ ...prev, minRadius: Number(nextValue) }))}
           min={1}
@@ -190,14 +213,24 @@ export default function CirclePackerVisualizer() {
         />
 
         <InputNumber
-          id="maxRadius"
           label="Max radius"
+          id="maxRadius"
           value={options.maxRadius}
           onChange={nextValue => setOptions(prev => ({ ...prev, maxRadius: Number(nextValue) }))}
           min={64}
           max={256}
         />
       </div>
+
+      <InputRange
+        label="Speed"
+        id="speed"
+        min={MAX_SPEED_MS}
+        max={MIN_SPEED_MS}
+        step={1}
+        onChange={value => speed.current = value}
+        defaultValue={DEFAULT_SPEED_MS}
+      />
 
       <Button
         onClick={generateCircles}
@@ -224,6 +257,10 @@ export default function CirclePackerVisualizer() {
         <p>Generated {packer?.state.circles.length ?? 0} circles</p>
         <p>Area coverage: {coverage}%</p>
       </div>
+
+      {error && (
+        <RichTextError>{error}</RichTextError>
+      )}
     </div>
   );
 }
