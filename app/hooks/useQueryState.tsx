@@ -7,15 +7,9 @@ export type Serializable = string | number | boolean | object;
 export type DefaultValueOrGetter<T> = T | (() => T);
 export type QueryParamConfig<T extends Serializable> = Record<string, DefaultValueOrGetter<T>>;
 
-class QueryParamManager {
-  private serialize: <V>(value: V) => string;
-  private deserialize: <V>(stringValue: string) => V;
-  private _handleChange: (path: string) => void;
-  private searchParams: URLSearchParams;
-  private parsedValues: Map<string, Serializable>;
-  private pathname: string;
-  private isDirty: boolean;
+type ChangePublishStrategy = 'none' | 'push' | 'replace';
 
+class QueryParamManager {
   public static extractDefault = <T extends Serializable>(defaultValueOrGetter: T | (() => T)) => {
     const isGetter = typeof defaultValueOrGetter === 'function';
 
@@ -26,24 +20,36 @@ class QueryParamManager {
     }
   }
 
+  private serialize: <V>(value: V) => string;
+  private deserialize: <V>(stringValue: string) => V;
+  private push: (path: string) => void;
+  private replace: (path: string) => void;
+  private searchParams: URLSearchParams;
+  private parsedValues: Map<string, Serializable>;
+  private pathname: string;
+
+  public isDirty: boolean;
+
   constructor(
     config: QueryParamConfig<Serializable>,
     pathname: string,
     searchParams: URLSearchParams,
-    onChange: (path: string) => void,
+    push: (path: string) => void,
+    replace: (path: string) => void,
     serialize = JSON.stringify,
     deserialize = JSON.parse,
   ) {
     this.serialize = serialize;
     this.deserialize = deserialize;
-    this._handleChange = onChange;
+    this.push = push;
+    this.replace = replace;
     this.searchParams = searchParams;
     this.parsedValues = new Map<string, Serializable>();
     this.pathname = pathname;
     this.isDirty = false;
 
     for (const [name, defaultValueOrGetter] of Object.entries(config)) {
-      this.isDirty = this.configure(name, defaultValueOrGetter, false);
+      this.isDirty = this.configure(name, defaultValueOrGetter, 'none');
     }
   }
 
@@ -51,7 +57,7 @@ class QueryParamManager {
   public configure<T extends Serializable>(
     name: string,
     defaultValueOrGetter: DefaultValueOrGetter<T>,
-    publishChange = true
+    publishStrategy: ChangePublishStrategy,
   ) {
     const existingValue = this.parsedValues.get(name);
 
@@ -69,7 +75,7 @@ class QueryParamManager {
       ? this.deserialize<T>(requestedValue)
       : QueryParamManager.extractDefault(defaultValueOrGetter);
 
-    this.set(name, value, publishChange);
+    this.set(name, value, publishStrategy);
 
     if (!requestedValue) {
       return true;
@@ -78,24 +84,30 @@ class QueryParamManager {
     }
   }
 
-  public handleChange(path: string) {
-    this._handleChange(path);
-    this.isDirty = false;
-  }
+  public handleChange(strategy: ChangePublishStrategy = 'push') {
+    if (strategy === 'none') {
+      this.isDirty = true;
+    } else {
+      this.isDirty = false;
 
-  public publish() {
-    if (this.isDirty) {
-      this.handleChange(this.getPath());
+      if (strategy === 'push') {
+        this.push(this.getPath());
+      } else {
+        this.replace(this.getPath());
+      }
     }
   }
 
-  public set<T extends Serializable>(key: string, value: T, publishChange = true) {
+  public syncCurrentURL(strategy: ChangePublishStrategy = 'push') {
+    this.handleChange(strategy);
+  }
+
+  public set<T extends Serializable>(key: string, value: T, publishStrategy: ChangePublishStrategy = 'push') {
     if (this.parsedValues.get(key) !== value) {
       this.parsedValues.set(key, value);
       this.searchParams.set(key, this.serialize(value));
 
-      if (publishChange) this._handleChange(this.getPath());
-      else this.isDirty = true;
+      this.handleChange(publishStrategy);
     }
   }
 
@@ -128,11 +140,14 @@ export const QueryParamProvider: FC<QueryParamProviderProps> = ({ config, childr
     pathname,
     new URLSearchParams(searchParams.toString()),
     router.push,
-  ), [config, pathname, router.push, searchParams]);
+    router.replace,
+  ), [config, pathname, router.push, router.replace, searchParams]);
 
   // Wait for useEffect to avoid route change during render
   useEffect(() => {
-    manager.publish();
+    // Replace to allow going back - otherwise will return to previous state w/missing params,
+    // which will then be automatically set, preventing the user from actually going back
+    manager.syncCurrentURL('replace');
   }, [manager]);
 
   return (
