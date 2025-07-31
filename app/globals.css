@@ -160,6 +160,8 @@
   .pop-hover,
   .pop-focus,
   .pop-focus-within,
+  .pop-focus-visible,
+  .pop-focus-visible-within,
   .pop-active {
     transition: scale 0.2s ease, filter 0.2s ease;
   }
@@ -167,6 +169,8 @@
   .pop-hover:not(:disabled):hover,
   .pop-focus:not(:disabled):focus,
   .pop-focus-within:not(:disabled):focus-within,
+  .pop-focus-visible:not(:disabled):focus-visible,
+  .pop-focus-visible-within:not(:disabled):has(:focus-visible),
   .pop-active:not(:disabled):active {
     /* Scale needs to be the reciprocal of a power of 2 (e.g. 1/16 = 6.25%)
      * to avoid sub-pixel issues with the absolutely-positioned filled track

@@ -14,7 +14,10 @@ type InputNumberProps = {
   className?: string;
 }
 
-// FIXME:This thing absolutely sucks
+/**
+ * FIXME: Not actually deprecated - this thing just sucks but I don't want to fix it right now
+ * @deprecated
+ */
 export const InputNumber: FC<InputNumberProps> = ({
   label,
   id,

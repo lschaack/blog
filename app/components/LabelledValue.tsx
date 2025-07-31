@@ -13,10 +13,10 @@ type LabelledValueProps = {
 export const LabelledValue: FC<LabelledValueProps> = ({ id, label, value, pad, className, children }) => {
   return (
     <div className={clsx(
-      'text-base/loose font-geist-mono font-medium relative w-full flex flex-col gap-1',
+      'relative w-full flex flex-col gap-1',
       className
     )}>
-      <div className="flex justify-between gap-8">
+      <div className="flex justify-between gap-8 text-base/loose font-geist-mono font-medium">
         <label htmlFor={id} className="block">{label}</label>
         <pre>{pad ? value.padStart(pad, ' ') : value}</pre>
       </div>

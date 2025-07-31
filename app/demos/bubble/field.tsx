@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useEffect, useRef, useState } from "react";
+import { FC, useEffect, useMemo, useRef, useState } from "react";
 import { Circle } from "@timohausmann/quadtree-ts";
 import clamp from "lodash/clamp";
 import { randomInt } from "d3-random";
@@ -13,7 +13,7 @@ import { useResizeValue } from "@/app/hooks/useResizeValue";
 import { Button } from "@/app/components/Button";
 import { Toggle } from "@/app/components/Toggle";
 import { ExclusiveOptions, Option } from "@/app/components/ExclusiveOptions";
-import { useQueryState } from "@/app/hooks/useQueryState";
+import { QueryParamProvider, useQueryState } from "@/app/hooks/useQueryState";
 
 const virginiaSky400 = {
   r: 74,
@@ -122,11 +122,10 @@ const PackedBubbles: FC<PackedBubbleProps> = ({
 
 const getRandomSeed = randomInt(999_999_999);
 
-export default function BubbleField() {
-  const [seed, setSeed] = useQueryState<number>('seed', getRandomSeed);
-
-  const [packingStrategy, setPackingStrategy] = useState<PackingStrategy>('pop');
-  const [randomStrategy, setRandomStrategy] = useState<RandomStrategy>(DEFAULT_RANDOM_STRATEGY);
+function BubbleField() {
+  const [seed, setSeed] = useQueryState<number>('seed');
+  const [packingStrategy, setPackingStrategy] = useQueryState<PackingStrategy>('packingStrategy');
+  const [randomStrategy, setRandomStrategy] = useQueryState<RandomStrategy>('randomStrategy');
 
   if (seed) {
     return (
@@ -157,9 +156,7 @@ export default function BubbleField() {
             label="Packing strategy"
             id="packing-strategy"
             value={packingStrategy === 'pop'}
-            onChange={() => setPackingStrategy(
-              prev => prev === 'pop' ? 'shift' : 'pop'
-            )}
+            onChange={() => setPackingStrategy(packingStrategy === 'pop' ? 'shift' : 'pop')}
             enabledText="pop"
             disabledText="shift"
           />
@@ -173,4 +170,18 @@ export default function BubbleField() {
   } else {
     return null;
   }
+}
+
+export default function Demo() {
+  const queryParamOptions = useMemo(() => ({
+    seed: getRandomSeed,
+    packingStrategy: 'pop',
+    randomStrategy: DEFAULT_RANDOM_STRATEGY,
+  }), []);
+
+  return (
+    <QueryParamProvider config={queryParamOptions}>
+      <BubbleField />
+    </QueryParamProvider>
+  )
 }

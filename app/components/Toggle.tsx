@@ -37,7 +37,7 @@ export const Toggle: FC<ToggleProps> = ({
   return (
     <label
       htmlFor={id}
-      className={clsx("flex flex-col gap-1 font-mono", className)}
+      className={clsx("flex flex-col gap-1 font-geist-mono font-medium", className)}
       tabIndex={0}
       onKeyUp={e => {
         if (e.key === 'Enter') onChange(!value);

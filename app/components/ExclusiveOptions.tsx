@@ -1,6 +1,7 @@
-import { createContext, ReactNode, useContext, useLayoutEffect, useRef, useState } from "react";
+import { createContext, ReactNode, useContext, useLayoutEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import kebabCase from "lodash/kebabCase";
 
 import { EasingDirection } from "@/app/utils/requestEasingFrames";
 import { useEaseUpDown } from "@/app/hooks/useEaseUpDown";
@@ -90,6 +91,7 @@ export const ExclusiveOptions = ({
   const [wrapperHeight, setWrapperHeight] = useState(0);
   const [wrapperWidth, setWrapperWidth] = useState(0);
   const [firedLegendImpulse, setFiredLegendImpulse] = useState(true);
+
   const easingFactor = useEaseUpDown(
     100,
     direction,
@@ -126,8 +128,9 @@ export const ExclusiveOptions = ({
     }
   };
 
+  const kebabName = useMemo(() => kebabCase(context.name), [context.name]);
+  const legendId = `exclusive-options-${kebabName}`;
   const legendPosition = springEasingFactor * LEGEND_DISPLACEMENT;
-  const legendId = `exclusive-options-${context.name}`;
 
   return (
     <ExclusiveOptionsContext.Provider value={context}>
@@ -135,7 +138,7 @@ export const ExclusiveOptions = ({
         role="group"
         aria-labelledby={legendId}
         className={clsx(
-          "flex flex-col gap-1 font-geist-mono z-50",
+          "flex flex-col gap-1 font-geist-mono font-medium z-50",
           wrapperWidth ? "opacity-100" : "opacity-0",
           className,
         )}

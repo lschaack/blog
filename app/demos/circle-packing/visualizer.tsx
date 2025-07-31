@@ -1,50 +1,34 @@
 'use client'
 
-import React, { useRef, useEffect, useState, FC, useCallback } from 'react';
-import { randomInt } from "d3-random";
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
+import { randomInt } from 'd3-random';
+import clamp from 'lodash/clamp';
 
-import { CirclePacker, PackingState } from '@/app/utils/circlePacker';
-import { InputNumber } from '@/app/components/InputNumber';
+import {
+  CirclePacker,
+  DEFAULT_RANDOM_STRATEGY,
+  PackingArea,
+  PackingState,
+  PackingStrategy,
+  RANDOM_RADIUS_FNS,
+  RandomStrategy
+} from '@/app/utils/circlePacker';
 import { Button } from '@/app/components/Button';
 import { useQueryState } from '@/app/hooks/useQueryState';
 import { RichTextError } from '@/app/components/RichTextError';
 import { InputRange } from '@/app/components/InputRange';
+import { QueryParamProvider } from '@/app/hooks/useQueryState';
+import { ExclusiveOptions, Option } from '@/app/components/ExclusiveOptions';
+import { Toggle } from '@/app/components/Toggle';
 
-type CirclePackerOptions = {
-  width: number;
-  height: number;
-  minRadius: number;
-  maxRadius: number;
-}
-
-type PackedCirclesProps = Partial<CirclePackerOptions>
-
-const DEFAULT_CIRCLE_PACKER_OPTIONS: CirclePackerOptions = {
+const DEFAULT_CIRCLE_PACKER_AREA: PackingArea = {
   width: 512,
   height: 512,
   minRadius: 16,
   maxRadius: 128,
 }
 
-//const PackedCircles: FC<PackedCirclesProps> = ({
-//  width = 1024,
-//  height = 1024,
-//  minRadius = 16,
-//  maxRadius = 256,
-//}) => {
-//  return (
-//    <div className="border rounded overflow-hidden self-center" >
-//      <canvas
-//        ref={canvasRef}
-//        width={params.width}
-//        height={params.height}
-//        className="block"
-//      />
-//    </div>
-//  )
-//}
-
-const drawCircles = (state: CirclePacker['state'], canvas: HTMLCanvasElement, params: CirclePackerOptions) => {
+const drawCircles = (state: CirclePacker['state'], canvas: HTMLCanvasElement, params: PackingArea) => {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
 
@@ -52,11 +36,6 @@ const drawCircles = (state: CirclePacker['state'], canvas: HTMLCanvasElement, pa
 
   // Clear canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  // Draw boundary
-  ctx.strokeStyle = '#333';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(0, 0, params.width, params.height);
 
   // Draw unoccupied sectors for current circle
   if (currentCircle && unoccupiedSectors.length > 0) {
@@ -119,108 +98,94 @@ const drawCircles = (state: CirclePacker['state'], canvas: HTMLCanvasElement, pa
   }
 };
 
-const getRandomSeed = randomInt(999_999_999);
-// NOTE: These are flipped (min > max) b/c they represent a delay passed to setTimeout
-const MAX_SPEED_MS = 0;
-const MIN_SPEED_MS = 100;
-const _DEFAULT_SPEED_VALUE = 20;
-const DEFAULT_SPEED_MS = MIN_SPEED_MS - _DEFAULT_SPEED_VALUE;
-
-export default function CirclePackerVisualizer() {
+type PackingAnimationProps = {
+  packingArea: PackingArea;
+  seed: number;
+  packingStrategy: PackingStrategy;
+  randomStrategy: RandomStrategy;
+}
+function PackingAnimation({
+  packingArea,
+  seed,
+  packingStrategy,
+  randomStrategy,
+}: PackingAnimationProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [options, setOptions] = useState(DEFAULT_CIRCLE_PACKER_OPTIONS);
-  const [seed, setSeed] = useQueryState<number>('seed', getRandomSeed);
+
+  const [packer, setPacker] = useState<CirclePacker>();
   const [error, setError] = useState<string | undefined>();
+  const [isGenerating, setIsGenerating] = useState(false);
+
   const speed = useRef(DEFAULT_SPEED_MS);
 
   const onUpdate = useCallback((state: PackingState) => {
     if (canvasRef.current) {
-      drawCircles(state, canvasRef.current, options);
+      drawCircles(state, canvasRef.current, packingArea);
       // Small delay to allow rendering
       return new Promise<void>(resolve => setTimeout(resolve, MIN_SPEED_MS - speed.current));
     }
 
     return Promise.resolve();
-  }, [options]);
+  }, [packingArea]);
 
-  const [packer, setPacker] = useState<CirclePacker>(new CirclePacker(
-    DEFAULT_CIRCLE_PACKER_OPTIONS,
-    'pop',
-    undefined,
-    onUpdate,
-    seed,
-  ));
-
-  const generateCircles = useCallback(() => {
-    setError(undefined);
+  const animate = useCallback(() => {
+    const noop = () => undefined;
 
     try {
-      const nextPacker = new CirclePacker(
-        options,
-        'pop',
-        undefined,
+      const packer = new CirclePacker(
+        packingArea,
+        packingStrategy,
+        randomStrategy,
         onUpdate,
         seed,
       );
 
-      setPacker(nextPacker);
+      setIsGenerating(true);
+      packer
+        .pack()
+        .then(() => setIsGenerating(false));
+
+      setPacker(packer);
+
+      return packer?.cancel ?? noop;
     } catch (e) {
       setError((e as Error).message);
     }
-  }, [onUpdate, options, seed]);
 
-  useEffect(() => {
-    setIsGenerating(true);
+    return noop;
+  }, [onUpdate, packingArea, packingStrategy, randomStrategy, seed]);
 
-    packer.pack().then(() => setIsGenerating(false));
-  }, [packer]);
+  // NOTE: Kind of a gross flow, but easiest b/c/o all the behavior I'm looking for:
+  // - automatically start animation on prop change
+  // - automatically clean up existing animation on restart
+  // - enable mid-animation cancellation/restart
+  useEffect(animate, [animate]);
 
   const coverage = packer
     ? ((packer.state.circles
-      .reduce((sum, c) => sum + Math.PI * c.r * c.r, 0) / (options.width * options.height)) * 100)
+      .reduce((sum, c) => sum + Math.PI * c.r * c.r, 0) / (packingArea.width * packingArea.height)) * 100)
       .toFixed(1)
     : 0;
 
   return (
-    <div className="flex flex-col gap-4 p-4 max-w-full" >
-      <div className="flex flex-wrap gap-12 items-center justify-between" >
-        <InputNumber
-          label="Width"
-          id="width"
-          value={options.width}
-          onChange={nextValue => setOptions(prev => ({ ...prev, width: Number(nextValue) }))}
-          min={256}
-          max={2560}
+    <div className="flex flex-col gap-4">
+      <div className="overflow-hidden self-center">
+        <canvas
+          ref={canvasRef}
+          width={packingArea.width}
+          height={packingArea.height}
+          className="block rounded-xl border-2 border-deep-500"
         />
 
-        <InputNumber
-          label="Height"
-          id="height"
-          value={options.height}
-          onChange={nextValue => setOptions(prev => ({ ...prev, height: Number(nextValue) }))}
-          min={256}
-          max={2560}
-        />
-
-        <InputNumber
-          label="Min radius"
-          id="minRadius"
-          value={options.minRadius}
-          onChange={nextValue => setOptions(prev => ({ ...prev, minRadius: Number(nextValue) }))}
-          min={1}
-          max={32}
-        />
-
-        <InputNumber
-          label="Max radius"
-          id="maxRadius"
-          value={options.maxRadius}
-          onChange={nextValue => setOptions(prev => ({ ...prev, maxRadius: Number(nextValue) }))}
-          min={64}
-          max={256}
-        />
+        <div className="text-sm/loose text-gray-600 flex gap-8 justify-between">
+          <p>Generated {packer?.state.circles.length ?? 0} circles</p>
+          <p>Area coverage: {coverage}%</p>
+        </div>
       </div>
+
+      {error && (
+        <RichTextError>{error}</RichTextError>
+      )}
 
       <InputRange
         label="Speed"
@@ -232,36 +197,130 @@ export default function CirclePackerVisualizer() {
         defaultValue={DEFAULT_SPEED_MS}
       />
 
-      <Button
-        onClick={generateCircles}
-        label={isGenerating ? 'Generating...' : 'Generate New'}
-        disabled={isGenerating}
-      />
+      <div className="flex gap-8 justify-between">
+        <Button
+          onClick={animate}
+          label={isGenerating ? 'Generating...' : 'Generate'}
+          disabled={isGenerating}
+        />
 
-      <Button
-        onClick={packer.cancel}
-        label="Cancel"
-        disabled={!isGenerating}
-      />
-
-      <div className="border rounded overflow-hidden self-center" >
-        <canvas
-          ref={canvasRef}
-          width={options.width}
-          height={options.height}
-          className="block"
+        <Button
+          onClick={() => packer?.cancel()}
+          label="Cancel"
+          disabled={!isGenerating}
         />
       </div>
+    </div>
+  )
+}
 
-      <div className="text-sm text-gray-600">
-        <p>Generated {packer?.state.circles.length ?? 0} circles</p>
-        <p>Area coverage: {coverage}%</p>
+const getRandomSeed = randomInt(999_999_999);
+// NOTE: These are flipped (min > max) b/c they represent a delay passed to setTimeout
+const MAX_SPEED_MS = 0;
+const MIN_SPEED_MS = 100;
+const _DEFAULT_SPEED_VALUE = 20;
+const DEFAULT_SPEED_MS = MIN_SPEED_MS - _DEFAULT_SPEED_VALUE;
+const MIN_RATIO = 2;
+const MAX_RATIO = 16;
+
+// TODO: radius ratio
+function PackingAnimationConfigurator() {
+  const [area, setArea] = useState(DEFAULT_CIRCLE_PACKER_AREA);
+
+  const [seed, setSeed] = useQueryState<number>('seed');
+  const [packingStrategy, setPackingStrategy] = useQueryState<PackingStrategy>('packingStrategy');
+  const [randomStrategy, setRandomStrategy] = useQueryState<RandomStrategy>('randomStrategy');
+
+  return (
+    <div className="flex flex-col gap-4 p-4 max-w-full" >
+      <PackingAnimation
+        packingArea={area}
+        seed={seed}
+        packingStrategy={packingStrategy}
+        randomStrategy={randomStrategy}
+      />
+
+      <div className="flex flex-col gap-4 mx-8 min-[550px]:mx-0">
+        <ExclusiveOptions
+          name="Min radius"
+          onChange={e => setArea(prev => {
+            const nextMinRadius = Number(e.target.value);
+            const currRatio = Math.round(prev.maxRadius / nextMinRadius);
+            const nextRatio = clamp(currRatio, MIN_RATIO, MAX_RATIO);
+            const nextMaxRadius = Math.round(nextMinRadius * nextRatio);
+
+            return {
+              ...prev,
+              minRadius: nextMinRadius,
+              maxRadius: nextMaxRadius,
+            };
+          })}
+          value={area.minRadius}
+          className="flex-row justify-between items-center"
+        >
+          <Option value={4} label="4" />
+          <Option value={8} label="8" />
+          <Option value={16} label="16" />
+          <Option value={32} label="32" />
+        </ExclusiveOptions>
+
+        <ExclusiveOptions
+          name="Ratio"
+          onChange={e => setArea(prev => ({ ...prev, maxRadius: Math.round(prev.minRadius * Number(e.target.value)) }))}
+          value={Math.round(area.maxRadius / area.minRadius)}
+          className="flex-row justify-between items-center"
+        >
+          <Option value={MIN_RATIO} label={MIN_RATIO.toString()} />
+          <Option value={4} label="4" />
+          <Option value={8} label="8" />
+          <Option value={MAX_RATIO} label={MAX_RATIO.toString()} />
+        </ExclusiveOptions>
+
+
+        <ExclusiveOptions
+          name="Random strategy"
+          onChange={e => setRandomStrategy(e.target.value as RandomStrategy)}
+          value={randomStrategy}
+          className="flex-row justify-between items-center"
+        >
+          {Object.keys(RANDOM_RADIUS_FNS).map(fnName => (
+            <Option
+              key={fnName}
+              value={fnName}
+              label={fnName}
+            />
+          ))}
+        </ExclusiveOptions>
+
+        <Toggle
+          className="w-full flex-row justify-between items-center"
+          label="Packing strategy"
+          id="packing-strategy"
+          value={packingStrategy === 'pop'}
+          onChange={() => setPackingStrategy(packingStrategy === 'pop' ? 'shift' : 'pop')}
+          enabledText="pop"
+          disabledText="shift"
+        />
+
+        <Button
+          label="Reroll"
+          onClick={() => setSeed(getRandomSeed())}
+        />
       </div>
-
-      {error && (
-        <RichTextError>{error}</RichTextError>
-      )}
     </div>
   );
 }
 
+export default function Demo() {
+  const queryParamConfig = useMemo(() => ({
+    seed: getRandomSeed,
+    packingStrategy: 'pop',
+    randomStrategy: DEFAULT_RANDOM_STRATEGY,
+  }), []);
+
+  return (
+    <QueryParamProvider config={queryParamConfig}>
+      <PackingAnimationConfigurator />
+    </QueryParamProvider>
+  )
+}

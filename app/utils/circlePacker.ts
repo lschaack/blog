@@ -18,7 +18,7 @@ export interface PackingState {
   unoccupiedSectors: Sector[];
 }
 
-interface PackingArea {
+export interface PackingArea {
   width: number;
   height: number;
   minRadius: number;
@@ -145,10 +145,9 @@ export class CirclePacker {
 
     await this.updatePublicState({ circles: this.placedCircles });
 
-    const MAX_ITERS = 500;
     let iter = 0;
 
-    while (this.stack.length > 0 && iter < MAX_ITERS && !this.cancelled) {
+    while (this.stack.length > 0 && !this.cancelled) {
       // FIXME: optimize this...
       const current = this.strategy === 'pop' ? this.stack.pop()! : this.stack.shift()!;
       await this.updatePublicState({ currentCircle: current });
