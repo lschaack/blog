@@ -6,6 +6,7 @@ import kebabCase from "lodash/kebabCase";
 import { EasingDirection } from "@/app/utils/requestEasingFrames";
 import { useEaseUpDown } from "@/app/hooks/useEaseUpDown";
 import { useEaseTrigger } from "@/app/hooks/useEaseTrigger";
+import { useOutsideClick } from "@/app/hooks/useOutsideClick";
 
 type OptionValue = string | number | readonly string[];
 
@@ -86,6 +87,7 @@ export const ExclusiveOptions = ({
   className,
   ...context
 }: ExclusiveOptionsProps) => {
+  const container = useRef<HTMLDivElement>(null);
   const optionWrapper = useRef<HTMLUListElement>(null);
   const [direction, setDirection] = useState(EasingDirection.DOWN);
   const [wrapperHeight, setWrapperHeight] = useState(0);
@@ -128,6 +130,8 @@ export const ExclusiveOptions = ({
     }
   };
 
+  useOutsideClick(container, () => toggleOpenClose(EasingDirection.DOWN), isOpen);
+
   const kebabName = useMemo(() => kebabCase(context.name), [context.name]);
   const legendId = `exclusive-options-${kebabName}`;
   const legendPosition = springEasingFactor * LEGEND_DISPLACEMENT;
@@ -136,9 +140,11 @@ export const ExclusiveOptions = ({
     <ExclusiveOptionsContext.Provider value={context}>
       <div
         role="group"
+        ref={container}
         aria-labelledby={legendId}
         className={clsx(
-          "flex flex-col gap-1 font-geist-mono font-medium z-50",
+          easingFactor > 0 ? "z-20" : "z-10",
+          "flex flex-col gap-1 font-geist-mono font-medium",
           wrapperWidth ? "opacity-100" : "opacity-0",
           className,
         )}
