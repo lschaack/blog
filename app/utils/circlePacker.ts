@@ -125,7 +125,7 @@ export class CirclePacker {
   private updatePublicState(nextState: Partial<PackingState>) {
     Object.assign(this.state, nextState);
 
-    return this.onStateChange?.(this.state);
+    if (!this.cancelled) return this.onStateChange?.(this.state);
   }
 
   public cancel = () => {

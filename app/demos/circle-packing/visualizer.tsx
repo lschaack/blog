@@ -114,7 +114,7 @@ function PackingAnimation({
 
   const [packer, setPacker] = useState<CirclePacker>();
   const [error, setError] = useState<string | undefined>();
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(true);
 
   const speed = useRef(DEFAULT_SPEED_MS);
 
@@ -132,7 +132,7 @@ function PackingAnimation({
     const noop = () => undefined;
 
     try {
-      const packer = new CirclePacker(
+      const nextPacker = new CirclePacker(
         packingArea,
         packingStrategy,
         randomStrategy,
@@ -141,13 +141,15 @@ function PackingAnimation({
       );
 
       setIsGenerating(true);
-      packer
+      nextPacker
         .pack()
         .then(() => setIsGenerating(false));
 
-      setPacker(packer);
+      setPacker(prev => {
+        prev?.cancel();
 
-      return packer?.cancel ?? noop;
+        return nextPacker;
+      });
     } catch (e) {
       setError((e as Error).message);
     }
