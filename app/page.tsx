@@ -37,7 +37,7 @@ const PostList = async () => {
 
 export default async function Home() {
   return (
-    <div>
+    <div className="max-w-full px-4">
       <ul className="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] justify-center items-center gap-4 max-w-7xl">
         <BatchedAnimationContextProvider>
           <PostList />
