@@ -76,7 +76,7 @@ const PackedBubbles: FC<PackedBubbleProps> = ({
         height: containerWidth,
         minRadius: 16,
         maxRadius: 128
-      }, packingStrategy, randomStrategy, undefined, seed))
+      }, packingStrategy, randomStrategy, undefined, undefined, seed))
         .pack()
         .then(circles => setPackedCircles(circles))
     }

@@ -80,6 +80,7 @@ export class CirclePacker {
   private placedCircles: Circle[] = [];
   private stack: Circle[] = [];
   private onStateChange?: (state: PackingState) => Promise<void>;
+  private onFinish?: (state: PackingState) => void;
   private randomRadius: RandomRadius;
   private strategy: PackingStrategy;
   private cancelled: boolean;
@@ -90,11 +91,13 @@ export class CirclePacker {
     area: PackingArea,
     packingStrategy?: PackingStrategy,
     randomStrategy?: RandomStrategy,
-    onAddCircle?: (state: PackingState) => Promise<void>,
+    onStateChange?: (state: PackingState) => Promise<void>,
+    onFinish?: (state: PackingState) => void,
     seed?: number
   ) {
     this.area = area;
-    this.onStateChange = onAddCircle;
+    this.onStateChange = onStateChange;
+    this.onFinish = onFinish;
     this.quadtree = new Quadtree<Circle>({
       width: area.width,
       height: area.height,
@@ -145,8 +148,6 @@ export class CirclePacker {
 
     await this.updatePublicState({ circles: this.placedCircles });
 
-    let iter = 0;
-
     while (this.stack.length > 0 && !this.cancelled) {
       // FIXME: optimize this...
       const current = this.strategy === 'pop' ? this.stack.pop()! : this.stack.shift()!;
@@ -196,11 +197,11 @@ export class CirclePacker {
           if (VERBOSE_DEBUG) debugger;
         }
       }
-
-      iter += 1;
     }
 
     this.cancelled = false;
+
+    this.onFinish?.(this.state);
 
     return this.placedCircles;
   }

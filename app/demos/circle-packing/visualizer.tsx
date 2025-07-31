@@ -28,6 +28,16 @@ const DEFAULT_CIRCLE_PACKER_AREA: PackingArea = {
   maxRadius: 128,
 }
 
+// NOTE: These are flipped (min > max) b/c they represent a delay passed to setTimeout
+const MAX_SPEED_MS = 0;
+const MIN_SPEED_MS = 100;
+const _DEFAULT_SPEED_VALUE = 20;
+const DEFAULT_SPEED_MS = MIN_SPEED_MS - _DEFAULT_SPEED_VALUE;
+const MIN_RATIO = 2;
+const MAX_RATIO = 16;
+
+const getRandomSeed = randomInt(999_999_999);
+
 const drawCircles = (state: CirclePacker['state'], canvas: HTMLCanvasElement, params: PackingArea) => {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
@@ -120,12 +130,21 @@ function PackingAnimation({
 
   const onUpdate = useCallback((state: PackingState) => {
     if (canvasRef.current) {
-      drawCircles(state, canvasRef.current, packingArea);
-      // Small delay to allow rendering
-      return new Promise<void>(resolve => setTimeout(resolve, MIN_SPEED_MS - speed.current));
+      // Don't draw until last iter at max speed
+      if (speed.current < MIN_SPEED_MS) {
+        drawCircles(state, canvasRef.current, packingArea);
+
+        return new Promise<void>(resolve => setTimeout(resolve, MIN_SPEED_MS - speed.current));
+      } else {
+        return Promise.resolve();
+      }
     }
 
     return Promise.resolve();
+  }, [packingArea]);
+
+  const onFinish = useCallback((state: PackingState) => {
+    if (canvasRef.current) drawCircles(state, canvasRef.current, packingArea);
   }, [packingArea]);
 
   const animate = useCallback(() => {
@@ -137,6 +156,7 @@ function PackingAnimation({
         packingStrategy,
         randomStrategy,
         onUpdate,
+        onFinish,
         seed,
       );
 
@@ -155,7 +175,7 @@ function PackingAnimation({
     }
 
     return noop;
-  }, [onUpdate, packingArea, packingStrategy, randomStrategy, seed]);
+  }, [onFinish, onUpdate, packingArea, packingStrategy, randomStrategy, seed]);
 
   // NOTE: Kind of a gross flow, but easiest b/c/o all the behavior I'm looking for:
   // - automatically start animation on prop change
@@ -163,41 +183,18 @@ function PackingAnimation({
   // - enable mid-animation cancellation/restart
   useEffect(animate, [animate]);
 
-  const coverage = packer
-    ? ((packer.state.circles
-      .reduce((sum, c) => sum + Math.PI * c.r * c.r, 0) / (packingArea.width * packingArea.height)) * 100)
-      .toFixed(1)
-    : 0;
-
   return (
     <div className="flex flex-col gap-4">
-      <div className="overflow-hidden self-center">
-        <canvas
-          ref={canvasRef}
-          width={packingArea.width}
-          height={packingArea.height}
-          className="block rounded-xl border-2 border-deep-500"
-        />
-
-        <div className="text-sm/loose text-gray-600 flex gap-8 justify-between">
-          <p>Generated {packer?.state.circles.length ?? 0} circles</p>
-          <p>Area coverage: {coverage}%</p>
-        </div>
-      </div>
+      <canvas
+        ref={canvasRef}
+        width={packingArea.width}
+        height={packingArea.height}
+        className="block rounded-xl border-2 border-deep-500"
+      />
 
       {error && (
         <RichTextError>{error}</RichTextError>
       )}
-
-      <InputRange
-        label="Speed"
-        id="speed"
-        min={MAX_SPEED_MS}
-        max={MIN_SPEED_MS}
-        step={1}
-        onChange={value => speed.current = value}
-        defaultValue={DEFAULT_SPEED_MS}
-      />
 
       <div className="flex gap-8 justify-between">
         <Button
@@ -212,20 +209,20 @@ function PackingAnimation({
           disabled={!isGenerating}
         />
       </div>
+
+      <InputRange
+        label="Speed"
+        id="speed"
+        min={MAX_SPEED_MS}
+        max={MIN_SPEED_MS}
+        step={1}
+        onChange={value => speed.current = value}
+        defaultValue={DEFAULT_SPEED_MS}
+      />
     </div>
   )
 }
 
-const getRandomSeed = randomInt(999_999_999);
-// NOTE: These are flipped (min > max) b/c they represent a delay passed to setTimeout
-const MAX_SPEED_MS = 0;
-const MIN_SPEED_MS = 100;
-const _DEFAULT_SPEED_VALUE = 20;
-const DEFAULT_SPEED_MS = MIN_SPEED_MS - _DEFAULT_SPEED_VALUE;
-const MIN_RATIO = 2;
-const MAX_RATIO = 16;
-
-// TODO: radius ratio
 function PackingAnimationConfigurator() {
   const [area, setArea] = useState(DEFAULT_CIRCLE_PACKER_AREA);
 
@@ -242,7 +239,7 @@ function PackingAnimationConfigurator() {
         randomStrategy={randomStrategy}
       />
 
-      <div className="flex flex-col gap-4 mx-8 min-[550px]:mx-0">
+      <div className="flex flex-col gap-4">
         <ExclusiveOptions
           name="Min radius"
           onChange={e => setArea(prev => {

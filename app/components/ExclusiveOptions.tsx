@@ -144,7 +144,7 @@ export const ExclusiveOptions = ({
         aria-labelledby={legendId}
         className={clsx(
           easingFactor > 0 ? "z-20" : "z-10",
-          "flex flex-col gap-1 font-geist-mono font-medium",
+          "flex flex-col flex-wrap gap-y-1 gap-x-4 font-geist-mono font-medium",
           wrapperWidth ? "opacity-100" : "opacity-0",
           className,
         )}
