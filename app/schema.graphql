@@ -110,6 +110,7 @@ type AssetLinkingCollections {
   blogPostCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): BlogPostCollection
   captionedImageCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): CaptionedImageCollection
   entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+  imageStackCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): ImageStackCollection
 }
 
 enum AssetOrder {
@@ -509,10 +510,13 @@ scalar DateTime
 """
 type Demo implements Entry & _Node {
   _id: ID!
+  args(locale: String): JSON
   contentfulMetadata: ContentfulMetadata!
   id(locale: String): String
+  key(locale: String): String
   linkedFrom(allowedLocales: [String]): DemoLinkingCollections
   sys: Sys!
+  title(locale: String): String
 }
 
 type DemoCollection {
@@ -525,6 +529,7 @@ type DemoCollection {
 input DemoFilter {
   AND: [DemoFilter]
   OR: [DemoFilter]
+  args_exists: Boolean
   contentfulMetadata: ContentfulMetadataFilter
   id: String
   id_contains: String
@@ -533,7 +538,21 @@ input DemoFilter {
   id_not: String
   id_not_contains: String
   id_not_in: [String]
+  key: String
+  key_contains: String
+  key_exists: Boolean
+  key_in: [String]
+  key_not: String
+  key_not_contains: String
+  key_not_in: [String]
   sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
 }
 
 type DemoLinkingCollections {
@@ -561,6 +580,8 @@ enum DemoLinkingCollectionsBlogPostCollectionOrder {
 enum DemoOrder {
   id_ASC
   id_DESC
+  key_ASC
+  key_DESC
   sys_firstPublishedAt_ASC
   sys_firstPublishedAt_DESC
   sys_id_ASC
@@ -569,6 +590,8 @@ enum DemoOrder {
   sys_publishedAt_DESC
   sys_publishedVersion_ASC
   sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
 }
 
 """
@@ -681,6 +704,57 @@ enum ImageResizeStrategy {
   THUMB
 }
 
+"""
+[See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/imageStack)
+"""
+type ImageStack implements Entry & _Node {
+  _id: ID!
+  contentfulMetadata: ContentfulMetadata!
+  linkedFrom(allowedLocales: [String]): ImageStackLinkingCollections
+  stackCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): AssetCollection
+  sys: Sys!
+  title(locale: String): String
+}
+
+type ImageStackCollection {
+  items: [ImageStack]!
+  limit: Int!
+  skip: Int!
+  total: Int!
+}
+
+input ImageStackFilter {
+  AND: [ImageStackFilter]
+  OR: [ImageStackFilter]
+  contentfulMetadata: ContentfulMetadataFilter
+  stackCollection_exists: Boolean
+  sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
+}
+
+type ImageStackLinkingCollections {
+  entryCollection(limit: Int = 100, locale: String, preview: Boolean, skip: Int = 0): EntryCollection
+}
+
+enum ImageStackOrder {
+  sys_firstPublishedAt_ASC
+  sys_firstPublishedAt_DESC
+  sys_id_ASC
+  sys_id_DESC
+  sys_publishedAt_ASC
+  sys_publishedAt_DESC
+  sys_publishedVersion_ASC
+  sys_publishedVersion_DESC
+  title_ASC
+  title_DESC
+}
+
 input ImageTransformOptions {
   """
   Desired background color, used with corner radius or `PAD` resize strategy.
@@ -737,6 +811,8 @@ type Query {
   demo(id: String!, locale: String, preview: Boolean): Demo
   demoCollection(limit: Int = 100, locale: String, order: [DemoOrder], preview: Boolean, skip: Int = 0, where: DemoFilter): DemoCollection
   entryCollection(limit: Int = 100, locale: String, order: [EntryOrder], preview: Boolean, skip: Int = 0, where: EntryFilter): EntryCollection
+  imageStack(id: String!, locale: String, preview: Boolean): ImageStack
+  imageStackCollection(limit: Int = 100, locale: String, order: [ImageStackOrder], preview: Boolean, skip: Int = 0, where: ImageStackFilter): ImageStackCollection
 }
 
 interface ResourceLink {
@@ -826,6 +902,7 @@ input cfAuthorNestedFilter {
 input cfDemoNestedFilter {
   AND: [cfDemoNestedFilter]
   OR: [cfDemoNestedFilter]
+  args_exists: Boolean
   contentfulMetadata: ContentfulMetadataFilter
   id: String
   id_contains: String
@@ -834,5 +911,19 @@ input cfDemoNestedFilter {
   id_not: String
   id_not_contains: String
   id_not_in: [String]
+  key: String
+  key_contains: String
+  key_exists: Boolean
+  key_in: [String]
+  key_not: String
+  key_not_contains: String
+  key_not_in: [String]
   sys: SysFilter
+  title: String
+  title_contains: String
+  title_exists: Boolean
+  title_in: [String]
+  title_not: String
+  title_not_contains: String
+  title_not_in: [String]
 }

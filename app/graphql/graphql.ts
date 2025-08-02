@@ -185,6 +185,7 @@ export type AssetLinkingCollections = {
   blogPostCollection?: Maybe<BlogPostCollection>;
   captionedImageCollection?: Maybe<CaptionedImageCollection>;
   entryCollection?: Maybe<EntryCollection>;
+  imageStackCollection?: Maybe<ImageStackCollection>;
 };
 
 
@@ -213,6 +214,14 @@ export type AssetLinkingCollectionsCaptionedImageCollectionArgs = {
 
 
 export type AssetLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type AssetLinkingCollectionsImageStackCollectionArgs = {
   limit?: InputMaybe<Scalars['Int']['input']>;
   locale?: InputMaybe<Scalars['String']['input']>;
   preview?: InputMaybe<Scalars['Boolean']['input']>;
@@ -789,10 +798,19 @@ export type ContentfulTag = {
 export type Demo = Entry & _Node & {
   __typename?: 'Demo';
   _id: Scalars['ID']['output'];
+  args?: Maybe<Scalars['JSON']['output']>;
   contentfulMetadata: ContentfulMetadata;
   id?: Maybe<Scalars['String']['output']>;
+  key?: Maybe<Scalars['String']['output']>;
   linkedFrom?: Maybe<DemoLinkingCollections>;
   sys: Sys;
+  title?: Maybe<Scalars['String']['output']>;
+};
+
+
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo) */
+export type DemoArgsArgs = {
+  locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -803,8 +821,20 @@ export type DemoIdArgs = {
 
 
 /** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo) */
+export type DemoKeyArgs = {
+  locale?: InputMaybe<Scalars['String']['input']>;
+};
+
+
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo) */
 export type DemoLinkedFromArgs = {
   allowedLocales?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+};
+
+
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/demo) */
+export type DemoTitleArgs = {
+  locale?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type DemoCollection = {
@@ -818,6 +848,7 @@ export type DemoCollection = {
 export type DemoFilter = {
   AND?: InputMaybe<Array<InputMaybe<DemoFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<DemoFilter>>>;
+  args_exists?: InputMaybe<Scalars['Boolean']['input']>;
   contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
   id?: InputMaybe<Scalars['String']['input']>;
   id_contains?: InputMaybe<Scalars['String']['input']>;
@@ -826,7 +857,21 @@ export type DemoFilter = {
   id_not?: InputMaybe<Scalars['String']['input']>;
   id_not_contains?: InputMaybe<Scalars['String']['input']>;
   id_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  key?: InputMaybe<Scalars['String']['input']>;
+  key_contains?: InputMaybe<Scalars['String']['input']>;
+  key_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  key_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  key_not?: InputMaybe<Scalars['String']['input']>;
+  key_not_contains?: InputMaybe<Scalars['String']['input']>;
+  key_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
   sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  title_contains?: InputMaybe<Scalars['String']['input']>;
+  title_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  title_not?: InputMaybe<Scalars['String']['input']>;
+  title_not_contains?: InputMaybe<Scalars['String']['input']>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
 };
 
 export type DemoLinkingCollections = {
@@ -872,6 +917,8 @@ export enum DemoLinkingCollectionsBlogPostCollectionOrder {
 export enum DemoOrder {
   IdAsc = 'id_ASC',
   IdDesc = 'id_DESC',
+  KeyAsc = 'key_ASC',
+  KeyDesc = 'key_DESC',
   SysFirstPublishedAtAsc = 'sys_firstPublishedAt_ASC',
   SysFirstPublishedAtDesc = 'sys_firstPublishedAt_DESC',
   SysIdAsc = 'sys_id_ASC',
@@ -879,7 +926,9 @@ export enum DemoOrder {
   SysPublishedAtAsc = 'sys_publishedAt_ASC',
   SysPublishedAtDesc = 'sys_publishedAt_DESC',
   SysPublishedVersionAsc = 'sys_publishedVersion_ASC',
-  SysPublishedVersionDesc = 'sys_publishedVersion_DESC'
+  SysPublishedVersionDesc = 'sys_publishedVersion_DESC',
+  TitleAsc = 'title_ASC',
+  TitleDesc = 'title_DESC'
 }
 
 export type Entry = {
@@ -979,6 +1028,87 @@ export enum ImageResizeStrategy {
   Thumb = 'THUMB'
 }
 
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/imageStack) */
+export type ImageStack = Entry & _Node & {
+  __typename?: 'ImageStack';
+  _id: Scalars['ID']['output'];
+  contentfulMetadata: ContentfulMetadata;
+  linkedFrom?: Maybe<ImageStackLinkingCollections>;
+  stackCollection?: Maybe<AssetCollection>;
+  sys: Sys;
+  title?: Maybe<Scalars['String']['output']>;
+};
+
+
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/imageStack) */
+export type ImageStackLinkedFromArgs = {
+  allowedLocales?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+};
+
+
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/imageStack) */
+export type ImageStackStackCollectionArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+/** [See type definition](https://app.contentful.com/spaces/462ufr2omsb2/content_types/imageStack) */
+export type ImageStackTitleArgs = {
+  locale?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type ImageStackCollection = {
+  __typename?: 'ImageStackCollection';
+  items: Array<Maybe<ImageStack>>;
+  limit: Scalars['Int']['output'];
+  skip: Scalars['Int']['output'];
+  total: Scalars['Int']['output'];
+};
+
+export type ImageStackFilter = {
+  AND?: InputMaybe<Array<InputMaybe<ImageStackFilter>>>;
+  OR?: InputMaybe<Array<InputMaybe<ImageStackFilter>>>;
+  contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
+  stackCollection_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  title_contains?: InputMaybe<Scalars['String']['input']>;
+  title_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  title_not?: InputMaybe<Scalars['String']['input']>;
+  title_not_contains?: InputMaybe<Scalars['String']['input']>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+};
+
+export type ImageStackLinkingCollections = {
+  __typename?: 'ImageStackLinkingCollections';
+  entryCollection?: Maybe<EntryCollection>;
+};
+
+
+export type ImageStackLinkingCollectionsEntryCollectionArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export enum ImageStackOrder {
+  SysFirstPublishedAtAsc = 'sys_firstPublishedAt_ASC',
+  SysFirstPublishedAtDesc = 'sys_firstPublishedAt_DESC',
+  SysIdAsc = 'sys_id_ASC',
+  SysIdDesc = 'sys_id_DESC',
+  SysPublishedAtAsc = 'sys_publishedAt_ASC',
+  SysPublishedAtDesc = 'sys_publishedAt_DESC',
+  SysPublishedVersionAsc = 'sys_publishedVersion_ASC',
+  SysPublishedVersionDesc = 'sys_publishedVersion_DESC',
+  TitleAsc = 'title_ASC',
+  TitleDesc = 'title_DESC'
+}
+
 export type ImageTransformOptions = {
   /**
    * Desired background color, used with corner radius or `PAD` resize strategy.
@@ -1026,6 +1156,8 @@ export type Query = {
   demo?: Maybe<Demo>;
   demoCollection?: Maybe<DemoCollection>;
   entryCollection?: Maybe<EntryCollection>;
+  imageStack?: Maybe<ImageStack>;
+  imageStackCollection?: Maybe<ImageStackCollection>;
 };
 
 
@@ -1154,6 +1286,23 @@ export type QueryEntryCollectionArgs = {
   where?: InputMaybe<EntryFilter>;
 };
 
+
+export type QueryImageStackArgs = {
+  id: Scalars['String']['input'];
+  locale?: InputMaybe<Scalars['String']['input']>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+};
+
+
+export type QueryImageStackCollectionArgs = {
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  locale?: InputMaybe<Scalars['String']['input']>;
+  order?: InputMaybe<Array<InputMaybe<ImageStackOrder>>>;
+  preview?: InputMaybe<Scalars['Boolean']['input']>;
+  skip?: InputMaybe<Scalars['Int']['input']>;
+  where?: InputMaybe<ImageStackFilter>;
+};
+
 export type ResourceLink = {
   sys: ResourceSys;
 };
@@ -1244,6 +1393,7 @@ export type CfAuthorNestedFilter = {
 export type CfDemoNestedFilter = {
   AND?: InputMaybe<Array<InputMaybe<CfDemoNestedFilter>>>;
   OR?: InputMaybe<Array<InputMaybe<CfDemoNestedFilter>>>;
+  args_exists?: InputMaybe<Scalars['Boolean']['input']>;
   contentfulMetadata?: InputMaybe<ContentfulMetadataFilter>;
   id?: InputMaybe<Scalars['String']['input']>;
   id_contains?: InputMaybe<Scalars['String']['input']>;
@@ -1252,7 +1402,21 @@ export type CfDemoNestedFilter = {
   id_not?: InputMaybe<Scalars['String']['input']>;
   id_not_contains?: InputMaybe<Scalars['String']['input']>;
   id_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  key?: InputMaybe<Scalars['String']['input']>;
+  key_contains?: InputMaybe<Scalars['String']['input']>;
+  key_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  key_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  key_not?: InputMaybe<Scalars['String']['input']>;
+  key_not_contains?: InputMaybe<Scalars['String']['input']>;
+  key_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
   sys?: InputMaybe<SysFilter>;
+  title?: InputMaybe<Scalars['String']['input']>;
+  title_contains?: InputMaybe<Scalars['String']['input']>;
+  title_exists?: InputMaybe<Scalars['Boolean']['input']>;
+  title_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
+  title_not?: InputMaybe<Scalars['String']['input']>;
+  title_not_contains?: InputMaybe<Scalars['String']['input']>;
+  title_not_in?: InputMaybe<Array<InputMaybe<Scalars['String']['input']>>>;
 };
 
 export type GetAllPostsQueryVariables = Exact<{
@@ -1270,7 +1434,7 @@ export type GetBlogPostWithSlugQueryVariables = Exact<{
 }>;
 
 
-export type GetBlogPostWithSlugQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', items: Array<{ __typename?: 'BlogPost', title?: string | null, subtitle?: string | null, slug?: string | null, sys: { __typename?: 'Sys', publishedAt?: any | null }, body?: { __typename?: 'BlogPostBody', json: any, links: { __typename?: 'BlogPostBodyLinks', entries: { __typename?: 'BlogPostBodyEntries', block: Array<{ __typename?: 'Author', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'BlogPost', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CaptionedImage', caption?: string | null, image?: { __typename?: 'Asset', url?: string | null, width?: number | null, height?: number | null, description?: string | null } | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CodeBlock', language?: string | null, code?: string | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'Demo', id?: string | null, sys: { __typename?: 'Sys', id: string } } | null> }, assets: { __typename?: 'BlogPostBodyAssets', block: Array<{ __typename?: 'Asset', url?: string | null, title?: string | null, width?: number | null, height?: number | null, description?: string | null, sys: { __typename?: 'Sys', id: string } } | null> } } } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
+export type GetBlogPostWithSlugQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', items: Array<{ __typename?: 'BlogPost', title?: string | null, subtitle?: string | null, slug?: string | null, sys: { __typename?: 'Sys', publishedAt?: any | null }, body?: { __typename?: 'BlogPostBody', json: any, links: { __typename?: 'BlogPostBodyLinks', entries: { __typename?: 'BlogPostBodyEntries', block: Array<{ __typename?: 'Author', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'BlogPost', sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CaptionedImage', caption?: string | null, image?: { __typename?: 'Asset', url?: string | null, width?: number | null, height?: number | null, description?: string | null } | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'CodeBlock', language?: string | null, code?: string | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'Demo', key?: string | null, args?: any | null, sys: { __typename?: 'Sys', id: string } } | { __typename?: 'ImageStack', sys: { __typename?: 'Sys', id: string } } | null> }, assets: { __typename?: 'BlogPostBodyAssets', block: Array<{ __typename?: 'Asset', url?: string | null, title?: string | null, width?: number | null, height?: number | null, description?: string | null, sys: { __typename?: 'Sys', id: string } } | null> } } } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
 
 export class TypedDocumentString<TResult, TVariables>
   extends String
@@ -1349,7 +1513,11 @@ export const GetBlogPostWithSlugDocument = new TypedDocumentString(`
                 id
               }
               ... on Demo {
-                id
+                sys {
+                  id
+                }
+                key
+                args
               }
               ... on CodeBlock {
                 language

@@ -19,7 +19,11 @@ export const getBlogPostWithSlug = gql`
                   id
                 }
                 ... on Demo {
-                  id
+                  sys {
+                    id
+                  }
+                  key
+                  args
                 }
                 ... on CodeBlock {
                   language

@@ -42,7 +42,7 @@ const getColor = (pos: number) => {
   }
 }
 
-type PackedBubbleProps = {
+export type PackedBubbleProps = {
   seed: number;
   packingStrategy: PackingStrategy;
   randomStrategy: RandomStrategy;

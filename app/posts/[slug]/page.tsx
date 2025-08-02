@@ -27,6 +27,7 @@ export default async function Post({
   const res = await getEntriesMatchingSlug(slug)
 
   const post = res.data.blogPostCollection?.items[0];
+  console.log('post.body.links.entries.block', post?.body?.links.entries.block)
 
   if (!post) {
     notFound();

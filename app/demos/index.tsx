@@ -16,16 +16,17 @@ export const DEMOS = {
   'bubble-configurator': lazy(() => import('./bubble/configurator')),
   'bubble-matryoshka': lazy(() => import('./bubble/matryoshka')),
   'bubble-field': lazy(() => import('./bubble/field')),
+  'bubble-tile': lazy(() => import('./bubble/tile')),
   'circle-packing': lazy(() => import('./circle-packing/visualizer')),
   'test': lazy(() => import('./test')),
 }
 
 export const Demo = ({ entry }: { entry: DemoType }) => {
-  const Demo = DEMOS[entry.id as keyof typeof DEMOS];
+  const Demo = DEMOS[entry.key as keyof typeof DEMOS];
 
   if (!Demo) {
-    return <RichTextError>Unknown demo: {entry.id}</RichTextError>;
+    return <RichTextError>Unknown demo: {entry.key}</RichTextError>;
   } else {
-    return <Demo />;
+    return <Demo {...entry.args} />;
   }
 }
