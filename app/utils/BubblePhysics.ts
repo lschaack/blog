@@ -31,6 +31,8 @@ export type PhysicsState = {
 export type BubblePhysicsOptions = {
   springStiffness?: number;
   sluggishness?: number;
+  randomize?: boolean;
+  seed?: number;
 }
 
 export class BubblePhysics {
@@ -55,6 +57,8 @@ export class BubblePhysics {
     this.velocity = createVec2();
     this.currentImpulse = createVec2();
     this.tempVec = createVec2();
+
+    this.reset(options.randomize ?? false, options.seed);
   }
 
   addImpulse(impulse: Vec2): void {

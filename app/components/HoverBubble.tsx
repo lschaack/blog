@@ -4,25 +4,12 @@ import { FC, memo, ReactNode, useCallback, useContext, useEffect, useId, useMemo
 import clsx from "clsx";
 
 import {
-  populateVectorSegmentsPrimitive,
-  RoundedRectangle,
-  RoundedShapeWithHole,
-} from "@/app/utils/findVectorSegmentsInShape";
-import {
-  BUBBLE_STIFFNESS,
   BUBBLE_OVERKILL,
   SPRING_STIFFNESS,
   BUBBLE_BOUNDARY,
 } from "@/app/utils/physicsConsts";
-import {
-  Vec2,
-  addVec2Mutable,
-  multiplyVecMutable,
-  clampVecMutable,
-  createVec2,
-  zeroVec2,
-} from "@/app/utils/vector";
 import { BubblePhysics } from "@/app/utils/BubblePhysics";
+import { BubblePresentation } from "@/app/utils/BubblePresentation";
 import { mouseService } from "@/app/utils/mouseService";
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
@@ -43,18 +30,6 @@ const INIT_DOM_MEASUREMENTS = {
 
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
-
-type Inset = {
-  top: number;
-  right: number;
-  bottom: number;
-  left: number;
-}
-
-type BubbleMeta = Inset & {
-  width: number;
-  height: number;
-}
 
 
 type HoverBubbleProps = {
@@ -97,7 +72,6 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const overkill = useDebuggableValue('bubbleOverkill', _overkill, true);
     const springStiffness = useDebuggableValue('springStiffness', _stiffness, true);
     const boundary = useDebuggableValue('bubbleBoundary', _boundary, true);
-    const doubleBoundary = 2 * boundary;
 
     // always start with at least one frame of animation to set clipPath
     const [isUpdatePending, setIsUpdatePending] = useState(true);
@@ -108,40 +82,29 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const offsetIndicatorElement = useRef<HTMLDivElement>(null);
     const lerpedOffsetIndicatorElement = useRef<HTMLDivElement>(null);
 
-    const physics = useMemo<BubblePhysics>(() => {
-      const bubblePhysics = new BubblePhysics({
-        springStiffness: _stiffness,
-        sluggishness,
-      })
+    const physics = useMemo<BubblePhysics>(() => new BubblePhysics({
+      springStiffness: _stiffness,
+      sluggishness,
+      randomize: moveOnMount,
+      seed,
+    }), [_stiffness, moveOnMount, seed, sluggishness]);
 
-      bubblePhysics.reset(moveOnMount, seed);
+    const presentation = useMemo<BubblePresentation>(() => {
+      return new BubblePresentation({
+        overkill: _overkill,
+        insetFilter,
+        width: 0, // Will be updated when DOM measurements are available
+        height: 0,
+        boundary: _boundary,
+        rounding,
+        containerOffsetLeft: 0,
+        containerOffsetTop: 0,
+      });
+    }, [_overkill, insetFilter, _boundary, rounding]);
 
-      return bubblePhysics;
-    }, [_stiffness, moveOnMount, seed, sluggishness]);
 
-    // Pre-allocated primitive coordinate arrays for zero-allocation segments
-    const MAX_SEGMENTS = 20;
-    const segmentStartX = useRef<Float64Array>(new Float64Array(MAX_SEGMENTS));
-    const segmentStartY = useRef<Float64Array>(new Float64Array(MAX_SEGMENTS));
-    const segmentEndX = useRef<Float64Array>(new Float64Array(MAX_SEGMENTS));
-    const segmentEndY = useRef<Float64Array>(new Float64Array(MAX_SEGMENTS));
 
-    // Pre-allocated shape to eliminate object creation on every call
-    const shapeWithHole = useRef<RoundedShapeWithHole | null>(null);
 
-    const bubbleMeta = useRef<BubbleMeta>({
-      top: 0,
-      right: 0,
-      bottom: 0,
-      left: 0,
-      width: 0,
-      height: 0,
-    })
-
-    // Object pools for reusable objects
-    const tempVec = useRef<Vec2>(createVec2());
-    const intersectionVec = useRef<Vec2>(createVec2());
-    const clampTempVec = useRef<Vec2>(createVec2());
 
     const [{
       bubbleOffsetWidth,
@@ -200,45 +163,14 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         ],
       } = physics.getState();
 
-      const {
-        top: bubbleTop,
-        right: bubbleRight,
-        bottom: bubbleBottom,
-        left: bubbleLeft,
-        width: bubbleWidth,
-        height: bubbleHeight,
-      } = bubbleMeta.current;
-
-      const scaleX = bubbleWidth / bubbleOffsetWidth;
-      const scaleY = bubbleHeight / bubbleOffsetHeight;
-      const translateX = (bubbleLeft - bubbleRight) * 0.5;
-      const translateY = (bubbleTop - bubbleBottom) * 0.5;
-
-      // Use cached style reference
+      // Use presentation layer for style calculations
       if (bubbleStyle) {
-        bubbleStyle.transform = `matrix(${scaleX},0,0,${scaleY},${translateX},${translateY})`;
+        bubbleStyle.transform = presentation.getOuterTransform();
       }
 
       if (contentStyle) {
-        // Avoid shifting the text content too much since it still needs to be readable
-        const contentOffsetX = offsetX * 0.5;
-        const contentOffsetY = offsetY * 0.5;
-
-        const distortionX = scaleX - 1;
-        const distortionY = scaleY - 1;
-        const scaleAvg = (scaleX + scaleY) * 0.5;
-
-        // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
-        const clipX = bubbleLeft - contentOffsetX + boundary * distortionX;
-        const clipY = bubbleTop - contentOffsetY + boundary * distortionY;
-
-        const clipWidth = Math.max(bubbleWidth - doubleBoundary * scaleX, 0);
-        const clipHeight = Math.max(bubbleHeight - doubleBoundary * scaleY, 0);
-
-        const clipRounding = Math.max(rounding - boundary, 0) * scaleAvg;
-
-        contentStyle.clipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
-        contentStyle.transform = `translate(${contentOffsetX}px,${contentOffsetY}px)`;
+        contentStyle.transform = presentation.getInnerTransform(offsetX, offsetY);
+        contentStyle.clipPath = presentation.getInnerClipPath(offsetX, offsetY);
       }
 
       if (offsetIndicatorStyle) {
@@ -252,84 +184,15 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         const lerpedTransformY = lerpedOffsetY * INDICATOR_AMPLIFICATION;
         lerpedOffsetIndicatorStyle.transform = `translate(${lerpedTransformX}px,${lerpedTransformY}px)`;
       }
-    }, [physics, bubbleOffsetWidth, bubbleOffsetHeight, boundary, doubleBoundary, rounding]);
+    }, [physics, presentation]);
 
-    // Object pools for reused shapes
-    const outerRectangle = useRef<RoundedRectangle>({
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-      radius: 0,
-    });
-    const innerRectangle = useRef<RoundedRectangle>({
-      x: 0,
-      y: 0,
-      width: 0,
-      height: 0,
-      radius: 0,
-    });
 
     useEffect(() => {
       const handleMouseMove = (currMouseX: number, currMouseY: number, prevMouseX: number, prevMouseY: number) => {
-        const {
-          top: bubbleTop,
-          left: bubbleLeft,
-          width: bubbleWidth,
-          height: bubbleHeight,
-        } = bubbleMeta.current;
+        const intersectionVec = presentation.collide(currMouseX, currMouseY, prevMouseX, prevMouseY);
 
-        const outer = outerRectangle.current;
-        const inner = innerRectangle.current;
-
-        outer.x = containerOffsetLeft + bubbleLeft;
-        outer.y = containerOffsetTop + bubbleTop;
-        outer.width = bubbleWidth;
-        outer.height = bubbleHeight;
-        outer.radius = rounding;
-
-        inner.x = outer.x + boundary;
-        inner.y = outer.y + boundary;
-        inner.width = outer.width - doubleBoundary;
-        inner.height = outer.height - doubleBoundary;
-        inner.radius = rounding - boundary;
-
-        // Reuse pre-allocated shape instead of creating new object
-        if (!shapeWithHole.current) {
-          shapeWithHole.current = new RoundedShapeWithHole(outer, inner);
-        } else {
-          // Update references instead of creating new object
-          shapeWithHole.current.outer = outer;
-          shapeWithHole.current.hole = inner;
-        }
-
-        const segmentCount = populateVectorSegmentsPrimitive(
-          segmentStartX.current,
-          segmentStartY.current,
-          segmentEndX.current,
-          segmentEndY.current,
-          MAX_SEGMENTS,
-          currMouseX,
-          currMouseY,
-          prevMouseX,
-          prevMouseY,
-          shapeWithHole.current
-        );
-
-        if (segmentCount > 0) {
-          zeroVec2(intersectionVec.current);
-
-          for (let i = 0; i < segmentCount; i++) {
-            // Convert primitive coordinates to vector manually - zero allocations
-            tempVec.current[0] = segmentStartX.current[i] - segmentEndX.current[i];
-            tempVec.current[1] = segmentStartY.current[i] - segmentEndY.current[i];
-            addVec2Mutable(intersectionVec.current, tempVec.current);
-          }
-
-          clampVecMutable(intersectionVec.current, -doubleBoundary, doubleBoundary, clampTempVec.current);
-          multiplyVecMutable(intersectionVec.current, BUBBLE_STIFFNESS);
-
-          physics.addImpulse(intersectionVec.current);
+        if (intersectionVec) {
+          physics.addImpulse(intersectionVec);
 
           if (!isUpdatePending) setIsUpdatePending(true);
         }
@@ -340,53 +203,29 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       return unsubscribe;
     }, [
       componentId,
-      boundary,
-      doubleBoundary,
       isUpdatePending,
-      containerOffsetLeft,
-      containerOffsetTop,
-      overkill,
-      rounding,
-      physics
+      physics,
+      presentation
     ]);
 
 
 
     const updateBubbleMeta = useCallback(() => {
-      const [lerpedOffsetX, lerpedOffsetY] = physics.getState().lerpedOffset;
+      const { lerpedOffset } = physics.getState();
 
-      const presentationOffsetX = overkill * lerpedOffsetX;
-      const presentationOffsetY = overkill * lerpedOffsetY;
+      presentation.updateMeta(lerpedOffset);
+    }, [physics, presentation]);
 
-      const nextTop = insetFilter(presentationOffsetY);
-      const nextRight = insetFilter(-presentationOffsetX);
-      const nextBottom = insetFilter(-presentationOffsetY);
-      const nextLeft = insetFilter(presentationOffsetX);
-
-      bubbleMeta.current.top = nextTop;
-      bubbleMeta.current.right = nextRight;
-      bubbleMeta.current.bottom = nextBottom;
-      bubbleMeta.current.left = nextLeft;
-
-      bubbleMeta.current.width = bubbleOffsetWidth - nextLeft - nextRight;
-      bubbleMeta.current.height = bubbleOffsetHeight - nextTop - nextBottom;
-
-    }, [bubbleOffsetHeight, bubbleOffsetWidth, insetFilter, overkill, physics]);
-
-    // NOTE: All ref state updates are performed in their corresponding update_ method
     const update = useCallback((delta: number) => {
       physics.addSpringForce();
-      const shouldUpdate = physics.hasActiveForces();
 
       const shouldContinue = physics.step(delta);
 
+      updateBubbleMeta();
+      updateStyles();
+
       if (!shouldContinue) {
         setIsUpdatePending(false);
-      }
-
-      if (shouldUpdate) {
-        updateBubbleMeta();
-        updateStyles();
       }
     }, [physics, updateBubbleMeta, updateStyles]);
 
@@ -397,6 +236,20 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         sluggishness,
       });
     }, [springStiffness, sluggishness, physics]);
+
+    // Update presentation configuration when props change
+    useEffect(() => {
+      presentation.updateConfiguration({
+        overkill,
+        insetFilter,
+        width: bubbleOffsetWidth,
+        height: bubbleOffsetHeight,
+        boundary,
+        rounding,
+        containerOffsetLeft,
+        containerOffsetTop,
+      });
+    }, [overkill, insetFilter, bubbleOffsetWidth, bubbleOffsetHeight, boundary, rounding, containerOffsetLeft, containerOffsetTop, presentation]);
 
     // Offset values are always undefined on first render, and shouldn't be accessed directly
     // in applySpringForce since DOM property access is so slow. This avoids essentially all
