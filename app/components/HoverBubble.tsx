@@ -1,8 +1,7 @@
 "use client";
 
-import { FC, memo, ReactNode, useCallback, useContext, useEffect, useId, useRef, useState } from "react";
+import { FC, memo, ReactNode, useCallback, useContext, useEffect, useId, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
-import { randomLcg, randomUniform } from "d3-random";
 
 import {
   populateVectorSegmentsPrimitive,
@@ -10,25 +9,20 @@ import {
   RoundedShapeWithHole,
 } from "@/app/utils/findVectorSegmentsInShape";
 import {
-  VELOCITY_ANIMATION_THRESHOLD,
   BUBBLE_STIFFNESS,
-  OFFSET_ANIMATION_THRESHOLD,
   BUBBLE_OVERKILL,
   SPRING_STIFFNESS,
   BUBBLE_BOUNDARY,
-  getSpringForceVec2Mutable,
 } from "@/app/utils/physicsConsts";
 import {
   Vec2,
-  magnitude,
   addVec2Mutable,
   multiplyVecMutable,
   clampVecMutable,
   createVec2,
-  lerpVec2Mutable,
   zeroVec2,
-  applyForcesMutable,
 } from "@/app/utils/vector";
+import { BubblePhysics } from "@/app/utils/BubblePhysics";
 import { mouseService } from "@/app/utils/mouseService";
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
@@ -39,11 +33,6 @@ import { resizeService } from "@/app/utils/resizeService";
 const DEFAULT_ROUNDING = 24;
 const DEFAULT_OFFSET_LERP_AMOUNT = 0.05;
 const INDICATOR_AMPLIFICATION = 2;
-const INITIAL_OFFSET_RANGE = 60;
-const INSET_OPTIONS = {
-  min: -INITIAL_OFFSET_RANGE,
-  max: INITIAL_OFFSET_RANGE
-};
 
 const INIT_DOM_MEASUREMENTS = {
   bubbleOffsetWidth: 0,
@@ -54,12 +43,6 @@ const INIT_DOM_MEASUREMENTS = {
 
 // TODO: name this something more descriptive...
 const asymmetricFilter = (v: number) => v < 0 ? v / 3 : v;
-
-type PhysicsState = {
-  offset: Vec2;
-  lerpedOffset: Vec2;
-  velocity: Vec2;
-}
 
 type Inset = {
   top: number;
@@ -73,24 +56,6 @@ type BubbleMeta = Inset & {
   height: number;
 }
 
-const getInitialPhysicsState = (randomize = false, seed?: number): PhysicsState => {
-  if (randomize) {
-    const { min, max } = INSET_OPTIONS;
-    const random = randomUniform.source(randomLcg(seed))(min, max);
-
-    return {
-      offset: createVec2(random(), random()),
-      lerpedOffset: createVec2(random(), random()),
-      velocity: createVec2(),
-    }
-  } else {
-    return {
-      offset: createVec2(),
-      lerpedOffset: createVec2(),
-      velocity: createVec2(),
-    }
-  }
-};
 
 type HoverBubbleProps = {
   children?: ReactNode;
@@ -143,9 +108,16 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const offsetIndicatorElement = useRef<HTMLDivElement>(null);
     const lerpedOffsetIndicatorElement = useRef<HTMLDivElement>(null);
 
-    const physicsState = useRef<PhysicsState>(getInitialPhysicsState(moveOnMount, seed));
+    const physics = useMemo<BubblePhysics>(() => {
+      const bubblePhysics = new BubblePhysics({
+        springStiffness: _stiffness,
+        sluggishness,
+      })
 
-    const currentImpulse = useRef<Vec2>([0, 0]);
+      bubblePhysics.reset(moveOnMount, seed);
+
+      return bubblePhysics;
+    }, [_stiffness, moveOnMount, seed, sluggishness]);
 
     // Pre-allocated primitive coordinate arrays for zero-allocation segments
     const MAX_SEGMENTS = 20;
@@ -226,7 +198,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
           lerpedOffsetX,
           lerpedOffsetY
         ],
-      } = physicsState.current;
+      } = physics.getState();
 
       const {
         top: bubbleTop,
@@ -280,7 +252,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         const lerpedTransformY = lerpedOffsetY * INDICATOR_AMPLIFICATION;
         lerpedOffsetIndicatorStyle.transform = `translate(${lerpedTransformX}px,${lerpedTransformY}px)`;
       }
-    }, [bubbleOffsetWidth, bubbleOffsetHeight, doubleBoundary, rounding, boundary]);
+    }, [physics, bubbleOffsetWidth, bubbleOffsetHeight, boundary, doubleBoundary, rounding]);
 
     // Object pools for reused shapes
     const outerRectangle = useRef<RoundedRectangle>({
@@ -357,7 +329,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
           clampVecMutable(intersectionVec.current, -doubleBoundary, doubleBoundary, clampTempVec.current);
           multiplyVecMutable(intersectionVec.current, BUBBLE_STIFFNESS);
 
-          addVec2Mutable(currentImpulse.current, intersectionVec.current);
+          physics.addImpulse(intersectionVec.current);
 
           if (!isUpdatePending) setIsUpdatePending(true);
         }
@@ -374,49 +346,14 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       containerOffsetLeft,
       containerOffsetTop,
       overkill,
-      rounding
+      rounding,
+      physics
     ]);
 
-    const populateSpringForce = useCallback(() => {
-      getSpringForceVec2Mutable(
-        tempVec.current,
-        physicsState.current.offset,
-        springStiffness,
-      );
 
-      addVec2Mutable(currentImpulse.current, tempVec.current);
-    }, [springStiffness]);
-
-    const consumeForces = useCallback((delta: number) => {
-      applyForcesMutable(
-        physicsState.current.velocity,
-        currentImpulse.current,
-        delta,
-      );
-
-      zeroVec2(currentImpulse.current);
-
-      // jump to still at low values or else this will basically never end
-      const shouldStop = (
-        Math.abs(magnitude(physicsState.current.velocity)) < VELOCITY_ANIMATION_THRESHOLD
-        && physicsState.current.offset.every(component => Math.abs(component) < OFFSET_ANIMATION_THRESHOLD)
-      );
-
-      if (shouldStop) {
-        setIsUpdatePending(false);
-        physicsState.current = getInitialPhysicsState();
-      } else {
-        addVec2Mutable(physicsState.current.offset, physicsState.current.velocity);
-        lerpVec2Mutable(
-          physicsState.current.lerpedOffset,
-          physicsState.current.offset,
-          sluggishness
-        );
-      }
-    }, [sluggishness]);
 
     const updateBubbleMeta = useCallback(() => {
-      const [lerpedOffsetX, lerpedOffsetY] = physicsState.current.lerpedOffset;
+      const [lerpedOffsetX, lerpedOffsetY] = physics.getState().lerpedOffset;
 
       const presentationOffsetX = overkill * lerpedOffsetX;
       const presentationOffsetY = overkill * lerpedOffsetY;
@@ -434,22 +371,32 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       bubbleMeta.current.width = bubbleOffsetWidth - nextLeft - nextRight;
       bubbleMeta.current.height = bubbleOffsetHeight - nextTop - nextBottom;
 
-    }, [bubbleOffsetHeight, bubbleOffsetWidth, insetFilter, overkill]);
+    }, [bubbleOffsetHeight, bubbleOffsetWidth, insetFilter, overkill, physics]);
 
     // NOTE: All ref state updates are performed in their corresponding update_ method
     const update = useCallback((delta: number) => {
-      populateSpringForce();
-      const impulse = currentImpulse.current;
+      physics.addSpringForce();
+      const shouldUpdate = physics.hasActiveForces();
 
-      const shouldUpdate = !(impulse[0] === 0 && impulse[1] === 0);
+      const shouldContinue = physics.step(delta);
 
-      consumeForces(delta);
+      if (!shouldContinue) {
+        setIsUpdatePending(false);
+      }
 
       if (shouldUpdate) {
         updateBubbleMeta();
         updateStyles();
       }
-    }, [consumeForces, populateSpringForce, updateBubbleMeta, updateStyles]);
+    }, [physics, updateBubbleMeta, updateStyles]);
+
+    // Update physics configuration when props change
+    useEffect(() => {
+      physics.updateConfiguration({
+        springStiffness,
+        sluggishness,
+      });
+    }, [springStiffness, sluggishness, physics]);
 
     // Offset values are always undefined on first render, and shouldn't be accessed directly
     // in applySpringForce since DOM property access is so slow. This avoids essentially all
