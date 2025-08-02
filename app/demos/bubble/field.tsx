@@ -52,12 +52,16 @@ type PackedBubbleProps = {
   packingStrategy: PackingStrategy;
   randomStrategy: RandomStrategy;
   maxWidth: number;
+  minRadius: number;
+  ratio: number;
 }
 const PackedBubbles: FC<PackedBubbleProps> = ({
   seed,
   packingStrategy,
   randomStrategy,
-  maxWidth
+  minRadius,
+  ratio,
+  maxWidth,
 }) => {
   const [packedCircles, setPackedCircles] = useState<Circle[]>();
 
@@ -74,13 +78,13 @@ const PackedBubbles: FC<PackedBubbleProps> = ({
       (new CirclePacker({
         width: containerWidth,
         height: containerWidth,
-        minRadius: 16,
-        maxRadius: 128
+        minRadius,
+        maxRadius: Math.round(minRadius * ratio),
       }, packingStrategy, randomStrategy, undefined, undefined, seed))
         .pack()
         .then(circles => setPackedCircles(circles))
     }
-  }, [containerWidth, packingStrategy, randomStrategy, seed]);
+  }, [containerWidth, minRadius, packingStrategy, randomStrategy, ratio, seed]);
 
   const diagonalLength = magnitude([containerWidth, containerWidth]);
 
@@ -88,7 +92,7 @@ const PackedBubbles: FC<PackedBubbleProps> = ({
     <BatchedAnimationContextProvider>
       <div
         ref={container}
-        className="relative aspect-square w-screen"
+        className="relative aspect-square w-screen bg-transparent"
         style={{ maxWidth }}
       >
         {packedCircles?.map((circle, index) => {
@@ -106,7 +110,7 @@ const PackedBubbles: FC<PackedBubbleProps> = ({
               }}
             >
               <HoverBubble
-                className="absolute -top-1/2 -left-1/2 h-full w-full"
+                className="h-full w-full -translate-1/2"
                 rounding={9999}
                 boundary={4}
                 overkill={2}
@@ -126,6 +130,8 @@ function BubbleField() {
   const [seed, setSeed] = useQueryState<number>('seed');
   const [packingStrategy, setPackingStrategy] = useQueryState<PackingStrategy>('packingStrategy');
   const [randomStrategy, setRandomStrategy] = useQueryState<RandomStrategy>('randomStrategy');
+  const [minRadius] = useQueryState<number>('minRadius');
+  const [ratio] = useQueryState<number>('ratio');
 
   if (seed) {
     return (
@@ -134,6 +140,8 @@ function BubbleField() {
           seed={seed}
           packingStrategy={packingStrategy}
           randomStrategy={randomStrategy}
+          minRadius={minRadius}
+          ratio={ratio}
           maxWidth={512}
         />
         <div className="flex flex-col gap-4 mx-8 min-[550px]:mx-0">
@@ -177,6 +185,8 @@ export default function Demo() {
     seed: getRandomSeed,
     packingStrategy: 'pop',
     randomStrategy: DEFAULT_RANDOM_STRATEGY,
+    minRadius: 16,
+    ratio: 8,
   }), []);
 
   return (

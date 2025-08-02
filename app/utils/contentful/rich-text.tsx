@@ -162,7 +162,7 @@ export const getBlogPostOptions = (links: Partial<BlogPostBodyLinks>): Options =
               );
             } else if (NEXT_KNOWN_IMAGE_EXTENSIONS.some(ext => asset.url?.endsWith(ext))) {
               return (
-                <Expandable className="my-8">
+                <Expandable className="my-8 flex justify-center">
                   <Image
                     src={asset.url}
                     alt={asset.description!}

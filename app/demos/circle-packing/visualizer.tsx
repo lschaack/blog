@@ -21,18 +21,13 @@ import { QueryParamProvider } from '@/app/hooks/useQueryState';
 import { ExclusiveOptions, Option } from '@/app/components/ExclusiveOptions';
 import { Toggle } from '@/app/components/Toggle';
 
-const DEFAULT_CIRCLE_PACKER_AREA: PackingArea = {
-  width: 512,
-  height: 512,
-  minRadius: 16,
-  maxRadius: 128,
-}
+const WIDTH = 512;
+const HEIGHT = 512;
 
 // NOTE: These are flipped (min > max) b/c they represent a delay passed to setTimeout
 const MAX_SPEED_MS = 0;
-const MIN_SPEED_MS = 100;
-const _DEFAULT_SPEED_VALUE = 20;
-const DEFAULT_SPEED_MS = MIN_SPEED_MS - _DEFAULT_SPEED_VALUE;
+const MIN_SPEED_MS = 1000;
+const DEFAULT_SPEED_MS = 900;
 const MIN_RATIO = 2;
 const MAX_RATIO = 16;
 
@@ -100,12 +95,21 @@ const drawCircles = (state: CirclePacker['state'], canvas: HTMLCanvasElement, pa
   });
 
   // Draw circle count
-  ctx.fillStyle = '#333';
-  ctx.font = '16px monospace';
-  ctx.fillText(`Circles: ${circles.length}`, 10, 25);
-  if (currentCircle) {
-    ctx.fillText(`Sectors: ${unoccupiedSectors.length}`, 10, 45);
-  }
+  const firstLine = `Circles: ${circles.length}`;
+  const secondLine = `Sectors: ${unoccupiedSectors.length}`;
+  const firstLineMeta = ctx.measureText(firstLine);
+  const lineHeight = firstLineMeta.fontBoundingBoxAscent + firstLineMeta.fontBoundingBoxDescent;
+
+  ctx.lineWidth = 6;
+  ctx.font = 'bold 36px monospace';
+  ctx.strokeStyle = '#333';
+  ctx.fillStyle = '#fff';
+
+  ctx.strokeText(firstLine, 10, lineHeight);
+  ctx.fillText(firstLine, 10, lineHeight);
+
+  ctx.strokeText(secondLine, 10, lineHeight * 2);
+  ctx.fillText(secondLine, 10, lineHeight * 2);
 };
 
 type PackingAnimationProps = {
@@ -113,14 +117,24 @@ type PackingAnimationProps = {
   seed: number;
   packingStrategy: PackingStrategy;
   randomStrategy: RandomStrategy;
+  scale: number;
 }
 function PackingAnimation({
-  packingArea,
+  packingArea: _packingArea,
   seed,
   packingStrategy,
   randomStrategy,
+  scale,
 }: PackingAnimationProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const packingArea = useMemo(
+    () => Object.fromEntries(
+      Object
+        .entries(_packingArea)
+        .map(([key, value]) => [key, value * scale])
+    ) as unknown as PackingArea,
+    [_packingArea, scale]
+  );
 
   const [packer, setPacker] = useState<CirclePacker>();
   const [error, setError] = useState<string | undefined>();
@@ -190,6 +204,12 @@ function PackingAnimation({
         width={packingArea.width}
         height={packingArea.height}
         className="block rounded-xl border-2 border-deep-500"
+        // use dpi-scaled area for canvas coords but regular area for element size,
+        // effectively scaling demo resolution with the user's screen
+        style={{
+          maxWidth: _packingArea.width,
+          maxHeight: _packingArea.height,
+        }}
       />
 
       {error && (
@@ -210,12 +230,15 @@ function PackingAnimation({
         />
       </div>
 
+      {/* FIXME: The easing is great, but prevents reaching the max value, skipping the animation */}
       <InputRange
         label="Speed"
         id="speed"
+        easing="easeOut"
         min={MAX_SPEED_MS}
         max={MIN_SPEED_MS}
         step={1}
+        precision={0}
         onChange={value => speed.current = value}
         defaultValue={DEFAULT_SPEED_MS}
       />
@@ -224,37 +247,50 @@ function PackingAnimation({
 }
 
 function PackingAnimationConfigurator() {
-  const [area, setArea] = useState(DEFAULT_CIRCLE_PACKER_AREA);
-
   const [seed, setSeed] = useQueryState<number>('seed');
   const [packingStrategy, setPackingStrategy] = useQueryState<PackingStrategy>('packingStrategy');
   const [randomStrategy, setRandomStrategy] = useQueryState<RandomStrategy>('randomStrategy');
+  const [minRadius, setMinRadius] = useQueryState<number>('minRadius');
+  const [ratio, setRatio] = useQueryState<number>('ratio');
+
+  const [dpi, setDpi] = useState<number>();
+
+  useEffect(() => setDpi(window.devicePixelRatio), [])
+
+  const maxRadius = minRadius * ratio;
+  const area = useMemo(() => ({
+    width: WIDTH,
+    height: HEIGHT,
+    minRadius,
+    maxRadius,
+  }), [maxRadius, minRadius]);
 
   return (
-    <div className="flex flex-col gap-4 p-4 max-w-full" >
-      <PackingAnimation
-        packingArea={area}
-        seed={seed}
-        packingStrategy={packingStrategy}
-        randomStrategy={randomStrategy}
-      />
+    <div className="flex flex-col gap-4 max-w-full" >
+      {dpi !== undefined ? (
+        <PackingAnimation
+          packingArea={area}
+          seed={seed}
+          packingStrategy={packingStrategy}
+          randomStrategy={randomStrategy}
+          scale={dpi}
+        />
+      ) : (
+        <div style={{ width: area.width, height: area.height }} />
+      )}
 
       <div className="flex flex-col gap-4">
         <ExclusiveOptions
           name="Min radius"
-          onChange={e => setArea(prev => {
+          onChange={e => {
             const nextMinRadius = Number(e.target.value);
-            const currRatio = Math.round(prev.maxRadius / nextMinRadius);
-            const nextRatio = clamp(currRatio, MIN_RATIO, MAX_RATIO);
-            const nextMaxRadius = Math.round(nextMinRadius * nextRatio);
+            const rawNextRatio = Math.round(maxRadius / nextMinRadius);
+            const nextRatio = clamp(rawNextRatio, MIN_RATIO, MAX_RATIO);
 
-            return {
-              ...prev,
-              minRadius: nextMinRadius,
-              maxRadius: nextMaxRadius,
-            };
-          })}
-          value={area.minRadius}
+            setMinRadius(nextMinRadius);
+            setRatio(nextRatio);
+          }}
+          value={minRadius}
           className="flex-row justify-between items-center"
         >
           <Option value={4} label="4" />
@@ -265,7 +301,7 @@ function PackingAnimationConfigurator() {
 
         <ExclusiveOptions
           name="Ratio"
-          onChange={e => setArea(prev => ({ ...prev, maxRadius: Math.round(prev.minRadius * Number(e.target.value)) }))}
+          onChange={e => setRatio(Number(e.target.value))}
           value={Math.round(area.maxRadius / area.minRadius)}
           className="flex-row justify-between items-center"
         >
@@ -274,7 +310,6 @@ function PackingAnimationConfigurator() {
           <Option value={8} label="8" />
           <Option value={MAX_RATIO} label={MAX_RATIO.toString()} />
         </ExclusiveOptions>
-
 
         <ExclusiveOptions
           name="Random strategy"
@@ -315,6 +350,8 @@ export default function Demo() {
     seed: getRandomSeed,
     packingStrategy: 'pop',
     randomStrategy: DEFAULT_RANDOM_STRATEGY,
+    minRadius: 16,
+    ratio: 8,
   }), []);
 
   return (

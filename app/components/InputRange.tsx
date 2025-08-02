@@ -19,6 +19,7 @@ type InputRangeProps = {
   className?: string;
   trackClassName?: string;
   easing?: EasingStrategy;
+  precision?: number;
 }
 
 export const InputRange: FC<InputRangeProps> = ({
@@ -32,6 +33,7 @@ export const InputRange: FC<InputRangeProps> = ({
   onChange,
   className,
   easing,
+  precision,
 }) => {
   const [_value, _setValue] = useState(defaultValue ?? min);
   const value = managedValue ?? _value;
@@ -93,7 +95,7 @@ export const InputRange: FC<InputRangeProps> = ({
       id={id}
       label={label}
       pad={pad}
-      value={roundToPrecision(value, 4).toString()}
+      value={roundToPrecision(value, precision).toString()}
       className={className}
     >
       {/* Custom track */}
