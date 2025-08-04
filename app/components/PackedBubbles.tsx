@@ -1,7 +1,7 @@
 "use client";
 
 import { FC, useEffect, useRef, useState } from "react";
-import { Circle } from "@timohausmann/quadtree-ts";
+import { Circle, Rectangle } from "@timohausmann/quadtree-ts";
 import clamp from "lodash/clamp";
 
 import { CirclePacker, PackingStrategy, RandomStrategy } from "@/app/utils/circlePacker";
@@ -77,7 +77,7 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
         maxRadius: Math.round(minRadius * ratio),
       }, packingStrategy, randomStrategy, undefined, undefined, seed))
         .pack()
-        .then(circles => setPackedCircles(circles))
+        .then(quadtree => setPackedCircles(quadtree.retrieve(new Rectangle(quadtree.bounds))))
     }
   }, [containerWidth, minRadius, packingStrategy, randomStrategy, ratio, seed]);
 

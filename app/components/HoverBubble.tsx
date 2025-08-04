@@ -217,14 +217,12 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     }, [physics, presentation]);
 
     const update = useCallback((delta: number) => {
-      physics.addSpringForce();
-
-      const shouldContinue = physics.step(delta);
+      physics.step(delta);
 
       updateBubbleMeta();
       updateStyles();
 
-      if (!shouldContinue) {
+      if (physics.isStable()) {
         setIsUpdatePending(false);
       }
     }, [physics, updateBubbleMeta, updateStyles]);

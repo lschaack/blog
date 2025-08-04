@@ -43,6 +43,7 @@ export class BubblePhysics {
 
   private springStiffness: number;
   private sluggishness: number;
+  private isStableState: boolean;
 
   // Pre-allocated temporary vector for calculations
   private tempVec: Vec2;
@@ -50,7 +51,7 @@ export class BubblePhysics {
   constructor(options: BubblePhysicsOptions = {}) {
     this.springStiffness = options.springStiffness ?? SPRING_STIFFNESS;
     this.sluggishness = options.sluggishness ?? 0.05;
-
+    
     // Initialize vectors
     this.offset = createVec2();
     this.lerpedOffset = createVec2();
@@ -58,14 +59,19 @@ export class BubblePhysics {
     this.currentImpulse = createVec2();
     this.tempVec = createVec2();
 
-    this.reset(options.randomize ?? false, options.seed);
+    const randomize = options.randomize ?? false;
+    // Start unstable if randomize is true (non-zero initial offset), stable otherwise
+    this.isStableState = !randomize;
+    
+    this.reset(randomize, options.seed);
   }
 
   addImpulse(impulse: Vec2): void {
     addVec2Mutable(this.currentImpulse, impulse);
+    this.isStableState = false; // Mark as unstable when impulse is added
   }
 
-  addSpringForce(): void {
+  private addSpringForce(): void {
     getSpringForceVec2Mutable(
       this.tempVec,
       this.offset,
@@ -75,7 +81,10 @@ export class BubblePhysics {
     addVec2Mutable(this.currentImpulse, this.tempVec);
   }
 
-  step(delta: number): boolean {
+  step(delta: number): void {
+    // Add spring force to restore equilibrium
+    this.addSpringForce();
+    
     applyForcesMutable(
       this.velocity,
       this.currentImpulse,
@@ -92,7 +101,7 @@ export class BubblePhysics {
 
     if (shouldStop) {
       this.reset();
-      return false;
+      this.isStableState = true;
     } else {
       addVec2Mutable(this.offset, this.velocity);
       lerpVec2Mutable(
@@ -100,7 +109,7 @@ export class BubblePhysics {
         this.offset,
         this.sluggishness
       );
-      return true;
+      this.isStableState = false;
     }
   }
 
@@ -142,5 +151,9 @@ export class BubblePhysics {
   hasActiveForces(): boolean {
     const impulse = this.currentImpulse;
     return !(impulse[0] === 0 && impulse[1] === 0);
+  }
+  
+  isStable(): boolean {
+    return this.isStableState;
   }
 }

@@ -135,7 +135,7 @@ export class CirclePacker {
     this.cancelled = true;
   }
 
-  async pack(): Promise<Circle[]> {
+  async pack(): Promise<Quadtree<Circle<void>>> {
     // Create initial circle in center
     const centerX = this.area.width / 2;
     const centerY = this.area.height / 2;
@@ -203,7 +203,7 @@ export class CirclePacker {
 
     this.onFinish?.(this.state);
 
-    return this.placedCircles;
+    return this.quadtree;
   }
 
   private findNearbyCircles(circle: Circle): Circle[] {
