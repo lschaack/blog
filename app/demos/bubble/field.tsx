@@ -12,7 +12,7 @@ import { PackedBubbles } from "@/app/components/PackedBubbles";
 
 const getRandomSeed = randomInt(999_999_999);
 
-function BubbleField() {
+function HoverBubbleField() {
   const [seed, setSeed] = useQueryState<number>('seed');
   const [packingStrategy, setPackingStrategy] = useQueryState<PackingStrategy>('packingStrategy');
   const [randomStrategy, setRandomStrategy] = useQueryState<RandomStrategy>('randomStrategy');
@@ -77,7 +77,7 @@ export default function Demo() {
 
   return (
     <QueryParamProvider config={queryParamOptions}>
-      <BubbleField />
+      <HoverBubbleField />
     </QueryParamProvider>
   )
 }
