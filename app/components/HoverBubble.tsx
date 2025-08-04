@@ -9,7 +9,7 @@ import {
   BUBBLE_BOUNDARY,
 } from "@/app/utils/physicsConsts";
 import { BubblePhysics } from "@/app/utils/bubble/BubblePhysics";
-import { BubblePresentation } from "@/app/utils/bubble/BubblePresentation";
+import { DOMBubblePresentation } from "@/app/utils/bubble/DOMBubblePresentation";
 import { Bubble } from "@/app/utils/bubble/Bubble";
 import { mouseService } from "@/app/utils/mouseService";
 import { DebugContext } from "@/app/components/DebugContext";
@@ -131,8 +131,8 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       seed,
     }), [_stiffness, moveOnMount, seed, sluggishness]);
 
-    const presentation = useMemo<BubblePresentation>(() => {
-      return new BubblePresentation({
+    const presentation = useMemo<DOMBubblePresentation>(() => {
+      return new DOMBubblePresentation({
         overkill: _overkill,
         insetFilter,
         width: 0, // Will be updated when DOM measurements are available

@@ -41,11 +41,6 @@ export class BubblePresentation {
   private innerRectangle: RoundedRectangle;
   private shapeWithHole: RoundedShapeWithHole | null;
   
-  // Cached style calculations (computed lazily)
-  private cachedOuterTransform: string | null = null;
-  private cachedInnerTransform: string | null = null;
-  private cachedInnerClipPath: string | null = null;
-  private stylesCacheDirty: boolean = true;
   
   // Collision detection infrastructure
   private readonly MAX_SEGMENTS = 20;
@@ -135,8 +130,6 @@ export class BubblePresentation {
     // Update rectangles for mouse interaction
     this.updateRectangles();
     
-    // Invalidate style cache since metadata changed
-    this.stylesCacheDirty = true;
   }
   
   private updateRectangles(): void {
@@ -193,73 +186,28 @@ export class BubblePresentation {
     // Recalculate metadata and rectangles with the last-used offset
     this.updateMeta(this.lastOffset);
     
-    // Style cache will be invalidated by updateMeta, but ensure it's marked dirty
-    this.stylesCacheDirty = true;
   }
   
   
-  getOuterTransform(): string {
-    if (this.stylesCacheDirty || this.cachedOuterTransform === null) {
-      this.calculateOuterTransform();
-    }
-    return this.cachedOuterTransform!;
+  // Protected getters for subclass access
+  protected getMeta(): Readonly<BubbleMeta> {
+    return this.meta;
   }
-  
-  getInnerTransform(offsetX: number, offsetY: number): string {
-    if (this.stylesCacheDirty || this.cachedInnerTransform === null) {
-      this.calculateInnerStyles(offsetX, offsetY);
-    }
-    return this.cachedInnerTransform!;
+
+  protected getWidth(): number {
+    return this.width;
   }
-  
-  getInnerClipPath(offsetX: number, offsetY: number): string {
-    if (this.stylesCacheDirty || this.cachedInnerClipPath === null) {
-      this.calculateInnerStyles(offsetX, offsetY);
-    }
-    return this.cachedInnerClipPath!;
+
+  protected getHeight(): number {
+    return this.height;
   }
-  
-  private calculateOuterTransform(): void {
-    const scaleX = this.meta.width / this.width;
-    const scaleY = this.meta.height / this.height;
-    const translateX = (this.meta.left - this.meta.right) * 0.5;
-    const translateY = (this.meta.top - this.meta.bottom) * 0.5;
-    
-    this.cachedOuterTransform = `matrix(${scaleX},0,0,${scaleY},${translateX},${translateY})`;
+
+  protected getBoundary(): number {
+    return this.boundary;
   }
-  
-  private calculateInnerStyles(offsetX: number, offsetY: number): void {
-    
-    // Calculate scales first
-    const scaleX = this.meta.width / this.width;
-    const scaleY = this.meta.height / this.height;
-    
-    // Avoid shifting the text content too much since it still needs to be readable
-    const contentOffsetX = offsetX * 0.5;
-    const contentOffsetY = offsetY * 0.5;
-    
-    // Calculate transform
-    this.cachedInnerTransform = `translate(${contentOffsetX}px,${contentOffsetY}px)`;
-    
-    // Calculate clip path
-    const distortionX = scaleX - 1;
-    const distortionY = scaleY - 1;
-    const scaleAvg = (scaleX + scaleY) * 0.5;
-    
-    // Content needs to flow normally, but be clipped by the bubble which is necessarily a sibling
-    const clipX = this.meta.left - contentOffsetX + this.boundary * distortionX;
-    const clipY = this.meta.top - contentOffsetY + this.boundary * distortionY;
-    
-    const doubleBoundary = 2 * this.boundary;
-    const clipWidth = Math.max(this.meta.width - doubleBoundary * scaleX, 0);
-    const clipHeight = Math.max(this.meta.height - doubleBoundary * scaleY, 0);
-    
-    const clipRounding = Math.max(this.rounding - this.boundary, 0) * scaleAvg;
-    
-    this.cachedInnerClipPath = `xywh(${clipX}px ${clipY}px ${clipWidth}px ${clipHeight}px round ${clipRounding}px)`;
-    
-    // Mark cache as clean after calculating inner styles
-    this.stylesCacheDirty = false;
+
+  protected getRounding(): number {
+    return this.rounding;
   }
   
   

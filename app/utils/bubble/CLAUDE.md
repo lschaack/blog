@@ -4,16 +4,24 @@ This directory contains the core bubble animation system used by the HoverBubble
 
 ## Architecture Overview
 
-The bubble system consists of three main classes that work together:
+The bubble system consists of four main classes that work together:
 
 ```
 ┌─────────────────┐    ┌──────────────────────┐
 │  BubblePhysics  │    │ BubblePresentation   │
 │                 │    │                      │
 │ • Physics State │    │ • Visual Transform   │
-│ • Force System  │    │ • Style Calculation  │
-│ • Stability     │    │ • Collision Detection│
+│ • Force System  │    │ • Collision Detection│
+│ • Stability     │    │ • Abstract Geometry  │
 └─────────────────┘    └──────────────────────┘
+         │                        │
+         │              ┌─────────────────────┐
+         │              │DOMBubblePresentation│
+         │              │                     │
+         │              │ • CSS Transform     │
+         │              │ • Clip Path         │
+         │              │ • Style Caching     │
+         │              └─────────────────────┘
          │                        │
          └────────┬───────────────┘
                   │
@@ -38,7 +46,8 @@ The bubble system consists of three main classes that work together:
 
 **Design Philosophy**: The system is designed with clear separation of concerns:
 - **BubblePhysics**: Pure physics simulation
-- **BubblePresentation**: DOM-agnostic visual calculations using abstract position/dimension properties
+- **BubblePresentation**: Abstract visual calculations and collision detection (DOM-agnostic)
+- **DOMBubblePresentation**: DOM-specific CSS style generation with caching
 - **Bubble**: Coordinates communication between physics and presentation
 - **HoverBubble**: Handles DOM-specific aspects and UI integration
 
@@ -125,14 +134,50 @@ type BubblePresentationOptions = {
 }
 ```
 
+## DOMBubblePresentation Class
+
+**Location**: `app/utils/bubble/DOMBubblePresentation.ts`
+
+### Responsibilities
+- **CSS Style Generation**: Creates CSS transform and clip-path strings for DOM elements
+- **Style Caching**: Implements lazy computation and caching of CSS styles for performance
+- **DOM Integration**: Bridges abstract bubble calculations to concrete DOM styling
+
+### Key Methods
+- `getOuterTransform(): string` - CSS transform for bubble element
+- `getInnerTransform(offsetX, offsetY): string` - CSS transform for content element
+- `getInnerClipPath(offsetX, offsetY): string` - CSS clip path for content element
+
+### Key Features
+- **Extends BubblePresentation**: Inherits collision detection and geometric calculations
+- **Lazy Style Calculation**: CSS strings computed only when requested and cached until invalidated
+- **Automatic Cache Invalidation**: Cache cleared when bubble metadata or configuration changes
+- **DOM-Specific Logic**: Handles CSS matrix transforms, clip paths, and content positioning
+
+### Style Caching Strategy
+```typescript
+// Styles are cached until bubble metadata changes
+const transform = domPresentation.getOuterTransform(); // Calculated once
+const transform2 = domPresentation.getOuterTransform(); // Returns cached value
+
+// Cache invalidated when bubble updates
+domPresentation.updateMeta(newOffset);
+const transform3 = domPresentation.getOuterTransform(); // Recalculated
+```
+
+### Integration with Base Class
+- Inherits geometric calculations and collision detection from BubblePresentation
+- Accesses parent properties via protected getters (`getMeta()`, `getWidth()`, etc.)
+- Automatically invalidates style cache when parent methods are called
+
 ## Integration with HoverBubble
 
 The HoverBubble component now uses the Bubble class for simplified orchestration:
 
-1. **Instance Creation**: Creates separate BubblePhysics and BubblePresentation instances, then passes them to Bubble
+1. **Instance Creation**: Creates separate BubblePhysics and DOMBubblePresentation instances, then passes them to Bubble
 2. **Unified Updates**: Calls `bubble.step(delta)` which handles both physics and presentation
 3. **Collision Handling**: Uses `bubble.collide()` which handles detection and impulse application
-4. **Style Application**: Accesses presentation instance directly for DOM updates
+4. **Style Application**: Accesses DOMBubblePresentation instance directly for CSS style generation
 5. **Animation Control**: Uses `bubble.isStable()` to start/stop animation
 
 ### Simplified Update Cycle
@@ -180,7 +225,7 @@ const physics = new BubblePhysics({
   sluggishness: 0.05
 });
 
-const presentation = new BubblePresentation({
+const presentation = new DOMBubblePresentation({
   overkill: 2.5,
   boundary: 4,
   rounding: 24,
@@ -199,7 +244,7 @@ const bubble = new Bubble(physics, presentation);
 // In animation frame callback
 bubble.step(deltaTime);
 
-// Apply styles using direct presentation access
+// Apply styles using DOMBubblePresentation methods
 element.style.transform = presentation.getOuterTransform();
 content.style.clipPath = presentation.getInnerClipPath(offsetX, offsetY);
 ```
