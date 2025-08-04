@@ -8,8 +8,8 @@ import {
   SPRING_STIFFNESS,
   BUBBLE_BOUNDARY,
 } from "@/app/utils/physicsConsts";
-import { BubblePhysics } from "@/app/utils/BubblePhysics";
-import { BubblePresentation } from "@/app/utils/BubblePresentation";
+import { BubblePhysics } from "@/app/utils/bubble/BubblePhysics";
+import { BubblePresentation } from "@/app/utils/bubble/BubblePresentation";
 import { mouseService } from "@/app/utils/mouseService";
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
@@ -46,7 +46,6 @@ type HoverBubbleProps = {
   backgroundClassname?: string;
   backgroundColor?: string;
   insetFilter?: (direction: number) => number;
-  // TODO: This property is pretty hacked together for the demos
   showIndicators?: boolean;
 }
 export const HoverBubble: FC<HoverBubbleProps> = memo(
@@ -82,30 +81,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     const offsetIndicatorElement = useRef<HTMLDivElement>(null);
     const lerpedOffsetIndicatorElement = useRef<HTMLDivElement>(null);
 
-    const physics = useMemo<BubblePhysics>(() => new BubblePhysics({
-      springStiffness: _stiffness,
-      sluggishness,
-      randomize: moveOnMount,
-      seed,
-    }), [_stiffness, moveOnMount, seed, sluggishness]);
-
-    const presentation = useMemo<BubblePresentation>(() => {
-      return new BubblePresentation({
-        overkill: _overkill,
-        insetFilter,
-        width: 0, // Will be updated when DOM measurements are available
-        height: 0,
-        boundary: _boundary,
-        rounding,
-        containerOffsetLeft: 0,
-        containerOffsetTop: 0,
-      });
-    }, [_overkill, insetFilter, _boundary, rounding]);
-
-
-
-
-
+    /********** DOM measurement **********/
     const [{
       bubbleOffsetWidth,
       bubbleOffsetHeight,
@@ -146,6 +122,72 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       }
     }, [updateDomMeasurements]);
 
+    /********** Bubble model **********/
+    const physics = useMemo<BubblePhysics>(() => new BubblePhysics({
+      springStiffness: _stiffness,
+      sluggishness,
+      randomize: moveOnMount,
+      seed,
+    }), [_stiffness, moveOnMount, seed, sluggishness]);
+
+    const presentation = useMemo<BubblePresentation>(() => {
+      return new BubblePresentation({
+        overkill: _overkill,
+        insetFilter,
+        width: 0, // Will be updated when DOM measurements are available
+        height: 0,
+        boundary: _boundary,
+        rounding,
+        containerOffsetLeft: 0,
+        containerOffsetTop: 0,
+      });
+    }, [_overkill, insetFilter, _boundary, rounding]);
+
+    // Update physics configuration when props change
+    useEffect(() => {
+      physics.updateConfiguration({
+        springStiffness,
+        sluggishness,
+      });
+    }, [springStiffness, sluggishness, physics]);
+
+    // Update presentation configuration when props change
+    useEffect(() => {
+      presentation.updateConfiguration({
+        overkill,
+        insetFilter,
+        width: bubbleOffsetWidth,
+        height: bubbleOffsetHeight,
+        boundary,
+        rounding,
+        containerOffsetLeft,
+        containerOffsetTop,
+      });
+    }, [overkill, insetFilter, bubbleOffsetWidth, bubbleOffsetHeight, boundary, rounding, containerOffsetLeft, containerOffsetTop, presentation]);
+
+    /********** Interaction **********/
+    useEffect(() => {
+      const handleMouseMove = (currMouseX: number, currMouseY: number, prevMouseX: number, prevMouseY: number) => {
+        const intersectionVec = presentation.collide(currMouseX, currMouseY, prevMouseX, prevMouseY);
+
+        if (intersectionVec) {
+          physics.addImpulse(intersectionVec);
+
+          if (!isUpdatePending) setIsUpdatePending(true);
+        }
+      };
+
+      const unsubscribe = mouseService.subscribe(componentId, handleMouseMove);
+
+      return unsubscribe;
+    }, [
+      componentId,
+      isUpdatePending,
+      physics,
+      presentation
+    ]);
+
+    /********** Updating physics -> presentation -> style **********/
     const updateStyles = useCallback(() => {
       const bubbleStyle = bubbleElement.current?.style;
       const contentStyle = contentElement.current?.style;
@@ -186,30 +228,6 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       }
     }, [physics, presentation]);
 
-
-    useEffect(() => {
-      const handleMouseMove = (currMouseX: number, currMouseY: number, prevMouseX: number, prevMouseY: number) => {
-        const intersectionVec = presentation.collide(currMouseX, currMouseY, prevMouseX, prevMouseY);
-
-        if (intersectionVec) {
-          physics.addImpulse(intersectionVec);
-
-          if (!isUpdatePending) setIsUpdatePending(true);
-        }
-      };
-
-      const unsubscribe = mouseService.subscribe(componentId, handleMouseMove);
-
-      return unsubscribe;
-    }, [
-      componentId,
-      isUpdatePending,
-      physics,
-      presentation
-    ]);
-
-
-
     const updateBubbleMeta = useCallback(() => {
       const { lerpedOffset } = physics.getState();
 
@@ -226,28 +244,6 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         setIsUpdatePending(false);
       }
     }, [physics, updateBubbleMeta, updateStyles]);
-
-    // Update physics configuration when props change
-    useEffect(() => {
-      physics.updateConfiguration({
-        springStiffness,
-        sluggishness,
-      });
-    }, [springStiffness, sluggishness, physics]);
-
-    // Update presentation configuration when props change
-    useEffect(() => {
-      presentation.updateConfiguration({
-        overkill,
-        insetFilter,
-        width: bubbleOffsetWidth,
-        height: bubbleOffsetHeight,
-        boundary,
-        rounding,
-        containerOffsetLeft,
-        containerOffsetTop,
-      });
-    }, [overkill, insetFilter, bubbleOffsetWidth, bubbleOffsetHeight, boundary, rounding, containerOffsetLeft, containerOffsetTop, presentation]);
 
     // Offset values are always undefined on first render, and shouldn't be accessed directly
     // in applySpringForce since DOM property access is so slow. This avoids essentially all
