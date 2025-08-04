@@ -10,6 +10,7 @@ import {
 } from "@/app/utils/physicsConsts";
 import { BubblePhysics } from "@/app/utils/bubble/BubblePhysics";
 import { BubblePresentation } from "@/app/utils/bubble/BubblePresentation";
+import { Bubble } from "@/app/utils/bubble/Bubble";
 import { mouseService } from "@/app/utils/mouseService";
 import { DebugContext } from "@/app/components/DebugContext";
 import { useDebuggableValue } from "@/app/hooks/useDebuggableValue";
@@ -143,6 +144,8 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       });
     }, [_overkill, insetFilter, _boundary, rounding]);
 
+    const bubble = useMemo<Bubble>(() => new Bubble(physics, presentation), [physics, presentation]);
+
     // Update physics configuration when props change
     useEffect(() => {
       physics.updateConfiguration({
@@ -168,12 +171,10 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     /********** Interaction **********/
     useEffect(() => {
       const handleMouseMove = (currMouseX: number, currMouseY: number, prevMouseX: number, prevMouseY: number) => {
-        const intersectionVec = presentation.collide(currMouseX, currMouseY, prevMouseX, prevMouseY);
+        const intersectionVec = bubble.collide(currMouseX, currMouseY, prevMouseX, prevMouseY);
 
-        if (intersectionVec) {
-          physics.addImpulse(intersectionVec);
-
-          if (!isUpdatePending) setIsUpdatePending(true);
+        if (intersectionVec && !isUpdatePending) {
+          setIsUpdatePending(true);
         }
       };
 
@@ -183,8 +184,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     }, [
       componentId,
       isUpdatePending,
-      physics,
-      presentation
+      bubble
     ]);
 
     /********** Updating physics -> presentation -> style **********/
@@ -193,7 +193,7 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       const contentStyle = contentElement.current?.style;
       const offsetIndicatorStyle = offsetIndicatorElement.current?.style;
       const lerpedOffsetIndicatorStyle = lerpedOffsetIndicatorElement.current?.style;
-
+      
       const {
         offset: [
           offsetX,
@@ -228,22 +228,15 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
       }
     }, [physics, presentation]);
 
-    const updateBubbleMeta = useCallback(() => {
-      const { lerpedOffset } = physics.getState();
-
-      presentation.updateMeta(lerpedOffset);
-    }, [physics, presentation]);
 
     const update = useCallback((delta: number) => {
-      physics.step(delta);
-
-      updateBubbleMeta();
+      bubble.step(delta);
       updateStyles();
 
-      if (physics.isStable()) {
+      if (bubble.isStable()) {
         setIsUpdatePending(false);
       }
-    }, [physics, updateBubbleMeta, updateStyles]);
+    }, [bubble, updateStyles]);
 
     // Offset values are always undefined on first render, and shouldn't be accessed directly
     // in applySpringForce since DOM property access is so slow. This avoids essentially all
@@ -256,7 +249,6 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
     // NOTE: This is kind of a dirty hack to update at least once per render
     useEffect(() => {
       if (!doAnimate) {
-        updateBubbleMeta();
         updateStyles();
       }
     });

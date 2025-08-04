@@ -4,7 +4,7 @@ This directory contains the core bubble animation system used by the HoverBubble
 
 ## Architecture Overview
 
-The bubble system consists of two main classes that work together:
+The bubble system consists of three main classes that work together:
 
 ```
 ┌─────────────────┐    ┌──────────────────────┐
@@ -18,16 +18,29 @@ The bubble system consists of two main classes that work together:
          └────────┬───────────────┘
                   │
         ┌─────────────────┐
+        │     Bubble      │
+        │  (Coordinator)  │
+        │                 │
+        │ • Communication │
+        │ • Integration   │
+        │ • Orchestration │
+        └─────────────────┘
+                  │
+        ┌─────────────────┐
         │   HoverBubble   │
         │   (Component)   │
         │                 │
-        │ • Orchestration │
         │ • DOM Updates   │
         │ • Event Handling│
+        │ • UI Integration│
         └─────────────────┘
 ```
 
-**Design Philosophy**: The BubblePresentation class is designed to be DOM-agnostic, working with abstract position and dimension properties that represent the bubble's stable (non-animated) state. The HoverBubble component handles the DOM-specific aspects and maps them to these abstract properties.
+**Design Philosophy**: The system is designed with clear separation of concerns:
+- **BubblePhysics**: Pure physics simulation
+- **BubblePresentation**: DOM-agnostic visual calculations using abstract position/dimension properties
+- **Bubble**: Coordinates communication between physics and presentation
+- **HoverBubble**: Handles DOM-specific aspects and UI integration
 
 ## BubblePhysics Class
 
@@ -114,24 +127,32 @@ type BubblePresentationOptions = {
 
 ## Integration with HoverBubble
 
-The HoverBubble component orchestrates these classes:
+The HoverBubble component now uses the Bubble class for simplified orchestration:
 
-1. **Physics Integration**: Calls `physics.step(delta)` each frame
-2. **Presentation Updates**: Calls `presentation.updateMeta(lerpedOffset)` to sync visuals
-3. **Style Application**: Uses presentation getters to update DOM styles
-4. **Collision Handling**: Uses `presentation.collide()` to detect mouse interactions
-5. **Animation Control**: Uses `physics.isStable()` to start/stop animation
+1. **Instance Creation**: Creates separate BubblePhysics and BubblePresentation instances, then passes them to Bubble
+2. **Unified Updates**: Calls `bubble.step(delta)` which handles both physics and presentation
+3. **Collision Handling**: Uses `bubble.collide()` which handles detection and impulse application
+4. **Style Application**: Accesses presentation instance directly for DOM updates
+5. **Animation Control**: Uses `bubble.isStable()` to start/stop animation
 
-### Typical Update Cycle
+### Simplified Update Cycle
 ```typescript
 const update = (delta: number) => {
-  physics.step(delta);                    // 1. Advance physics
+  bubble.step(delta);                     // 1. Advance physics & sync presentation
+  updateStyles();                         // 2. Update DOM
   
-  updateBubbleMeta();                     // 2. Sync presentation
-  updateStyles();                         // 3. Update DOM
-  
-  if (physics.isStable()) {               // 4. Check if done
+  if (bubble.isStable()) {                // 3. Check if done
     setIsUpdatePending(false);
+  }
+};
+```
+
+### Mouse Interaction
+```typescript
+const handleMouseMove = (currX: number, currY: number, prevX: number, prevY: number) => {
+  const intersectionVec = bubble.collide(currX, currY, prevX, prevY);
+  if (intersectionVec && !isUpdatePending) {
+    setIsUpdatePending(true);
   }
 };
 ```
@@ -153,6 +174,7 @@ const update = (delta: number) => {
 
 ### Basic Bubble Creation
 ```typescript
+// Create instances separately
 const physics = new BubblePhysics({
   springStiffness: 0.1,
   sluggishness: 0.05
@@ -161,17 +183,23 @@ const physics = new BubblePhysics({
 const presentation = new BubblePresentation({
   overkill: 2.5,
   boundary: 4,
-  rounding: 24
+  rounding: 24,
+  width: 200,
+  height: 100,
+  x: 0,
+  y: 0
 });
+
+// Pass instances to Bubble for coordination
+const bubble = new Bubble(physics, presentation);
 ```
 
 ### Animation Loop
 ```typescript
 // In animation frame callback
-physics.step(deltaTime);
-presentation.updateMeta(physics.getState().lerpedOffset);
+bubble.step(deltaTime);
 
-// Apply styles
+// Apply styles using direct presentation access
 element.style.transform = presentation.getOuterTransform();
 content.style.clipPath = presentation.getInnerClipPath(offsetX, offsetY);
 ```
@@ -179,9 +207,10 @@ content.style.clipPath = presentation.getInnerClipPath(offsetX, offsetY);
 ### Mouse Interaction
 ```typescript
 // In mouse move handler
-const force = presentation.collide(currX, currY, prevX, prevY);
-if (force) {
-  physics.addImpulse(force);
+const intersectionVec = bubble.collide(currX, currY, prevX, prevY);
+if (intersectionVec) {
+  // Animation will start automatically via bubble.step()
+  startAnimation();
 }
 ```
 
@@ -201,6 +230,50 @@ if (force) {
 - Adjust `VELOCITY_ANIMATION_THRESHOLD` and `OFFSET_ANIMATION_THRESHOLD` in physics constants
 - Modify cache invalidation logic for different update patterns
 - Tune pre-allocation sizes for different collision complexity
+
+## Bubble Class
+
+**Location**: `app/utils/bubble/Bubble.ts`
+
+### Responsibilities
+- **Communication**: Manages interaction between BubblePhysics and BubblePresentation
+- **Integration**: Automatically applies physics results to presentation layer
+- **Orchestration**: Provides unified interface for bubble operations
+- **Abstraction**: Simplifies usage by hiding inter-class communication details
+
+### Key Methods
+- `collide(currMouseX, currMouseY, prevMouseX, prevMouseY): Vec2 | null` - Handles collision detection and applies impulses
+- `step(delta: number): void` - Advances physics and updates presentation
+- `isStable(): boolean` - Checks if physics simulation has reached equilibrium
+- `reset(randomize?: boolean, seed?: number): void` - Resets bubble to initial state
+
+### Constructor
+```typescript
+constructor(physics: BubblePhysics, presentation: BubblePresentation)
+```
+
+### Key Features
+- **Automated Communication**: Physics results automatically applied to presentation
+- **Simplified Interface**: Focused purely on coordinating updates between physics and presentation
+- **Instance Management**: Accepts and manages existing physics and presentation instances
+- **No Configuration**: Does not handle configuration - instances should be configured before passing to Bubble
+
+### Integration Flow
+```typescript
+// Create instances
+const physics = new BubblePhysics({ springStiffness: 0.1, sluggishness: 0.05 });
+const presentation = new BubblePresentation({ overkill: 2.5, boundary: 4 });
+const bubble = new Bubble(physics, presentation);
+
+// 1. Collision detection triggers physics impulse
+bubble.collide(mouseX, mouseY, prevX, prevY);
+
+// 2. Physics simulation updates and automatically syncs to presentation
+bubble.step(deltaTime);
+
+// 3. Access presentation directly for DOM updates
+const transform = presentation.getOuterTransform();
+```
 
 ## Debugging
 

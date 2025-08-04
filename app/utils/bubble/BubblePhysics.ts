@@ -113,7 +113,7 @@ export class BubblePhysics {
     }
   }
 
-  private reset(randomize = false, seed?: number): void {
+  reset(randomize = false, seed?: number): void {
     if (randomize) {
       const { min, max } = INSET_OPTIONS;
       const random = randomUniform.source(randomLcg(seed))(min, max);
