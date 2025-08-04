@@ -189,8 +189,8 @@ export class BubblePresentation {
   }
   
   
-  // Protected getters for subclass access
-  protected getMeta(): Readonly<BubbleMeta> {
+  // Public getter for external access to bubble position
+  getMeta(): Readonly<BubbleMeta> {
     return this.meta;
   }
 

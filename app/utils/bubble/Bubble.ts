@@ -35,4 +35,12 @@ export class Bubble {
   reset(randomize?: boolean, seed?: number): void {
     this.physics.reset(randomize, seed);
   }
+
+  getPhysics(): BubblePhysics {
+    return this.physics;
+  }
+
+  getPresentation(): BubblePresentation {
+    return this.presentation;
+  }
 }
