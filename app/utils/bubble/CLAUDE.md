@@ -27,6 +27,8 @@ The bubble system consists of two main classes that work together:
         └─────────────────┘
 ```
 
+**Design Philosophy**: The BubblePresentation class is designed to be DOM-agnostic, working with abstract position and dimension properties that represent the bubble's stable (non-animated) state. The HoverBubble component handles the DOM-specific aspects and maps them to these abstract properties.
+
 ## BubblePhysics Class
 
 **Location**: `app/utils/bubble/BubblePhysics.ts`
@@ -76,7 +78,6 @@ type PhysicsState = {
 - `getOuterTransform(): string` - CSS transform for bubble element
 - `getInnerTransform(offsetX, offsetY): string` - CSS transform for content
 - `getInnerClipPath(offsetX, offsetY): string` - CSS clip path for content
-- `getMeta(): Readonly<BubbleMeta>` - Current bubble dimensions
 - `updateConfiguration(options)` - Updates presentation parameters
 
 ### Bubble Metadata
@@ -102,12 +103,12 @@ type BubbleMeta = {
 type BubblePresentationOptions = {
   overkill?: number;                        // Amplification factor for visual effect
   insetFilter?: (direction: number) => number; // Asymmetric distortion filter  
-  width?: number;                           // Container width
-  height?: number;                          // Container height
+  width?: number;                           // Bubble width in stable state
+  height?: number;                          // Bubble height in stable state
   boundary?: number;                        // Border thickness
   rounding?: number;                        // Corner radius
-  containerOffsetLeft?: number;             // Container position
-  containerOffsetTop?: number;              // Container position
+  x?: number;                               // Bubble x position in stable state
+  y?: number;                               // Bubble y position in stable state
 }
 ```
 
@@ -205,8 +206,7 @@ if (force) {
 
 ### Debug Mode Integration
 - Physics state can be inspected via `getState()`
-- Bubble metadata available via `getMeta()`
-- Collision shapes accessible via `getOuterRectangle()`, `getInnerRectangle()`
+- Bubble metadata and collision shapes can be inspected using debugger statements within class methods
 - Stability state via `isStable()`
 
 ### Common Issues

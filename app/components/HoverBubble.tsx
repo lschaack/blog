@@ -138,8 +138,8 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         height: 0,
         boundary: _boundary,
         rounding,
-        containerOffsetLeft: 0,
-        containerOffsetTop: 0,
+        x: 0,
+        y: 0,
       });
     }, [_overkill, insetFilter, _boundary, rounding]);
 
@@ -160,8 +160,8 @@ export const HoverBubble: FC<HoverBubbleProps> = memo(
         height: bubbleOffsetHeight,
         boundary,
         rounding,
-        containerOffsetLeft,
-        containerOffsetTop,
+        x: containerOffsetLeft,
+        y: containerOffsetTop,
       });
     }, [overkill, insetFilter, bubbleOffsetWidth, bubbleOffsetHeight, boundary, rounding, containerOffsetLeft, containerOffsetTop, presentation]);
 

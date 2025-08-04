@@ -51,7 +51,7 @@ export class BubblePhysics {
   constructor(options: BubblePhysicsOptions = {}) {
     this.springStiffness = options.springStiffness ?? SPRING_STIFFNESS;
     this.sluggishness = options.sluggishness ?? 0.05;
-    
+
     // Initialize vectors
     this.offset = createVec2();
     this.lerpedOffset = createVec2();
@@ -62,7 +62,7 @@ export class BubblePhysics {
     const randomize = options.randomize ?? false;
     // Start unstable if randomize is true (non-zero initial offset), stable otherwise
     this.isStableState = !randomize;
-    
+
     this.reset(randomize, options.seed);
   }
 
@@ -84,7 +84,7 @@ export class BubblePhysics {
   step(delta: number): void {
     // Add spring force to restore equilibrium
     this.addSpringForce();
-    
+
     applyForcesMutable(
       this.velocity,
       this.currentImpulse,
@@ -113,7 +113,7 @@ export class BubblePhysics {
     }
   }
 
-  reset(randomize = false, seed?: number): void {
+  private reset(randomize = false, seed?: number): void {
     if (randomize) {
       const { min, max } = INSET_OPTIONS;
       const random = randomUniform.source(randomLcg(seed))(min, max);
@@ -148,11 +148,6 @@ export class BubblePhysics {
     }
   }
 
-  hasActiveForces(): boolean {
-    const impulse = this.currentImpulse;
-    return !(impulse[0] === 0 && impulse[1] === 0);
-  }
-  
   isStable(): boolean {
     return this.isStableState;
   }

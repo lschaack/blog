@@ -18,8 +18,8 @@ export type BubblePresentationOptions = {
   height?: number;
   boundary?: number;
   rounding?: number;
-  containerOffsetLeft?: number;
-  containerOffsetTop?: number;
+  x?: number;
+  y?: number;
 }
 
 export class BubblePresentation {
@@ -29,8 +29,8 @@ export class BubblePresentation {
   private height: number;
   private boundary: number;
   private rounding: number;
-  private containerOffsetLeft: number;
-  private containerOffsetTop: number;
+  private x: number;
+  private y: number;
   private lastOffset: Vec2;
   
   // Internal metadata storage
@@ -64,8 +64,8 @@ export class BubblePresentation {
     this.height = options.height ?? 0;
     this.boundary = options.boundary ?? 0;
     this.rounding = options.rounding ?? 0;
-    this.containerOffsetLeft = options.containerOffsetLeft ?? 0;
-    this.containerOffsetTop = options.containerOffsetTop ?? 0;
+    this.x = options.x ?? 0;
+    this.y = options.y ?? 0;
     this.lastOffset = [0, 0];
     
     // Initialize metadata
@@ -141,8 +141,8 @@ export class BubblePresentation {
   
   private updateRectangles(): void {
     // Update outer rectangle
-    this.outerRectangle.x = this.containerOffsetLeft + this.meta.left;
-    this.outerRectangle.y = this.containerOffsetTop + this.meta.top;
+    this.outerRectangle.x = this.x + this.meta.left;
+    this.outerRectangle.y = this.y + this.meta.top;
     this.outerRectangle.width = this.meta.width;
     this.outerRectangle.height = this.meta.height;
     this.outerRectangle.radius = this.rounding;
@@ -183,11 +183,11 @@ export class BubblePresentation {
     if (options.rounding !== undefined) {
       this.rounding = options.rounding;
     }
-    if (options.containerOffsetLeft !== undefined) {
-      this.containerOffsetLeft = options.containerOffsetLeft;
+    if (options.x !== undefined) {
+      this.x = options.x;
     }
-    if (options.containerOffsetTop !== undefined) {
-      this.containerOffsetTop = options.containerOffsetTop;
+    if (options.y !== undefined) {
+      this.y = options.y;
     }
     
     // Recalculate metadata and rectangles with the last-used offset
@@ -197,21 +197,6 @@ export class BubblePresentation {
     this.stylesCacheDirty = true;
   }
   
-  getMeta(): Readonly<BubbleMeta> {
-    return this.meta;
-  }
-  
-  getOuterRectangle(): Readonly<RoundedRectangle> {
-    return this.outerRectangle;
-  }
-  
-  getInnerRectangle(): Readonly<RoundedRectangle> {
-    return this.innerRectangle;
-  }
-  
-  getShapeWithHole(): RoundedShapeWithHole | null {
-    return this.shapeWithHole;
-  }
   
   getOuterTransform(): string {
     if (this.stylesCacheDirty || this.cachedOuterTransform === null) {
@@ -277,14 +262,6 @@ export class BubblePresentation {
     this.stylesCacheDirty = false;
   }
   
-  
-  getOverkill(): number {
-    return this.overkill;
-  }
-  
-  getInsetFilter(): (direction: number) => number {
-    return this.insetFilter;
-  }
   
   collide(currMouseX: number, currMouseY: number, prevMouseX: number, prevMouseY: number): Vec2 | null {
     if (!this.shapeWithHole) {
