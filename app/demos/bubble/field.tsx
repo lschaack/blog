@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { randomInt } from "d3-random";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import { DEFAULT_RANDOM_STRATEGY, PackingStrategy, RANDOM_RADIUS_FNS, RandomStrategy } from "@/app/utils/circlePacker";
 import { Button } from "@/app/components/Button";
@@ -13,6 +15,8 @@ import { PackedBubbles } from "@/app/components/PackedBubbles";
 const getRandomSeed = randomInt(999_999_999);
 
 function HoverBubbleField() {
+  const searchParams = useSearchParams();
+
   const [seed, setSeed] = useQueryState<number>('seed');
   const [packingStrategy, setPackingStrategy] = useQueryState<PackingStrategy>('packingStrategy');
   const [randomStrategy, setRandomStrategy] = useQueryState<RandomStrategy>('randomStrategy');
@@ -62,6 +66,12 @@ function HoverBubbleField() {
             label="Reroll"
             onClick={() => setSeed(getRandomSeed())}
           />
+          <Link
+            href={`/demos/circle-packing?${searchParams.toString()}`}
+            className="font-mono text-base/loose text-center underline mx-auto"
+          >
+            Go to circle packing demo with these settings
+          </Link>
         </div>
       </div>
     );

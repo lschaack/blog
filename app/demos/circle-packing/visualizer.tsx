@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { randomInt } from 'd3-random';
 import clamp from 'lodash/clamp';
+import Link from 'next/link';
 
 import {
   CirclePacker,
@@ -20,6 +21,7 @@ import { InputRange } from '@/app/components/InputRange';
 import { QueryParamProvider } from '@/app/hooks/useQueryState';
 import { ExclusiveOptions, Option } from '@/app/components/ExclusiveOptions';
 import { Toggle } from '@/app/components/Toggle';
+import { useSearchParams } from 'next/navigation';
 
 const WIDTH = 512;
 const HEIGHT = 512;
@@ -247,6 +249,8 @@ function PackingAnimation({
 }
 
 function PackingAnimationConfigurator() {
+  const searchParams = useSearchParams();
+
   const [seed, setSeed] = useQueryState<number>('seed');
   const [packingStrategy, setPackingStrategy] = useQueryState<PackingStrategy>('packingStrategy');
   const [randomStrategy, setRandomStrategy] = useQueryState<RandomStrategy>('randomStrategy');
@@ -340,6 +344,13 @@ function PackingAnimationConfigurator() {
           label="Reroll"
           onClick={() => setSeed(getRandomSeed())}
         />
+
+        <Link
+          href={`/demos/bubble-field?${searchParams.toString()}`}
+          className="font-mono text-base/loose text-center underline mx-auto"
+        >
+          Go to bubble field demo with these settings
+        </Link>
       </div>
     </div>
   );
