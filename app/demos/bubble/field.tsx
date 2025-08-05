@@ -34,7 +34,7 @@ function HoverBubbleField() {
           maxWidth={512}
           dpi={dpi}
         />
-        <div className="flex flex-col gap-4 mx-8 min-[550px]:mx-0">
+        <div className="flex flex-col gap-4">
           <ExclusiveOptions
             name="Random strategy"
             onChange={e => setRandomStrategy(e.target.value as RandomStrategy)}
