@@ -93,6 +93,7 @@ export type PackedBubbleProps = {
   packingStrategy: PackingStrategy;
   randomStrategy: RandomStrategy;
   maxWidth: number;
+  maxHeight?: number;
   minRadius: number;
   ratio: number;
   dpi: number;
@@ -104,6 +105,7 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
   minRadius,
   ratio,
   maxWidth,
+  maxHeight = maxWidth,
   dpi,
 }) => {
   const [bubbleField, setBubbleField] = useState<BubbleField | null>(null);
@@ -111,18 +113,18 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
   const packingArea = useMemo(
     () => ({
       width: maxWidth * dpi,
-      height: maxWidth * dpi,
+      height: maxHeight * dpi,
       minRadius: minRadius * dpi,
       maxRadius: Math.round(minRadius * ratio) * dpi,
     }),
-    [dpi, maxWidth, minRadius, ratio]
+    [dpi, maxHeight, maxWidth, minRadius, ratio]
   );
 
   const container = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const lastMousePos = useRef({ x: 0, y: 0 });
 
-  const diagonalLength = Math.sqrt(Math.pow(maxWidth * dpi, 2) + Math.pow(maxWidth * dpi, 2));
+  const diagonalLength = Math.sqrt(Math.pow(maxWidth * dpi, 2) + Math.pow(maxHeight * dpi, 2));
 
   // Initialize BubbleField when container dimensions are available
   useEffect(() => {
@@ -136,7 +138,7 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
     field.initialize().then(() => {
       setBubbleField(field);
     });
-  }, [dpi, maxWidth, minRadius, packingArea, packingStrategy, randomStrategy, ratio, seed]);
+  }, [packingArea, packingStrategy, randomStrategy, seed]);
 
   const animate: AnimationCallback = useCallback((deltaTime) => {
     if (!bubbleField || !canvas.current) return;
@@ -157,15 +159,23 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
   const handleMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!bubbleField || !canvas.current) return;
 
-    const canvasRect = canvas.current.getBoundingClientRect()
-    const currentX = event.clientX - canvasRect.left;
-    const currentY = event.clientY - canvasRect.top;
+    const { width: baseWidth, height: baseHeight } = canvas.current;
+
+    // NOTE: Getting the bounding client and recomputing scale on every mouse move is super
+    // inefficient, but it runs at 60fps on a 20x slowdown (~1.5 slower than low-end mobile
+    // on my machine), so it's fine for now until I get around to making a really robust
+    // dom rect caching hook
+    const { left, top, width: measuredWidth, height: measuredHeight } = canvas.current.getBoundingClientRect();
+    const currentX = event.clientX - left;
+    const currentY = event.clientY - top;
+    const scaleX = baseWidth / measuredWidth;
+    const scaleY = baseHeight / measuredHeight;
 
     bubbleField.handleMouseMove(
-      currentX * dpi,
-      currentY * dpi,
-      lastMousePos.current.x * dpi,
-      lastMousePos.current.y * dpi,
+      currentX * scaleX,
+      currentY * scaleY,
+      lastMousePos.current.x * scaleX,
+      lastMousePos.current.y * scaleY,
     );
 
     lastMousePos.current.x = currentX;
@@ -175,7 +185,7 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
     if (bubbleField.getActiveBubblesCount() > 0) {
       setIsAnimating(true);
     }
-  }, [bubbleField, dpi]);
+  }, [bubbleField]);
 
   // Avoid edge case where frame is cleared w/o redrawing on prop change
   useEffect(() => {
@@ -186,18 +196,15 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
   }, [bubbleField, diagonalLength]);
 
   return (
-    <div
-      ref={container}
-      className="relative aspect-square w-full bg-transparent"
-      style={{ maxWidth }}
-    >
+    <div ref={container}>
       <canvas
         ref={canvas}
+        className="w-full"
         width={packingArea.width}
         height={packingArea.height}
         style={{
           maxWidth: maxWidth,
-          maxHeight: maxWidth,
+          maxHeight: maxHeight,
         }}
         onMouseMove={handleMouseMove}
       />

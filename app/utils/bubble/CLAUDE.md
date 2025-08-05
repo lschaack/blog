@@ -170,9 +170,76 @@ const transform3 = domPresentation.getOuterTransform(); // Recalculated
 - Accesses parent properties via protected getters (`getMeta()`, `getWidth()`, etc.)
 - Automatically invalidates style cache when parent methods are called
 
+## BubbleField Class
+
+**Location**: `app/utils/BubbleField.ts`
+
+### Responsibilities
+- **Bubble Field Management**: Orchestrates multiple bubbles in a spatial simulation
+- **Circle Packing Integration**: Uses CirclePacker to generate initial bubble positions
+- **Quadtree Optimization**: Maintains spatial index for efficient collision detection
+- **Canvas Rendering**: Supports high-performance canvas-based bubble field rendering
+- **Mouse Interaction**: Handles mouse movement across the entire bubble field
+
+### Key Methods
+- `initialize(): Promise<void>` - Sets up circle packing and creates bubble instances
+- `handleMouseMove(mouseX, mouseY, prevMouseX, prevMouseY): void` - Processes mouse interaction across field
+- `step(deltaTime: number): void` - Updates all active bubbles and maintains spatial index
+- `getAllBubbles(): readonly Bubble[]` - Returns all bubble instances for rendering
+- `getActiveBubblesCount(): number` - Returns count of currently animating bubbles
+
+### Architecture Overview
+```typescript
+BubbleField manages:
+┌─────────────────────────────────────────┐
+│ CirclePacker → Initial Circle Positions │
+│              ↓                          │
+│ Rectangle Quadtree ← Collision Detection │
+│              ↓                          │
+│ Bubble[] ← Physics + Presentation       │
+│              ↓                          │
+│ Canvas Rendering ← Animation Loop       │
+└─────────────────────────────────────────┘
+```
+
+### Key Features
+- **O(1) Bubble Lookups**: Uses multiple maps to avoid loops when linking bubble representations
+- **Spatial Optimization**: Rectangle quadtree for efficient mouse collision queries
+- **Performance Optimized**: Fast quadtree updates with batched cleanup operations
+- **Active Bubble Tracking**: Only updates bubbles that need animation
+
+### Integration with PackedBubbles
+The PackedBubbles component uses BubbleField for canvas-based bubble field simulation:
+
+```typescript
+// Initialize bubble field
+const bubbleField = new BubbleField({
+  seed, packingStrategy, randomStrategy, packingArea
+});
+await bubbleField.initialize();
+
+// Mouse interaction
+const handleMouseMove = (event) => {
+  bubbleField.handleMouseMove(currentX, currentY, prevX, prevY);
+  if (bubbleField.getActiveBubblesCount() > 0) {
+    setIsAnimating(true);
+  }
+};
+
+// Render loop
+const animate = (deltaTime) => {
+  bubbleField.step(deltaTime);
+  drawBubbles(bubbleField.getAllBubbles());
+  
+  if (bubbleField.getActiveBubblesCount() === 0) {
+    setIsAnimating(false);
+  }
+};
+```
+
 ## Integration with HoverBubble
 
-The HoverBubble component now uses the Bubble class for simplified orchestration:
+The HoverBubble component uses the Bubble class for simplified orchestration:
 
 1. **Instance Creation**: Creates separate BubblePhysics and DOMBubblePresentation instances, then passes them to Bubble
 2. **Unified Updates**: Calls `bubble.step(delta)` which handles both physics and presentation
@@ -217,7 +284,7 @@ const handleMouseMove = (currX: number, currY: number, prevX: number, prevY: num
 
 ## Common Usage Patterns
 
-### Basic Bubble Creation
+### Single Bubble Creation (HoverBubble)
 ```typescript
 // Create instances separately
 const physics = new BubblePhysics({
@@ -239,9 +306,31 @@ const presentation = new DOMBubblePresentation({
 const bubble = new Bubble(physics, presentation);
 ```
 
-### Animation Loop
+### Bubble Field Creation (PackedBubbles)
 ```typescript
-// In animation frame callback
+// Create bubble field with circle packing
+const bubbleField = new BubbleField({
+  seed: 42,
+  packingStrategy: 'pop',
+  randomStrategy: 'exponential',
+  packingArea: {
+    width: 800,
+    height: 600,
+    minRadius: 10,
+    maxRadius: 40
+  }
+});
+
+// Initialize the field
+await bubbleField.initialize();
+
+// Access individual bubbles for rendering
+const allBubbles = bubbleField.getAllBubbles();
+```
+
+### Animation Loop (Single Bubble)
+```typescript
+// In animation frame callback for HoverBubble
 bubble.step(deltaTime);
 
 // Apply styles using DOMBubblePresentation methods
@@ -249,13 +338,51 @@ element.style.transform = presentation.getOuterTransform();
 content.style.clipPath = presentation.getInnerClipPath(offsetX, offsetY);
 ```
 
-### Mouse Interaction
+### Animation Loop (Bubble Field)
 ```typescript
-// In mouse move handler
+// In animation frame callback for PackedBubbles
+bubbleField.step(deltaTime);
+
+// Canvas rendering
+const ctx = canvas.getContext('2d');
+ctx.clearRect(0, 0, width, height);
+
+for (const bubble of bubbleField.getAllBubbles()) {
+  const presentation = bubble.getPresentation();
+  const outerRect = presentation.getOuterRectangle();
+  
+  // Draw bubble to canvas
+  ctx.fillStyle = getColor(bubble);
+  ctx.beginPath();
+  ctx.ellipse(
+    outerRect.x + outerRect.width / 2,
+    outerRect.y + outerRect.height / 2,
+    outerRect.width / 2,
+    outerRect.height / 2,
+    0, 0, 2 * Math.PI
+  );
+  ctx.fill();
+}
+```
+
+### Mouse Interaction (Single Bubble)
+```typescript
+// In mouse move handler for HoverBubble
 const intersectionVec = bubble.collide(currX, currY, prevX, prevY);
 if (intersectionVec) {
   // Animation will start automatically via bubble.step()
   startAnimation();
+}
+```
+
+### Mouse Interaction (Bubble Field)
+```typescript
+// In mouse move handler for PackedBubbles
+bubbleField.handleMouseMove(currentX, currentY, prevX, prevY);
+
+// Start animation if bubbles were affected
+if (bubbleField.getActiveBubblesCount() > 0) {
+  setIsAnimating(true);
 }
 ```
 
