@@ -7,7 +7,6 @@ import { PackingStrategy, RandomStrategy } from "@/app/utils/circlePacker";
 import { BubbleField } from "@/app/utils/BubbleField";
 import { magnitude } from "@/app/utils/mutableVector";
 import { AnimationCallback, useAnimationFrames } from "@/app/hooks/useAnimationFrames";
-import { useResizeValue } from "@/app/hooks/useResizeValue";
 
 const STROKE_WIDTH = 16;
 
@@ -123,12 +122,6 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
   const canvas = useRef<HTMLCanvasElement>(null);
   const lastMousePos = useRef({ x: 0, y: 0 });
 
-  const canvasRect = useResizeValue(
-    useCallback(() => canvas.current?.getBoundingClientRect(), []),
-    undefined,
-    useCallback(() => [document.documentElement], []),
-  )
-
   const diagonalLength = Math.sqrt(Math.pow(maxWidth * dpi, 2) + Math.pow(maxWidth * dpi, 2));
 
   // Initialize BubbleField when container dimensions are available
@@ -162,7 +155,9 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
 
   // Mouse move handler
   const handleMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!bubbleField || !canvasRect) return;
+    if (!bubbleField || !canvas.current) return;
+
+    const canvasRect = canvas.current.getBoundingClientRect()
     const currentX = event.clientX - canvasRect.left;
     const currentY = event.clientY - canvasRect.top;
 
@@ -180,7 +175,7 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
     if (bubbleField.getActiveBubblesCount() > 0) {
       setIsAnimating(true);
     }
-  }, [bubbleField, canvasRect, dpi]);
+  }, [bubbleField, dpi]);
 
   // Avoid edge case where frame is cleared w/o redrawing on prop change
   useEffect(() => {
