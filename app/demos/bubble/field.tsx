@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { randomInt } from "d3-random";
 
 import { DEFAULT_RANDOM_STRATEGY, PackingStrategy, RANDOM_RADIUS_FNS, RandomStrategy } from "@/app/utils/circlePacker";
@@ -18,8 +18,11 @@ function HoverBubbleField() {
   const [randomStrategy, setRandomStrategy] = useQueryState<RandomStrategy>('randomStrategy');
   const [minRadius] = useQueryState<number>('minRadius');
   const [ratio] = useQueryState<number>('ratio');
+  const [dpi, setDpi] = useState<number>();
 
-  if (seed) {
+  useEffect(() => setDpi(window.devicePixelRatio), []);
+
+  if (seed && dpi) {
     return (
       <div className="flex flex-col gap-8">
         <PackedBubbles
@@ -29,6 +32,7 @@ function HoverBubbleField() {
           minRadius={minRadius}
           ratio={ratio}
           maxWidth={512}
+          dpi={dpi}
         />
         <div className="flex flex-col gap-4 mx-8 min-[550px]:mx-0">
           <ExclusiveOptions
