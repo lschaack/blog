@@ -6,7 +6,7 @@ import clamp from "lodash/clamp";
 import { PackingStrategy, RandomStrategy } from "@/app/utils/circlePacker";
 import { BubbleField } from "@/app/utils/BubbleField";
 import { magnitude } from "@/app/utils/mutableVector";
-import { useAnimationFrames } from "@/app/hooks/useAnimationFrames";
+import { AnimationCallback, useAnimationFrames } from "@/app/hooks/useAnimationFrames";
 import { useResizeValue } from "@/app/hooks/useResizeValue";
 
 const STROKE_WIDTH = 16;
@@ -43,7 +43,7 @@ const getColor = (pos: number) => {
   }
 }
 
-const drawBubbles = (bubbleField: BubbleField, canvas: HTMLCanvasElement) => {
+const drawBubbles = (bubbleField: BubbleField, canvas: HTMLCanvasElement, diagonalLength: number) => {
   if (!bubbleField || !canvas) return;
 
   const ctx = canvas.getContext('2d');
@@ -52,8 +52,6 @@ const drawBubbles = (bubbleField: BubbleField, canvas: HTMLCanvasElement) => {
   // Clear canvas
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // FIXME: Don't calculate this every frame for every bubble
-  const diagonalLength = magnitude([canvas.width, canvas.height]);
   const allBubbles = bubbleField.getAllBubbles();
 
   // Draw each bubble
@@ -123,7 +121,6 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
 
   const container = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
-  const prevCanvas = useRef<HTMLCanvasElement>(null);
   const lastMousePos = useRef({ x: 0, y: 0 });
 
   const canvasRect = useResizeValue(
@@ -131,6 +128,8 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
     undefined,
     useCallback(() => [document.documentElement], []),
   )
+
+  const diagonalLength = Math.sqrt(Math.pow(maxWidth * dpi, 2) + Math.pow(maxWidth * dpi, 2));
 
   // Initialize BubbleField when container dimensions are available
   useEffect(() => {
@@ -146,21 +145,20 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
     });
   }, [dpi, maxWidth, minRadius, packingArea, packingStrategy, randomStrategy, ratio, seed]);
 
+  const animate: AnimationCallback = useCallback((deltaTime) => {
+    if (!bubbleField || !canvas.current) return;
+
+    bubbleField.step(deltaTime);
+    drawBubbles(bubbleField, canvas.current, diagonalLength);
+
+    // Stop animation if no active bubbles
+    if (bubbleField.getActiveBubblesCount() === 0) {
+      setIsAnimating(false);
+    }
+  }, [bubbleField, diagonalLength]);
+
   // Animation loop
-  useAnimationFrames(
-    (deltaTime) => {
-      if (!bubbleField || !canvas.current) return;
-
-      bubbleField.step(deltaTime);
-      drawBubbles(bubbleField, canvas.current);
-
-      // Stop animation if no active bubbles
-      if (bubbleField.getActiveBubblesCount() === 0) {
-        setIsAnimating(false);
-      }
-    },
-    isAnimating
-  );
+  useAnimationFrames(animate, isAnimating);
 
   // Mouse move handler
   const handleMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -188,11 +186,9 @@ export const PackedBubbles: FC<PackedBubbleProps> = ({
   useEffect(() => {
     if (bubbleField && canvas.current) {
       bubbleField.step(0);
-      drawBubbles(bubbleField, canvas.current);
+      drawBubbles(bubbleField, canvas.current, diagonalLength);
     }
-  }, [bubbleField]);
-
-  prevCanvas.current = canvas.current;
+  }, [bubbleField, diagonalLength]);
 
   return (
     <div

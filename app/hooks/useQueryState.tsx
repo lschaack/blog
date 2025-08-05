@@ -165,7 +165,6 @@ export const useQueryState = <T extends Serializable>(name: string): [T, (value:
   }
 
   if (!manager.has(name)) {
-    debugger;
     throw new Error(`Query param "${name}" has not been configured in the provider`);
   }
 
