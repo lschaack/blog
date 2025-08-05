@@ -3,13 +3,12 @@ import { CirclePacker, PackingStrategy, RandomStrategy, PackingArea } from '@/ap
 import { Bubble } from '@/app/utils/bubble/Bubble';
 import { BubblePhysics } from '@/app/utils/bubble/BubblePhysics';
 import { BubblePresentation } from '@/app/utils/bubble/BubblePresentation';
+import { SPRING_STIFFNESS } from '@/app/utils/physicsConsts';
 
 export interface BubbleFieldProps {
   seed: number;
   packingStrategy: PackingStrategy;
   randomStrategy: RandomStrategy;
-  minRadius: number;
-  ratio: number;
   packingArea: PackingArea;
 }
 
@@ -19,21 +18,17 @@ export class BubbleField {
   private rectangleToBubbleMap: Map<Rectangle, Bubble> = new Map();
   private bubbleToRectangleMap: Map<Bubble, Rectangle> = new Map();
   private activeBubbles: Set<Bubble> = new Set();
-  
+
   private packingArea: PackingArea;
   private seed: number;
   private packingStrategy: PackingStrategy;
   private randomStrategy: RandomStrategy;
-  private minRadius: number;
-  private ratio: number;
 
   constructor(props: BubbleFieldProps) {
     this.packingArea = props.packingArea;
     this.seed = props.seed;
     this.packingStrategy = props.packingStrategy;
     this.randomStrategy = props.randomStrategy;
-    this.minRadius = props.minRadius;
-    this.ratio = props.ratio;
   }
 
   async initialize(): Promise<void> {
@@ -48,7 +43,7 @@ export class BubbleField {
     );
 
     const circleQuadtree = await packer.pack();
-    
+
     // Generate rectangle quadtree and bubbles from circles
     this.generateRectangleQuadtreeAndBubbles(circleQuadtree);
   }
@@ -67,7 +62,7 @@ export class BubbleField {
 
     // Get all circles from the circle quadtree
     const allCircles = circleQuadtree.retrieve(new Rectangle(bounds));
-    
+
     // Convert each circle to a rectangle and create corresponding bubble
     for (const circle of allCircles) {
       // Convert circle center position to rectangle top-left position
@@ -77,10 +72,10 @@ export class BubbleField {
         width: circle.r * 2,
         height: circle.r * 2
       });
-      
+
       // Create BubblePhysics instance
       const physics = new BubblePhysics({
-        springStiffness: 0.1,
+        springStiffness: SPRING_STIFFNESS,
         sluggishness: 0.05,
         randomize: false
       });
@@ -93,19 +88,25 @@ export class BubbleField {
         y: circle.y - circle.r, // Convert center to top-left
         boundary: 2,
         rounding: circle.r, // Use radius for full rounding
-        overkill: 2
+        overkill: 5,
+        insetFilter: (v: number) => v < 0 ? v / 3 : v,
       });
 
       // Create Bubble instance
       const bubble = new Bubble(physics, presentation);
-      
+
       // Store all mappings for O(1) access
       this.bubbles.push(bubble);
       this.rectangleToBubbleMap.set(rectangle, bubble);
       this.bubbleToRectangleMap.set(bubble, rectangle);
-      
+
       // Insert rectangle into quadtree
       this.rectangleQuadtree.insert(rectangle);
+
+      // NOTE: All bubbles need to be active initially to properly set computed settings
+      // Is this effectively a bug cause I made it poorly? Yeah basically. I'm sure I'll
+      // get around to it someday...
+      this.activeBubbles.add(bubble);
     }
   }
 
@@ -122,7 +123,7 @@ export class BubbleField {
 
     // Query quadtree for rectangles that might intersect with the mouse line
     const potentialRectangles = this.rectangleQuadtree.retrieve(mouseLine);
-    
+
     // Check each rectangle for actual collision and trigger bubble collision
     for (const rectangle of potentialRectangles) {
       // O(1) lookup of bubble from rectangle
@@ -131,7 +132,7 @@ export class BubbleField {
 
       // Perform collision detection using the bubble's collision system
       const intersectionVec = bubble.collide(mouseX, mouseY, prevMouseX, prevMouseY);
-      
+
       if (intersectionVec) {
         // Add bubble to active set for updating
         this.activeBubbles.add(bubble);
@@ -143,24 +144,24 @@ export class BubbleField {
     const bubblesToRemove: Bubble[] = [];
     let i = 0;
     const totalActiveBubbles = this.activeBubbles.size;
-    
+
     // Update all active bubbles
     for (const bubble of this.activeBubbles) {
       const isLastIteration = i === totalActiveBubbles - 1;
-      
+
       bubble.step(deltaTime);
-      
+
       // Always update rectangle position (even if stable, for final zeroed position)
       this.updateRectanglePosition(bubble, !isLastIteration);
-      
+
       // Check if bubble has stabilized after updating position
       if (bubble.isStable()) {
         bubblesToRemove.push(bubble);
       }
-      
+
       i++;
     }
-    
+
     // Remove stabilized bubbles from active set
     for (const bubble of bubblesToRemove) {
       this.activeBubbles.delete(bubble);
@@ -174,17 +175,17 @@ export class BubbleField {
 
     // Remove rectangle from quadtree with fast parameter
     this.rectangleQuadtree.remove(rectangle, fast);
-    
+
     // Get current bubble position from presentation meta
-    const meta = bubble.getPresentation().getMeta();
-    
+    const outerRectangle = bubble.getPresentation().getOuterRectangle();
+
     // Update rectangle position based on bubble's current presentation state
     // meta contains the current insets, so we need to calculate the actual bubble position
-    rectangle.x = meta.left; // This is the current left position after insets
-    rectangle.y = meta.top;  // This is the current top position after insets
-    rectangle.width = meta.width;   // Current width after insets
-    rectangle.height = meta.height; // Current height after insets
-    
+    rectangle.x = outerRectangle.x; // This is the current left position after insets
+    rectangle.y = outerRectangle.y;  // This is the current top position after insets
+    rectangle.width = outerRectangle.width;   // Current width after insets
+    rectangle.height = outerRectangle.height; // Current height after insets
+
     // Re-insert rectangle with updated position
     this.rectangleQuadtree.insert(rectangle);
   }
