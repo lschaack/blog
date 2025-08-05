@@ -1426,7 +1426,7 @@ export type GetAllPostsQueryVariables = Exact<{
 }>;
 
 
-export type GetAllPostsQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', total: number, items: Array<{ __typename?: 'BlogPost', title?: string | null, subtitle?: string | null, tags?: Array<string | null> | null, slug?: string | null, sys: { __typename?: 'Sys', id: string, firstPublishedAt?: any | null, publishedAt?: any | null }, heroImage?: { __typename?: 'Asset', url?: string | null, description?: string | null, width?: number | null, height?: number | null } | null, heroDemo?: { __typename?: 'Demo', id?: string | null } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
+export type GetAllPostsQuery = { __typename?: 'Query', blogPostCollection?: { __typename?: 'BlogPostCollection', total: number, items: Array<{ __typename?: 'BlogPost', title?: string | null, subtitle?: string | null, tags?: Array<string | null> | null, slug?: string | null, sys: { __typename?: 'Sys', id: string, firstPublishedAt?: any | null, publishedAt?: any | null }, heroImage?: { __typename?: 'Asset', url?: string | null, description?: string | null, width?: number | null, height?: number | null } | null, heroDemo?: { __typename?: 'Demo', id?: string | null, key?: string | null } | null, author?: { __typename?: 'Author', name?: string | null, sys: { __typename?: 'Sys', id: string }, profilePicture?: { __typename?: 'Asset', url?: string | null, title?: string | null } | null } | null } | null> } | null };
 
 export type GetBlogPostWithSlugQueryVariables = Exact<{
   preview?: InputMaybe<Scalars['Boolean']['input']>;
@@ -1477,6 +1477,7 @@ export const GetAllPostsDocument = new TypedDocumentString(`
       }
       heroDemo {
         id
+        key
       }
       author {
         ... on Author {

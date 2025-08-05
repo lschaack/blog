@@ -22,6 +22,7 @@ export const getAllPosts = gql`
         }
         heroDemo {
           id
+          key
         }
         author {
           ... on Author {
