@@ -2,7 +2,10 @@ import { ApolloClient, InMemoryCache } from "@apollo/client";
 
 const GRAPHQL_HOST = 'https://graphql.contentful.com';
 
-const token = process.env.NODE_ENV === "development"
+const hasPreviewToken = process.env.CONTENTFUL_PREVIEW_TOKEN !== undefined;
+export const preview = process.env.NODE_ENV === "development" && hasPreviewToken;
+
+const token = preview
   ? process.env.CONTENTFUL_PREVIEW_TOKEN
   : process.env.CONTENTFUL_DELIVERY_TOKEN;
 

@@ -4,7 +4,8 @@ import { loadEnvConfig } from '@next/env'
 const projectDir = process.cwd()
 loadEnvConfig(projectDir)
 
-const token = process.env.NODE_ENV === "development"
+const hasPreviewToken = process.env.CONTENTFUL_PREVIEW_TOKEN !== undefined;
+const token = process.env.NODE_ENV === "development" && hasPreviewToken
   ? process.env.CONTENTFUL_PREVIEW_TOKEN
   : process.env.CONTENTFUL_DELIVERY_TOKEN;
 

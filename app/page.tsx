@@ -1,4 +1,4 @@
-import { client } from "@/app/utils/contentful/client";
+import { client, preview } from "@/app/utils/contentful/client";
 import { getAllPosts } from "@/app/queries/getAllPosts";
 import { GetAllPostsQuery } from "@/app/graphql/graphql";
 import { PostBubble } from "@/app/components/PostBubble";
@@ -11,7 +11,7 @@ const getPosts = (skip: number, limit: number) => {
   return client.query<GetAllPostsQuery>({
     query: getAllPosts,
     variables: {
-      preview: process.env.NODE_ENV === 'development',
+      preview,
       skip,
       limit,
     }
