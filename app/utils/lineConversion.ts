@@ -174,11 +174,125 @@ export const calculateLineLength = (line: Line): number => {
 };
 
 /**
- * Complete pipeline to process AI points into a validated line
- * @param aiPoints Raw coordinate points from AI
- * @param bounds Canvas bounds
- * @param options Processing options
+ * Process AI Bezier curves directly (new preferred method)
+ * @param aiCurves Direct Bezier curves from AI
+ * @param bounds Canvas bounds for validation
  * @returns Processed and validated Line
+ */
+export const processAIBezierCurves = (
+  aiCurves: BezierCurve[]
+): Line => {
+  // Validate that we have curves
+  if (!Array.isArray(aiCurves) || aiCurves.length === 0) {
+    throw new Error('No curves provided');
+  }
+
+  // Validate each curve structure
+  for (const curve of aiCurves) {
+    if (!Array.isArray(curve) || curve.length !== 4) {
+      throw new Error('Invalid curve: must have 4 points [start, cp1, cp2, end]');
+    }
+    
+    for (const point of curve) {
+      if (!Array.isArray(point) || point.length !== 2) {
+        throw new Error('Invalid point in curve');
+      }
+      
+      const [x, y] = point;
+      if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) {
+        throw new Error('Invalid coordinates in curve');
+      }
+    }
+  }
+
+  // Apply curve quality improvements
+  const improvedCurves = improveAICurves(aiCurves);
+
+  // Validate the final result
+  if (!validateGeneratedLine(improvedCurves)) {
+    throw new Error('Generated line failed validation');
+  }
+
+  return improvedCurves;
+};
+
+/**
+ * Improve AI-generated curves for better drawing quality
+ * @param curves Raw AI curves
+ * @param bounds Canvas bounds
+ * @returns Improved curves
+ */
+const improveAICurves = (curves: BezierCurve[]): BezierCurve[] => {
+  return curves.map((curve, index) => {
+    let [start] = curve;
+    const [, cp1, cp2, end] = curve;
+
+    // 1. Ensure smooth connections between curves
+    if (index > 0) {
+      const prevCurve = curves[index - 1];
+      const prevEnd = prevCurve[3];
+      
+      // Make current start match previous end exactly for smooth connection
+      start = prevEnd;
+    }
+
+    // 2. Improve control point positions for more natural curves
+    const improvedCurve = optimizeControlPoints([start, cp1, cp2, end]);
+
+    return improvedCurve;
+  });
+};
+
+/**
+ * Optimize control points for more natural curve behavior
+ * @param curve Original curve
+ * @param bounds Canvas bounds
+ * @returns Optimized curve
+ */
+const optimizeControlPoints = (curve: BezierCurve): BezierCurve => {
+  const [start, cp1, cp2, end] = curve;
+
+  // Calculate the direct line vector from start to end
+  const directVector = [end[0] - start[0], end[1] - start[1]];
+  const directLength = Math.sqrt(directVector[0] ** 2 + directVector[1] ** 2);
+
+  // If the curve is very short, make it simpler
+  if (directLength < 10) {
+    return [
+      start,
+      [start[0] + directVector[0] * 0.3, start[1] + directVector[1] * 0.3],
+      [start[0] + directVector[0] * 0.7, start[1] + directVector[1] * 0.7],
+      end
+    ];
+  }
+
+  // Check if control points are too far from the main line
+  const maxControlDistance = directLength * 0.5; // Control points shouldn't be more than 50% of line length away
+
+  // Adjust cp1 if too extreme
+  const cp1Distance = Math.sqrt((cp1[0] - start[0]) ** 2 + (cp1[1] - start[1]) ** 2);
+  const newCp1 = cp1Distance > maxControlDistance 
+    ? [
+        start[0] + (cp1[0] - start[0]) * (maxControlDistance / cp1Distance),
+        start[1] + (cp1[1] - start[1]) * (maxControlDistance / cp1Distance)
+      ] as Point
+    : cp1;
+
+  // Adjust cp2 if too extreme
+  const cp2Distance = Math.sqrt((cp2[0] - end[0]) ** 2 + (cp2[1] - end[1]) ** 2);
+  const newCp2 = cp2Distance > maxControlDistance 
+    ? [
+        end[0] + (cp2[0] - end[0]) * (maxControlDistance / cp2Distance),
+        end[1] + (cp2[1] - end[1]) * (maxControlDistance / cp2Distance)
+      ] as Point
+    : cp2;
+
+  return [start, newCp1, newCp2, end];
+};
+
+/**
+ * Legacy function - complete pipeline to process AI points into a validated line
+ * @deprecated Use processAIBezierCurves for better quality
  */
 export const processAILine = (
   aiPoints: Point[],

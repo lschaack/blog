@@ -3,7 +3,7 @@ import { Line } from "./Sketchpad";
 import { Turn } from "./useTurnManager";
 import { getGeminiService, GameContext } from "@/app/services/geminiAI";
 import { renderGameStateToBase64, createGameContextSummary, checkImageSizeLimit } from "@/app/utils/imageContext";
-import { processAILine } from "@/app/utils/lineConversion";
+import { processAIBezierCurves } from "@/app/utils/lineConversion";
 
 export type AITurnState = "idle" | "processing" | "error" | "complete";
 
@@ -55,13 +55,9 @@ export const useAITurn = () => {
       const geminiService = getGeminiService();
       const aiResponse = await geminiService.generateTurn(gameContext);
 
-      // Step 5: Convert AI points to our line format
-      setProgress("Converting AI drawing...");
-      const convertedLine = processAILine(aiResponse.line, canvasDimensions, {
-        maxError: 2,
-        enableSmoothing: true,
-        smoothingWindow: 3
-      });
+      // Step 5: Convert AI Bezier curves to our line format
+      setProgress("Processing AI drawing...");
+      const convertedLine = processAIBezierCurves(aiResponse.curves);
 
       setState("complete");
       setProgress("");
@@ -149,8 +145,8 @@ export const useAITurn = () => {
       "Preparing game context...": "Setting up the game state...",
       "Rendering current drawing...": "Creating image of current drawing...",
       "Building game history...": "Summarizing previous turns...",
-      "Waiting for AI response...": "AI is analyzing and drawing...",
-      "Converting AI drawing...": "Processing AI's line drawing..."
+      "Waiting for AI response...": "AI is analyzing and creating curves...",
+      "Processing AI drawing...": "Optimizing AI's artistic curves..."
     };
     
     return progressMap[progress] || progress;

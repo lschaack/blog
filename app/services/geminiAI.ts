@@ -1,10 +1,11 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export type Point = [number, number];
+export type BezierCurve = [Point, Point, Point, Point]; // [startPoint, controlPoint1, controlPoint2, endPoint]
 
 export type AITurnResponse = {
   interpretation: string;
-  line: Point[];
+  curves: BezierCurve[];  // Direct Bezier curve output
   reasoning: string;
 };
 
@@ -40,36 +41,64 @@ class GeminiAIService {
 
     return `You're playing a collaborative drawing game called "Exquisite Corpse."
 
-RULES:
+DRAWING RULES:
 1. First, describe what you think the drawing is becoming
-2. Add exactly ONE continuous line to continue the drawing
-3. Keep additions simple and playful - just a single stroke
+2. Add exactly ONE flowing, artistic line that connects meaningfully to existing shapes
+3. Think like an artist - create curves that have natural flow and expression
 4. Build on what's there rather than starting something completely new
-5. Your line should be 3-15 coordinate points forming one continuous stroke
+5. Your addition should enhance and develop the existing drawing
 
 CANVAS INFO:
 - Dimensions: ${context.canvasDimensions.width}x${context.canvasDimensions.height} pixels
 - Coordinates: (0,0) is top-left, (${context.canvasDimensions.width},${context.canvasDimensions.height}) is bottom-right
 - Draw within these bounds
 
+BEZIER CURVE DRAWING:
+You will draw using Bezier curves, which create smooth, artistic lines. Each curve has 4 points:
+- Start Point: Where the curve begins
+- Control Point 1: Pulls the curve from the start (creates the initial direction/bend)
+- Control Point 2: Pulls the curve toward the end (creates the final direction/bend)  
+- End Point: Where the curve ends
+
+ARTISTIC TECHNIQUE TIPS:
+- To create a smooth flowing line: Place control points along the general direction of flow
+- To create tight curves: Pull control points closer to start/end points
+- To create gentle curves: Place control points further from start/end points
+- To connect to existing shapes: Start your curve near or touching existing elements
+- To create natural flow: Think about how a pencil would naturally move
+
+EXAMPLES OF GOOD CURVES:
+- Gentle arc: [[50,100], [75,80], [125,80], [150,100]] (control points above the arc)
+- S-curve: [[100,50], [120,30], [130,70], [150,50]] (control points create flowing S shape)
+- Connecting line: [[10,20], [30,15], [70,45], [90,50]] (flows from one shape to another)
+
 GAME HISTORY:
 ${historyText || "This is the first turn of the game."}
 
 CURRENT TURN: ${context.currentTurn}
 
-Look at the current drawing and:
-1. Interpret what you think it's becoming
-2. Add one simple, continuous line that builds on the existing drawing
-3. Explain your reasoning
+TASK:
+1. Analyze the image carefully - look for shapes, lines, and potential connections
+2. Interpret what the drawing is becoming (be creative but grounded in what you see)
+3. Plan ONE artistic curve that will enhance the drawing
+4. Consider how your curve connects to or builds upon existing elements
+5. Choose start/end points that make visual sense
+6. Design control points that create beautiful, flowing curves
 
 Respond with a JSON object in this exact format:
 {
-  "interpretation": "Your interpretation of what the drawing represents",
-  "line": [[x1, y1], [x2, y2], [x3, y3], ...],
-  "reasoning": "Brief explanation of why you added this line"
+  "interpretation": "What you think this drawing represents or is becoming",
+  "curves": [
+    [[startX, startY], [control1X, control1Y], [control2X, control2Y], [endX, endY]]
+  ],
+  "reasoning": "Why you chose to add this specific curve and how it enhances the drawing"
 }
 
-The line array should contain 3-15 coordinate points forming one continuous stroke.`;
+IMPORTANT: 
+- Use exactly 1-3 Bezier curves to create one flowing artistic line
+- Make sure your curves connect meaningfully to existing shapes
+- Think about the artistic flow and natural movement
+- Consider the overall composition and balance`;
   }
 
   private validateResponse(response: unknown): AITurnResponse {
@@ -77,49 +106,58 @@ The line array should contain 3-15 coordinate points forming one continuous stro
       throw new Error('Invalid AI response format');
     }
 
-    const { interpretation, line, reasoning } = response;
+    const { interpretation, curves, reasoning } = response as { interpretation: unknown; curves: unknown; reasoning: unknown };
 
     if (typeof interpretation !== 'string' || interpretation.trim().length === 0) {
       throw new Error('Invalid or missing interpretation');
     }
 
-    if (!Array.isArray(line) || line.length < 3 || line.length > 15) {
-      throw new Error('Line must be an array of 3-15 coordinate points');
+    if (!Array.isArray(curves) || curves.length < 1 || curves.length > 3) {
+      throw new Error('Must provide 1-3 Bezier curves');
     }
 
     if (typeof reasoning !== 'string' || reasoning.trim().length === 0) {
       throw new Error('Invalid or missing reasoning');
     }
 
-    // Validate each coordinate point
-    for (const point of line) {
-      if (!Array.isArray(point) || point.length !== 2) {
-        throw new Error('Each point must be a [x, y] coordinate array');
+    // Validate each Bezier curve
+    for (const curve of curves) {
+      if (!Array.isArray(curve) || curve.length !== 4) {
+        throw new Error('Each curve must have exactly 4 points: [start, control1, control2, end]');
       }
-      const [x, y] = point;
-      if (typeof x !== 'number' || typeof y !== 'number') {
-        throw new Error('Coordinates must be numbers');
-      }
-      if (!Number.isFinite(x) || !Number.isFinite(y)) {
-        throw new Error('Coordinates must be finite numbers');
+      
+      // Validate each point in the curve
+      for (const point of curve) {
+        if (!Array.isArray(point) || point.length !== 2) {
+          throw new Error('Each point must be a [x, y] coordinate array');
+        }
+        const [x, y] = point;
+        if (typeof x !== 'number' || typeof y !== 'number') {
+          throw new Error('Coordinates must be numbers');
+        }
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          throw new Error('Coordinates must be finite numbers');
+        }
       }
     }
 
     return {
       interpretation: interpretation.trim(),
-      line: line as Point[],
+      curves: curves as BezierCurve[],
       reasoning: reasoning.trim(),
     };
   }
 
-  private validateCoordinateBounds(
-    line: Point[], 
+  private validateCurveBounds(
+    curves: BezierCurve[], 
     bounds: { width: number; height: number }
-  ): Point[] {
-    return line.map(([x, y]) => [
-      Math.max(0, Math.min(bounds.width, Math.round(x))),
-      Math.max(0, Math.min(bounds.height, Math.round(y)))
-    ]) as Point[];
+  ): BezierCurve[] {
+    return curves.map(curve => {
+      return curve.map(([x, y]) => [
+        Math.max(0, Math.min(bounds.width, Math.round(x))),
+        Math.max(0, Math.min(bounds.height, Math.round(y)))
+      ]) as Point;
+    }) as BezierCurve[];
   }
 
   async generateTurn(context: GameContext): Promise<AITurnResponse> {
@@ -159,14 +197,14 @@ The line array should contain 3-15 coordinate points forming one continuous stro
       const validatedResponse = this.validateResponse(parsedResponse);
 
       // Validate and clamp coordinates to canvas bounds
-      const boundedLine = this.validateCoordinateBounds(
-        validatedResponse.line, 
+      const boundedCurves = this.validateCurveBounds(
+        validatedResponse.curves, 
         context.canvasDimensions
       );
 
       return {
         ...validatedResponse,
-        line: boundedLine,
+        curves: boundedCurves,
       };
 
     } catch (error) {
