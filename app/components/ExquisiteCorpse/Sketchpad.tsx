@@ -56,6 +56,46 @@ const fitCurvesToPoints = (points: Point[], maxError: number = 50): Line => {
   }
 };
 
+// PNG export utility
+const renderToPNG = (lines: Line[], width: number, height: number): void => {
+  const exportCanvas = document.createElement('canvas');
+  const ctx = exportCanvas.getContext('2d')!;
+  
+  exportCanvas.width = width;
+  exportCanvas.height = height;
+  
+  // Enable high-quality image smoothing
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  
+  // Set drawing style
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  
+  // Fill background with white
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  
+  // Draw all lines
+  lines.forEach(line => drawLine(ctx, line));
+  
+  // Convert to blob and download
+  exportCanvas.toBlob((blob) => {
+    if (!blob) return;
+    
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `sketch-${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, 'image/png', 1.0);
+};
+
 // Flow:
 // - user mouses down
 //   - start recording mouse positions
@@ -200,6 +240,11 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
 
+  // Render to PNG function
+  const handleRender = useCallback(() => {
+    renderToPNG(lines, width, height);
+  }, [lines, width, height]);
+
   const stopDrawing = useCallback(() => {
     if (!isDrawing) return;
 
@@ -255,6 +300,12 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
           label="Redo"
           onClick={redo}
           disabled={!canRedo}
+          className="flex-1"
+        />
+        <Button
+          label="Render PNG"
+          onClick={handleRender}
+          disabled={lines.length === 0}
           className="flex-1"
         />
       </div>
