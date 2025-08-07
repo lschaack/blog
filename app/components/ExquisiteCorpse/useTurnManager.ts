@@ -6,6 +6,10 @@ export type Turn = {
   author: "user" | "ai";
   timestamp: string;
   number: number;
+  // AI-specific fields
+  interpretation?: string; // AI's interpretation of what the drawing represents
+  reasoning?: string; // AI's reasoning for adding their line
+  // Legacy field for backward compatibility
   guess?: string;
 }
 
@@ -35,8 +39,8 @@ export const useTurnManager = (onTurnEnd?: (turn: Turn) => void) => {
     setCurrentTurnIndex(turns.length);
   }, [turns.length]);
 
-  // Turn completion
-  const endTurn = useCallback((line: Line) => {
+  // Turn completion for user turns
+  const endUserTurn = useCallback((line: Line) => {
     const newTurn: Turn = {
       line,
       author: "user",
@@ -50,6 +54,27 @@ export const useTurnManager = (onTurnEnd?: (turn: Turn) => void) => {
 
     return newTurn;
   }, [turns.length, onTurnEnd]);
+
+  // Turn completion for AI turns
+  const endAITurn = useCallback((line: Line, interpretation: string, reasoning: string) => {
+    const newTurn: Turn = {
+      line,
+      author: "ai",
+      timestamp: new Date().toISOString(),
+      number: turns.length + 1,
+      interpretation,
+      reasoning,
+    };
+
+    setTurns(prev => [...prev, newTurn]);
+    setCurrentTurnIndex(turns.length + 1);
+    onTurnEnd?.(newTurn);
+
+    return newTurn;
+  }, [turns.length, onTurnEnd]);
+
+  // Generic turn completion (for backward compatibility)
+  const endTurn = endUserTurn;
 
   // Get lines for display up to current viewing index
   const displayLines = useMemo(() => {
@@ -65,6 +90,9 @@ export const useTurnManager = (onTurnEnd?: (turn: Turn) => void) => {
   // Turn metadata
   const currentTurnNumber = currentTurnIndex + 1;
   const totalTurns = turns.length + 1;
+  const lastTurn = turns[turns.length - 1];
+  const isUserTurn = !lastTurn || lastTurn.author === "ai";
+  const isAITurn = lastTurn && lastTurn.author === "user";
 
   return {
     // State
@@ -74,6 +102,11 @@ export const useTurnManager = (onTurnEnd?: (turn: Turn) => void) => {
     totalTurns,
     isViewingCurrentTurn,
     
+    // Game flow
+    isUserTurn,
+    isAITurn,
+    lastTurn,
+    
     // Navigation
     canGoToPrevious,
     canGoToNext,
@@ -82,7 +115,9 @@ export const useTurnManager = (onTurnEnd?: (turn: Turn) => void) => {
     goToCurrentTurn,
     
     // Turn management
-    endTurn,
+    endTurn, // backward compatibility (user turn)
+    endUserTurn,
+    endAITurn,
     clearAllTurns,
     
     // Display

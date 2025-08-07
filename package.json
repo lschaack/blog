@@ -17,6 +17,7 @@
     "@contentful/rich-text-types": "^17.0.0",
     "@faker-js/faker": "^9.8.0",
     "@google/genai": "^1.13.0",
+    "@google/generative-ai": "^0.24.1",
     "@next/bundle-analyzer": "^15.3.5",
     "@next/env": "^15.2.2",
     "@timohausmann/quadtree-ts": "^2.2.2",
