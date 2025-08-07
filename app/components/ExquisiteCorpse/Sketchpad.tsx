@@ -1,9 +1,7 @@
-"use client";
-
 import { FC, useEffect, useRef, useState, useCallback } from "react";
 import fitCurve from 'fit-curve';
+
 import { useAnimationFrames } from '@/app/hooks/useAnimationFrames';
-import { Button } from '@/app/components/Button';
 
 type Point = [number, number];
 type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
@@ -12,7 +10,8 @@ type Line = BezierCurve[];
 type SketchpadProps = {
   width: number;
   height: number;
-  handleAddLine?: (lines: Line[]) => void;
+  lines: Line[];
+  handleAddLine: (lines: Line[]) => void;
 }
 
 // Canvas drawing utilities
@@ -56,66 +55,6 @@ const fitCurvesToPoints = (points: Point[], maxError: number = 50): Line => {
   }
 };
 
-// PNG export utility
-const renderToPNG = (lines: Line[], width: number, height: number): void => {
-  const exportCanvas = document.createElement('canvas');
-  const ctx = exportCanvas.getContext('2d')!;
-  
-  exportCanvas.width = width;
-  exportCanvas.height = height;
-  
-  // Enable high-quality image smoothing
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = 'high';
-  
-  // Set drawing style
-  ctx.strokeStyle = '#000';
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  
-  // Fill background with white
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, width, height);
-  
-  // Draw all lines
-  lines.forEach(line => drawLine(ctx, line));
-  
-  // Convert to blob and download
-  exportCanvas.toBlob((blob) => {
-    if (!blob) return;
-    
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `sketch-${Date.now()}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, 'image/png', 1.0);
-};
-
-// JSON export utility
-const exportLinesToJSON = (lines: Line[]): void => {
-  const exportData = {
-    version: 1,
-    timestamp: Date.now(),
-    lines: lines
-  };
-  
-  const jsonString = JSON.stringify(exportData, null, 2);
-  const blob = new Blob([jsonString], { type: 'application/json' });
-  
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `sketch-lines-${Date.now()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-};
 
 // Flow:
 // - user mouses down
@@ -126,13 +65,10 @@ const exportLinesToJSON = (lines: Line[]): void => {
 //     - render all lines to the canvas, including the newly-fit temporary curve
 // - user mouses up
 //   - fit the line and commit the resulting curve
-export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) => {
+export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddLine }) => {
   const [dpi, setDpi] = useState<number>(1);
   useEffect(() => setDpi(window.devicePixelRatio || 1), []);
 
-  const [lines, setLines] = useState<Line[]>([]);
-  const [history, setHistory] = useState<Line[][]>([[]]);
-  const [historyIndex, setHistoryIndex] = useState(0);
   const [isDrawing, setIsDrawing] = useState(false);
   const currentPoints = useRef<Point[]>([]);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -230,54 +166,6 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
     }
   };
 
-  // Undo/Redo functions
-  const addToHistory = useCallback((newLines: Line[]) => {
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(newLines);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  }, [history, historyIndex]);
-
-  const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      const previousState = history[newIndex];
-      setLines(previousState);
-      handleAddLine?.(previousState);
-    }
-  }, [historyIndex, history, handleAddLine]);
-
-  const redo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      const nextState = history[newIndex];
-      setLines(nextState);
-      handleAddLine?.(nextState);
-    }
-  }, [historyIndex, history, handleAddLine]);
-
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
-
-  // Render to PNG function
-  const handleRender = useCallback(() => {
-    renderToPNG(lines, width, height);
-  }, [lines, width, height]);
-
-  // Clear canvas and history
-  const handleClear = useCallback(() => {
-    setLines([]);
-    setHistory([[]]);
-    setHistoryIndex(0);
-    handleAddLine?.([]);
-  }, [handleAddLine]);
-
-  // Export lines to JSON
-  const handleExportJSON = useCallback(() => {
-    exportLinesToJSON(lines);
-  }, [lines]);
 
   const stopDrawing = useCallback(() => {
     if (!isDrawing) return;
@@ -288,14 +176,12 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
       const fittedLine = fitCurvesToPoints(currentPoints.current);
       if (fittedLine.length > 0) {
         const newLines = [...lines, fittedLine];
-        setLines(newLines);
-        addToHistory(newLines);
-        handleAddLine?.(newLines);
+        handleAddLine(newLines);
       }
     }
 
     currentPoints.current = [];
-  }, [isDrawing, lines, addToHistory, handleAddLine]);
+  }, [isDrawing, lines, handleAddLine]);
 
   // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent) => startDrawing(e.nativeEvent);
@@ -322,54 +208,20 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
   }, [stopDrawing]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-2">
-        <Button
-          label="Undo"
-          onClick={undo}
-          disabled={!canUndo}
-          className="flex-1"
-        />
-        <Button
-          label="Redo"
-          onClick={redo}
-          disabled={!canRedo}
-          className="flex-1"
-        />
-        <Button
-          label="Clear"
-          onClick={handleClear}
-          disabled={lines.length === 0}
-          className="flex-1"
-        />
-        <Button
-          label="Export JSON"
-          onClick={handleExportJSON}
-          disabled={lines.length === 0}
-          className="flex-1"
-        />
-        <Button
-          label="Render PNG"
-          onClick={handleRender}
-          disabled={lines.length === 0}
-          className="flex-1"
-        />
-      </div>
-      <canvas
-        ref={canvas}
-        width={width}
-        height={height}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        style={{
-          touchAction: 'none',
-          cursor: 'crosshair'
-        }}
-      />
-    </div>
+    <canvas
+      ref={canvas}
+      width={width}
+      height={height}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      style={{
+        touchAction: 'none',
+        cursor: 'crosshair'
+      }}
+    />
   );
 }

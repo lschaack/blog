@@ -1,10 +1,7 @@
-import { Sketchpad } from "@/app/components/ExquisiteCorpse/Sketchpad";
+import { Game } from "../components/ExquisiteCorpse/Game";
 
 export default function Demo() {
   return (
-    <Sketchpad
-      width={512}
-      height={512}
-    />
+    <Game />
   );
 }
