@@ -87,7 +87,7 @@ const drawBubbles = (bubbleField: BubbleField, canvas: HTMLCanvasElement, diagon
   }
 };
 
-
+// TODO: Scale overkill w/dpi, measured scale
 export type PackedBubbleProps = {
   seed: number;
   packingStrategy: PackingStrategy;
