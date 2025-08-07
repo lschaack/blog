@@ -3,9 +3,9 @@ import fitCurve from 'fit-curve';
 
 import { useAnimationFrames } from '@/app/hooks/useAnimationFrames';
 
-type Point = [number, number];
-type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
-type Line = BezierCurve[];
+export type Point = [number, number];
+export type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
+export type Line = BezierCurve[];
 
 type SketchpadProps = {
   width: number;

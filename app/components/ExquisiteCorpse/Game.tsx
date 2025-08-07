@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Sketchpad } from "./Sketchpad";
+import { useState, useCallback, useMemo } from "react";
+
+import { BezierCurve, Line, Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 
-type Point = [number, number];
-type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
-type Line = BezierCurve[];
+type Turn = {
+  line: Line;
+  author: "user" | "ai";
+  timestamp: string;
+  number: number;
+  guess?: string;
+}
 
 // PNG export utility
 const renderToPNG = (lines: Line[], width: number, height: number): void => {
@@ -81,100 +86,183 @@ const exportLinesToJSON = (lines: Line[]): void => {
   URL.revokeObjectURL(url);
 };
 
-export const Game = () => {
-  const [lines, setLines] = useState<Line[]>([]);
-  const [history, setHistory] = useState<Line[][]>([[]]);
-  const [historyIndex, setHistoryIndex] = useState(0);
+type GameProps = {
+  handleEndTurn?: (turn: Turn) => void;
+}
 
-  // History management functions
-  const addToHistory = useCallback((newLines: Line[]) => {
-    const newHistory = history.slice(0, historyIndex + 1);
+export const Game = ({ handleEndTurn }: GameProps = {}) => {
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [currentTurnIndex, setCurrentTurnIndex] = useState(0);
+  const [currentTurnLine, setCurrentTurnLine] = useState<Line[]>([]);
+  const [currentTurnHistory, setCurrentTurnHistory] = useState<Line[][]>([[]]);
+  const [currentTurnHistoryIndex, setCurrentTurnHistoryIndex] = useState(0);
+
+  // Get all lines from completed turns plus current turn line for display
+  const displayLines = useMemo(() => {
+    return [...turns.slice(0, currentTurnIndex).map(turn => turn.line), ...currentTurnLine];
+  }, [turns, currentTurnIndex, currentTurnLine]);
+
+  // Current turn history management
+  const addToCurrentTurnHistory = useCallback((newLines: Line[]) => {
+    const newHistory = currentTurnHistory.slice(0, currentTurnHistoryIndex + 1);
     newHistory.push(newLines);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  }, [history, historyIndex]);
+    setCurrentTurnHistory(newHistory);
+    setCurrentTurnHistoryIndex(newHistory.length - 1);
+  }, [currentTurnHistory, currentTurnHistoryIndex]);
 
   const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      const newIndex = historyIndex - 1;
-      setHistoryIndex(newIndex);
-      const previousState = history[newIndex];
-      setLines(previousState);
+    if (currentTurnHistoryIndex > 0) {
+      const newIndex = currentTurnHistoryIndex - 1;
+      setCurrentTurnHistoryIndex(newIndex);
+      const previousState = currentTurnHistory[newIndex];
+      setCurrentTurnLine(previousState);
     }
-  }, [historyIndex, history]);
+  }, [currentTurnHistoryIndex, currentTurnHistory]);
 
   const redo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const newIndex = historyIndex + 1;
-      setHistoryIndex(newIndex);
-      const nextState = history[newIndex];
-      setLines(nextState);
+    if (currentTurnHistoryIndex < currentTurnHistory.length - 1) {
+      const newIndex = currentTurnHistoryIndex + 1;
+      setCurrentTurnHistoryIndex(newIndex);
+      const nextState = currentTurnHistory[newIndex];
+      setCurrentTurnLine(nextState);
     }
-  }, [historyIndex, history]);
+  }, [currentTurnHistoryIndex, currentTurnHistory]);
 
-  const canUndo = historyIndex > 0;
-  const canRedo = historyIndex < history.length - 1;
+  const canUndo = currentTurnHistoryIndex > 0;
+  const canRedo = currentTurnHistoryIndex < currentTurnHistory.length - 1;
+  const isViewingCurrentTurn = currentTurnIndex === turns.length;
+  const hasCurrentLine = currentTurnLine.length > 0;
 
   // Action handlers
   const handleAddLine = useCallback((newLines: Line[]) => {
-    setLines(newLines);
-    addToHistory(newLines);
-  }, [addToHistory]);
+    // Only allow one line per turn - replace the current line
+    const newLine = newLines.slice(-1);
+    setCurrentTurnLine(newLine);
+    addToCurrentTurnHistory(newLine);
+  }, [addToCurrentTurnHistory]);
+
+  const handleEndTurnClick = useCallback(() => {
+    if (currentTurnLine.length === 0) return;
+
+    const newTurn: Turn = {
+      line: currentTurnLine[0],
+      author: "user",
+      timestamp: new Date().toISOString(),
+      number: turns.length + 1,
+    };
+
+    setTurns(prev => [...prev, newTurn]);
+    setCurrentTurnLine([]);
+    setCurrentTurnHistory([[]]);
+    setCurrentTurnHistoryIndex(0);
+    setCurrentTurnIndex(turns.length + 1);
+
+    handleEndTurn?.(newTurn);
+  }, [currentTurnLine, turns.length, handleEndTurn]);
 
   const handleClear = useCallback(() => {
-    setLines([]);
-    setHistory([[]]);
-    setHistoryIndex(0);
+    setTurns([]);
+    setCurrentTurnIndex(0);
+    setCurrentTurnLine([]);
+    setCurrentTurnHistory([[]]);
+    setCurrentTurnHistoryIndex(0);
   }, []);
 
+  const handlePreviousTurn = useCallback(() => {
+    if (currentTurnIndex > 0) {
+      setCurrentTurnIndex(prev => prev - 1);
+    }
+  }, [currentTurnIndex]);
+
+  const handleNextTurn = useCallback(() => {
+    if (currentTurnIndex < turns.length) {
+      setCurrentTurnIndex(prev => prev + 1);
+    }
+  }, [currentTurnIndex, turns.length]);
+
   const handleRender = useCallback(() => {
-    renderToPNG(lines, 512, 512);
-  }, [lines]);
+    renderToPNG(displayLines, 512, 512);
+  }, [displayLines]);
 
   const handleExportJSON = useCallback(() => {
-    exportLinesToJSON(lines);
-  }, [lines]);
+    exportLinesToJSON(displayLines);
+  }, [displayLines]);
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Turn navigation */}
+      <div className="flex gap-2 items-center">
+        <Button
+          label="← Previous"
+          onClick={handlePreviousTurn}
+          disabled={currentTurnIndex === 0}
+          className="flex-1"
+        />
+        <div className="text-center px-4">
+          Turn {currentTurnIndex + 1} of {turns.length + 1}
+          {!isViewingCurrentTurn && " (Viewing)"}
+        </div>
+        <Button
+          label="Next →"
+          onClick={handleNextTurn}
+          disabled={currentTurnIndex >= turns.length}
+          className="flex-1"
+        />
+      </div>
+
+      {/* Current turn controls - always visible to prevent layout shift */}
       <div className="flex gap-2">
         <Button
           label="Undo"
           onClick={undo}
-          disabled={!canUndo}
+          disabled={!isViewingCurrentTurn || !canUndo}
           className="flex-1"
         />
         <Button
           label="Redo"
           onClick={redo}
-          disabled={!canRedo}
+          disabled={!isViewingCurrentTurn || !canRedo}
           className="flex-1"
         />
         <Button
-          label="Clear"
+          label="Clear All"
           onClick={handleClear}
-          disabled={lines.length === 0}
+          disabled={!isViewingCurrentTurn || (turns.length === 0 && !hasCurrentLine)}
           className="flex-1"
         />
+      </div>
+
+      {/* Export controls */}
+      <div className="flex gap-2">
         <Button
           label="Export JSON"
           onClick={handleExportJSON}
-          disabled={lines.length === 0}
+          disabled={displayLines.length === 0}
           className="flex-1"
         />
         <Button
           label="Render PNG"
           onClick={handleRender}
-          disabled={lines.length === 0}
+          disabled={displayLines.length === 0}
           className="flex-1"
         />
       </div>
+
       <Sketchpad
         width={512}
         height={512}
-        lines={lines}
-        handleAddLine={handleAddLine}
+        lines={displayLines}
+        handleAddLine={isViewingCurrentTurn ? handleAddLine : () => {}}
       />
+
+      {/* End turn button - only show when viewing current turn and has a line */}
+      {isViewingCurrentTurn && hasCurrentLine && (
+        <Button
+          label="End Turn"
+          onClick={handleEndTurnClick}
+          className="w-full"
+        />
+      )}
     </div>
   )
 }
