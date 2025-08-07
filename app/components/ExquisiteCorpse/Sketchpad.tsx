@@ -96,6 +96,27 @@ const renderToPNG = (lines: Line[], width: number, height: number): void => {
   }, 'image/png', 1.0);
 };
 
+// JSON export utility
+const exportLinesToJSON = (lines: Line[]): void => {
+  const exportData = {
+    version: 1,
+    timestamp: Date.now(),
+    lines: lines
+  };
+  
+  const jsonString = JSON.stringify(exportData, null, 2);
+  const blob = new Blob([jsonString], { type: 'application/json' });
+  
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `sketch-lines-${Date.now()}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
 // Flow:
 // - user mouses down
 //   - start recording mouse positions
@@ -253,6 +274,11 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
     handleAddLine?.([]);
   }, [handleAddLine]);
 
+  // Export lines to JSON
+  const handleExportJSON = useCallback(() => {
+    exportLinesToJSON(lines);
+  }, [lines]);
+
   const stopDrawing = useCallback(() => {
     if (!isDrawing) return;
 
@@ -313,6 +339,12 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
         <Button
           label="Clear"
           onClick={handleClear}
+          disabled={lines.length === 0}
+          className="flex-1"
+        />
+        <Button
+          label="Export JSON"
+          onClick={handleExportJSON}
           disabled={lines.length === 0}
           className="flex-1"
         />
