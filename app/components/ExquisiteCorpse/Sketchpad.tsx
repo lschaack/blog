@@ -245,6 +245,14 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
     renderToPNG(lines, width, height);
   }, [lines, width, height]);
 
+  // Clear canvas and history
+  const handleClear = useCallback(() => {
+    setLines([]);
+    setHistory([[]]);
+    setHistoryIndex(0);
+    handleAddLine?.([]);
+  }, [handleAddLine]);
+
   const stopDrawing = useCallback(() => {
     if (!isDrawing) return;
 
@@ -300,6 +308,12 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
           label="Redo"
           onClick={redo}
           disabled={!canRedo}
+          className="flex-1"
+        />
+        <Button
+          label="Clear"
+          onClick={handleClear}
+          disabled={lines.length === 0}
           className="flex-1"
         />
         <Button
