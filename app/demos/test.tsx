@@ -1,6 +1,10 @@
+import { Sketchpad } from "@/app/components/ExquisiteCorpse/Sketchpad";
+
 export default function Demo() {
   return (
-    <div>
-    </div>
+    <Sketchpad
+      width={512}
+      height={512}
+    />
   );
 }
