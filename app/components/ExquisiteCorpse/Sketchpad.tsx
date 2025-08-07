@@ -3,6 +3,7 @@
 import { FC, useEffect, useRef, useState, useCallback } from "react";
 import fitCurve from 'fit-curve';
 import { useAnimationFrames } from '@/app/hooks/useAnimationFrames';
+import { Button } from '@/app/components/Button';
 
 type Point = [number, number];
 type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
@@ -33,7 +34,7 @@ const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {
 
 const drawRawPoints = (ctx: CanvasRenderingContext2D, points: Point[]) => {
   if (points.length < 2) return;
-  
+
   ctx.beginPath();
   ctx.moveTo(points[0][0], points[0][1]);
   for (let i = 1; i < points.length; i++) {
@@ -43,9 +44,9 @@ const drawRawPoints = (ctx: CanvasRenderingContext2D, points: Point[]) => {
 };
 
 // Curve fitting logic
-const fitCurvesToPoints = (points: Point[], maxError: number = 2): Line => {
+const fitCurvesToPoints = (points: Point[], maxError: number = 50): Line => {
   if (points.length < 2) return [];
-  
+
   try {
     const curves = fitCurve(points, maxError);
     return curves as BezierCurve[];
@@ -69,6 +70,8 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
   useEffect(() => setDpi(window.devicePixelRatio || 1), []);
 
   const [lines, setLines] = useState<Line[]>([]);
+  const [history, setHistory] = useState<Line[][]>([[]]);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const [isDrawing, setIsDrawing] = useState(false);
   const currentPoints = useRef<Point[]>([]);
   const canvas = useRef<HTMLCanvasElement>(null);
@@ -82,7 +85,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
     canvas.current!.height = height * dpi;
     canvas.current!.style.width = `${width}px`;
     canvas.current!.style.height = `${height}px`;
-    
+
     ctx.scale(dpi, dpi);
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
@@ -104,7 +107,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
     if (currentPoints.current.length > 1) {
       ctx.strokeStyle = '#ccc';
       drawRawPoints(ctx, currentPoints.current);
-      
+
       // Fit and draw temporary curve
       const tempCurves = fitCurvesToPoints(currentPoints.current);
       if (tempCurves.length > 0) {
@@ -119,7 +122,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
   // Redraw committed lines when not drawing
   useEffect(() => {
     if (isDrawing) return;
-    
+
     const ctx = canvas.current?.getContext('2d');
     if (!ctx) return;
 
@@ -130,7 +133,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
 
   const getEventPoint = (e: MouseEvent | TouchEvent): Point => {
     const rect = canvas.current!.getBoundingClientRect();
-    
+
     if ('touches' in e) {
       const touch = e.touches[0] || e.changedTouches[0];
       return [
@@ -154,34 +157,66 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
   const continueDrawing = (e: MouseEvent | TouchEvent) => {
     if (!isDrawing) return;
     e.preventDefault();
-    
+
     const point = getEventPoint(e);
     const lastPoint = currentPoints.current[currentPoints.current.length - 1];
-    
+
     // Only add point if it's different enough from the last one
-    if (!lastPoint || 
-        Math.abs(point[0] - lastPoint[0]) > 1 || 
-        Math.abs(point[1] - lastPoint[1]) > 1) {
+    if (!lastPoint ||
+      Math.abs(point[0] - lastPoint[0]) > 1 ||
+      Math.abs(point[1] - lastPoint[1]) > 1) {
       currentPoints.current.push(point);
     }
   };
 
+  // Undo/Redo functions
+  const addToHistory = useCallback((newLines: Line[]) => {
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newLines);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  }, [history, historyIndex]);
+
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      const previousState = history[newIndex];
+      setLines(previousState);
+      handleAddLine?.(previousState);
+    }
+  }, [historyIndex, history, handleAddLine]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      const nextState = history[newIndex];
+      setLines(nextState);
+      handleAddLine?.(nextState);
+    }
+  }, [historyIndex, history, handleAddLine]);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
   const stopDrawing = useCallback(() => {
     if (!isDrawing) return;
-    
+
     setIsDrawing(false);
-    
+
     if (currentPoints.current.length > 1) {
       const fittedLine = fitCurvesToPoints(currentPoints.current);
       if (fittedLine.length > 0) {
         const newLines = [...lines, fittedLine];
         setLines(newLines);
+        addToHistory(newLines);
         handleAddLine?.(newLines);
       }
     }
-    
+
     currentPoints.current = [];
-  }, [isDrawing, lines, handleAddLine]);
+  }, [isDrawing, lines, addToHistory, handleAddLine]);
 
   // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent) => startDrawing(e.nativeEvent);
@@ -197,10 +232,10 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
     const handleMouseUpGlobal = () => stopDrawing();
     const handleMouseLeave = () => stopDrawing();
     const canvasElement = canvas.current;
-    
+
     document.addEventListener('mouseup', handleMouseUpGlobal);
     canvasElement?.addEventListener('mouseleave', handleMouseLeave);
-    
+
     return () => {
       document.removeEventListener('mouseup', handleMouseUpGlobal);
       canvasElement?.removeEventListener('mouseleave', handleMouseLeave);
@@ -208,20 +243,36 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, handleAddLine }) 
   }, [stopDrawing]);
 
   return (
-    <canvas 
-      ref={canvas} 
-      width={width} 
-      height={height}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      style={{ 
-        touchAction: 'none',
-        cursor: 'crosshair'
-      }}
-    />
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2">
+        <Button
+          label="Undo"
+          onClick={undo}
+          disabled={!canUndo}
+          className="flex-1"
+        />
+        <Button
+          label="Redo"
+          onClick={redo}
+          disabled={!canRedo}
+          className="flex-1"
+        />
+      </div>
+      <canvas
+        ref={canvas}
+        width={width}
+        height={height}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          touchAction: 'none',
+          cursor: 'crosshair'
+        }}
+      />
+    </div>
   );
 }
