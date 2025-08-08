@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import fs from 'fs';
+import path from 'path';
 
 export type Point = [number, number];
 export type BezierCurve = [Point, Point, Point, Point];
@@ -24,58 +26,15 @@ export type GameContext = {
 
 class GeminiSketchbotService {
   private client: GoogleGenerativeAI;
-  private static systemPrompt = `You're playing a collaborative drawing game called "Exquisite Corpse."
+  private static systemPrompt: string | null = null;
 
-DRAWING PHILOSOPHY:
-Create elegant geometry with sparse but confident lines that provide only the necessary features required to make the subject immediately recognizable. Think of the Pablo Picasso one-line drawings like "Camel" or "Flamingo." Produce each stroke with one long, flowing line; think "don't lift the pen."
-
-CANVAS INFO:
-- Dimensions: 512x512 pixels
-- Coordinates: (0,0) is top-left, (512,512) is bottom-right
-
-BEZIER CURVE DRAWING:
-You will draw using Bezier curves, which create smooth, artistic lines. Each curve has 4 points:
-- Start Point: Where the curve begins
-- Control Point 1: Pulls the curve from the start (creates the initial direction/bend)
-- Control Point 2: Pulls the curve toward the end (creates the final direction/bend)
-- End Point: Where the curve ends
-
-DRAWING RULES:
-The following rules describe a possible evaluation of this line:
-<Line>
-<BezierCurve>
-[150,117],[113.04066323404871,117],[138.78539768444764,154.21460231555236],[160,133]
-</BezierCurve>
-<BezierCurve>
-[160,133],[181.7575157077113,111.24248429228871],[154.75177820219437,82.5620554494514],[129,89]
-</BezierCurve>
-<BezierCurve>
-[129,89],[97.58619003694115,96.85345249076471],[109.13302950012437,150.47981770007462],[130,163]
-</BezierCurve>
-<BezierCurve>
-[130,163],[172.36755732151366,188.4205343929082],[225.28997569725234,126.71996759633647],[197,89]
-</BezierCurve>
-<BezierCurve>
-[197,89],[148.94396001300981,24.925280017346395],[41.44940061014522,104.41566768357536],[91,187]
-</BezierCurve>
-<BezierCurve>
-[91,187],[137.86999598653003,265.11665997755006],[320,235.12786205264206],[320,148]
-</BezierCurve>
-</Line>
-1. First, describe what you think the drawing is becoming: "I see a spiral curve that starts from the upper left, curves down and around, creating an open spiral shape like a seashell"
-2. Decide on a single addition that expresses your interpretation: "I should create an opening to represent the mouth of the seashell"
-4. Define a geometric plan to produce that addition: "I will create a loop that joins the outer tip of the spiral to the nearest edge"
-    4.1. Specify connection points: "The loop should start at the outer tip of the spiral, connect to another point on the nearest edge, then return to the outer tip"
-    4.2. Map control points: "The bezier curve will have control points that curve the first and second parts of the line in opposite directions"
-5. Draw in the form of a bezier curve:
-<Line>
-<BezierCurve>
-[323,149],[323,102.46249647638308],[200.51468698308443,100.05874793233771],[206,122]
-</BezierCurve>
-<BezierCurve>
-[206,122],[211.62919227867525,144.51676911470102],[325,161.893029490424],[325,148]
-</BezierCurve>
-</Line>`
+  private static getSystemPrompt(): string {
+    if (GeminiSketchbotService.systemPrompt === null) {
+      const promptPath = path.join(process.cwd(), 'app', 'api', 'gemini', 'systemPrompt.txt');
+      GeminiSketchbotService.systemPrompt = fs.readFileSync(promptPath, 'utf8');
+    }
+    return GeminiSketchbotService.systemPrompt;
+  }
 
   constructor(apiKey: string) {
     this.client = new GoogleGenerativeAI(apiKey);
@@ -178,7 +137,7 @@ Respond with a JSON object in this exact format:
     try {
       const model = this.client.getGenerativeModel({
         model: "gemini-2.5-flash",
-        systemInstruction: GeminiSketchbotService.systemPrompt,
+        systemInstruction: GeminiSketchbotService.getSystemPrompt(),
       });
 
       const prompt = this.buildPrompt(context);
