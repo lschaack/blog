@@ -79,8 +79,8 @@ export const TrainingInterface = () => {
     clearLines();
   }, [clearLines]);
 
-  // Convert old training example file to new format
-  const handleConvertFile = useCallback(() => {
+  // Load existing training example file for editing
+  const handleLoadFile = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
 
@@ -95,48 +95,27 @@ export const TrainingInterface = () => {
 
     try {
       const xmlText = await file.text();
-      const parsedData = parseOldXML(xmlText);
+      const parsedData = parseXML(xmlText);
 
       if (!parsedData) {
         alert('Failed to parse XML file. Please ensure it\'s a valid training example.');
         return;
       }
 
-      // Generate base64 image from the parsed lines
-      const base64Image = await renderGameStateToBase64(
-        parsedData.lines,
-        canvasDimensions.width,
-        canvasDimensions.height
-      );
+      // Load the data into the form for editing
+      setExampleName(parsedData.name);
+      setExampleDescription(parsedData.description);
+      setCurrentLine(parsedData.lines);
 
-      // Generate new XML with image
-      const newXmlContent = generateXML(
-        parsedData.name,
-        parsedData.description,
-        parsedData.lines,
-        base64Image
-      );
-
-      // Download the converted file
-      const blob = new Blob([newXmlContent], { type: 'application/xml' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `converted-${file.name}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      alert('File converted successfully!');
+      alert('Example loaded successfully! You can now edit and save it.');
     } catch (error) {
-      console.error('Failed to convert file:', error);
-      alert('Failed to convert file. Please check the file format and try again.');
+      console.error('Failed to load file:', error);
+      alert('Failed to load file. Please check the file format and try again.');
     }
 
     // Reset file input
     event.target.value = '';
-  }, [canvasDimensions]);
+  }, [setCurrentLine]);
 
   return (
     <div className="flex flex-col gap-4 max-w-[512px]">
@@ -240,16 +219,16 @@ export const TrainingInterface = () => {
         </div>
       </div>
 
-      {/* File converter section */}
+      {/* Load existing example section */}
       <div className="border-t pt-4">
-        <div className="text-center p-2 bg-blue-50 rounded mb-2">
-          <div className="font-semibold text-blue-800">Format Converter</div>
-          <div className="text-sm text-blue-600">Convert old training examples to include base64 images</div>
+        <div className="text-center p-2 bg-green-50 rounded mb-2">
+          <div className="font-semibold text-green-800">Load & Edit</div>
+          <div className="text-sm text-green-600">Load an existing training example file for editing</div>
         </div>
 
         <Button
-          label="Convert Old Example File"
-          onClick={handleConvertFile}
+          label="Load Example File"
+          onClick={handleLoadFile}
           className="w-full"
         />
 
@@ -265,14 +244,14 @@ export const TrainingInterface = () => {
   );
 };
 
-// Parse old XML format training example
+// Parse XML format training example (supports both old and new formats)
 type ParsedTrainingExample = {
   name: string;
   description: string;
   lines: Line[];
 };
 
-const parseOldXML = (xmlText: string): ParsedTrainingExample | null => {
+const parseXML = (xmlText: string): ParsedTrainingExample | null => {
   try {
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
