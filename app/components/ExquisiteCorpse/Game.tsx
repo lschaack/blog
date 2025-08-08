@@ -235,12 +235,6 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
           disabled={!turnManager.isViewingCurrentTurn || !turnManager.isUserTurn || !currentTurn.canRedo}
           className="flex-1"
         />
-        <Button
-          label="Clear All"
-          onClick={handleClear}
-          disabled={!turnManager.isViewingCurrentTurn || (turnManager.turns.length === 0 && !currentTurn.hasLine)}
-          className="flex-1"
-        />
       </div>
 
       {/* Export controls */}
@@ -268,7 +262,7 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
 
       {/* Turn action buttons */}
       {turnManager.isViewingCurrentTurn && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-4">
           {/* End turn button - only for user turns with a line */}
           <Button
             label="End Turn"
@@ -285,6 +279,14 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
               className="w-full"
             />
           )}
+
+          <Button
+            label="Reset"
+            onClick={handleClear}
+            disabled={!turnManager.isViewingCurrentTurn || (turnManager.turns.length === 0 && !currentTurn.hasLine)}
+            className="flex-1"
+          />
+
         </div>
       )}
 

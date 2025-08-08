@@ -17,7 +17,7 @@ export const Button: FC<ButtonProps> = ({ label, onClick, className, disabled = 
         "text-base/loose text-text-extralight font-geist-mono font-semibold",
         "w-full p-2 rounded-[10px] cursor-pointer bg-bold",
         "pop-active",
-        "disabled:contrast-50 disabled:brightness-200"
+        "disabled:contrast-50 disabled:brightness-200 disabled:cursor-not-allowed"
       )}
       disabled={disabled}
     >
