@@ -96,7 +96,7 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
   const turnInfo = useRef<HTMLDivElement>(null);
 
   // Separate turn and line management using custom hooks
-  const turnManager = useTurnManager(handleEndTurn);
+  const { turnManager, turns, currentTurnIndex } = useTurnManager(handleEndTurn);
   const currentTurn = useCurrentTurn();
   const aiTurn = useAITurn();
 
@@ -115,13 +115,13 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
   // Serialize game state to JSON
   const gameStateJSON = useMemo(() => {
     const gameState: GameState = {
-      turns: turnManager.turns,
-      currentTurnIndex: turnManager.currentTurnIndex,
+      turns: turns,
+      currentTurnIndex: currentTurnIndex,
       currentLine: currentTurn.currentLine,
       timestamp: new Date().toISOString(),
     };
     return JSON.stringify(gameState, null, 2);
-  }, [turnManager.turns, turnManager.currentTurnIndex, currentTurn.currentLine]);
+  }, [turns, currentTurnIndex, currentTurn.currentLine]);
 
   // Update JSON text when game state changes
   useEffect(() => {
@@ -140,7 +140,7 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
         try {
           const result = await aiTurn.processAITurn(
             displayLines,
-            turnManager.turns,
+            turns,
             canvasDimensions
           );
 
@@ -154,7 +154,7 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
     };
 
     processAITurnAutomatically();
-  }, [turnManager.isAITurn, aiTurn.isProcessing, turnManager.isViewingCurrentTurn, aiTurn, turnManager, displayLines, canvasDimensions]);
+  }, [turnManager.isAITurn, aiTurn.isProcessing, turnManager.isViewingCurrentTurn, aiTurn, turnManager, displayLines, canvasDimensions, turns]);
 
   // Action handlers
   const handleAddLine = useCallback((newLines: Line[]) => {
@@ -174,7 +174,7 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
     try {
       const result = await aiTurn.retryAITurn(
         displayLines,
-        turnManager.turns,
+        turns,
         canvasDimensions
       );
 
@@ -182,7 +182,7 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
     } catch (error) {
       console.error("AI retry failed:", error);
     }
-  }, [aiTurn, displayLines, turnManager, canvasDimensions]);
+  }, [aiTurn, displayLines, turns, canvasDimensions, turnManager]);
 
   const handleClear = useCallback(() => {
     turnManager.clearAllTurns();
@@ -248,7 +248,7 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
   })
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 max-w-[512px]">
       {/* Game status indicator */}
       <div className="text-center p-2 bg-gray-100 rounded">
         {aiTurn.isProcessing ? (
@@ -351,7 +351,7 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
           <Button
             label="Reset"
             onClick={handleClear}
-            disabled={!turnManager.isViewingCurrentTurn || (turnManager.turns.length === 0 && !currentTurn.hasLine)}
+            disabled={!turnManager.isViewingCurrentTurn || (turns.length === 0 && !currentTurn.hasLine)}
             className="flex-1"
           />
 
@@ -359,11 +359,11 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
       )}
 
       {/* Turn information panel */}
-      {turnManager.turns.length > 0 && (
+      {turns.length > 0 && (
         <div className="mt-4 p-3 bg-gray-50 rounded">
           <h3 className="font-semibold mb-2">Turn History</h3>
           <div className="space-y-2 max-h-40 overflow-y-auto" ref={turnInfo}>
-            {turnManager.turns.map((turn) => (
+            {turns.map((turn) => (
               <div key={turn.number} className="text-sm border-l-2 border-gray-300 pl-3">
                 <div className="font-medium">
                   Turn {turn.number} - {turn.author === "user" ? "You" : "AI"}
