@@ -179,7 +179,7 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
   })
 
   return (
-    <div className="flex flex-col gap-4 w-min">
+    <div className="flex flex-col gap-4">
       {/* Game status indicator */}
       <div className="text-center p-2 bg-gray-100 rounded">
         {aiTurn.isProcessing ? (

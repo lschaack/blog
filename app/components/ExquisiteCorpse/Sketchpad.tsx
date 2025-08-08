@@ -78,11 +78,6 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
     const ctx = canvas.current?.getContext('2d');
     if (!ctx || !dpi) return;
 
-    canvas.current!.width = width * dpi;
-    canvas.current!.height = height * dpi;
-    canvas.current!.style.width = `${width}px`;
-    canvas.current!.style.height = `${height}px`;
-
     ctx.scale(dpi, dpi);
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
@@ -130,19 +125,30 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
 
   const getEventPoint = (e: MouseEvent | TouchEvent): Point => {
     const rect = canvas.current!.getBoundingClientRect();
+    const { width: baseWidth, height: baseHeight } = canvas.current!;
+    const { width: measuredWidth, height: measuredHeight } = rect;
+
+    const scaleX = baseWidth / measuredWidth / dpi;
+    const scaleY = baseHeight / measuredHeight / dpi;
+
+    let clientX: number, clientY: number;
 
     if ('touches' in e) {
       const touch = e.touches[0] || e.changedTouches[0];
-      return [
-        touch.clientX - rect.left,
-        touch.clientY - rect.top
-      ];
+      clientX = touch.clientX;
+      clientY = touch.clientY;
     } else {
-      return [
-        e.clientX - rect.left,
-        e.clientY - rect.top
-      ];
+      clientX = e.clientX;
+      clientY = e.clientY;
     }
+
+    const currentX = clientX - rect.left;
+    const currentY = clientY - rect.top;
+
+    return [
+      currentX * scaleX,
+      currentY * scaleY
+    ];
   };
 
   const startDrawing = (e: MouseEvent | TouchEvent) => {
@@ -210,8 +216,8 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
   return (
     <canvas
       ref={canvas}
-      width={width}
-      height={height}
+      width={width * dpi}
+      height={height * dpi}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -220,7 +226,9 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
       onTouchEnd={handleTouchEnd}
       style={{
         touchAction: 'none',
-        cursor: 'crosshair'
+        cursor: 'crosshair',
+        width,
+        maxWidth: '100%',
       }}
     />
   );
