@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
-import { Sketchpad, Line } from "./Sketchpad";
+import { useState, useCallback, useMemo, useRef } from "react";
+import { Sketchpad, Line, BezierCurve } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { useUndoRedo } from './useUndoRedo';
 import { renderGameStateToBase64 } from './imageContext';
@@ -25,6 +25,9 @@ export const TrainingInterface = () => {
   // Canvas dimensions (consistent with Game component)
   const canvasDimensions = useMemo(() => ({ width: 512, height: 512 }), []);
 
+  // File input ref for converter
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   // Handler for adding lines from Sketchpad
   const handleAddLine = useCallback((newLines: Line[]) => {
     setCurrentLine(newLines);
@@ -47,9 +50,9 @@ export const TrainingInterface = () => {
 
       // Generate XML content with image
       const xmlContent = generateXML(
-        exampleName.trim(), 
-        exampleDescription.trim(), 
-        currentLine, 
+        exampleName.trim(),
+        exampleDescription.trim(),
+        currentLine,
         base64Image
       );
 
@@ -75,6 +78,65 @@ export const TrainingInterface = () => {
     setExampleDescription("");
     clearLines();
   }, [clearLines]);
+
+  // Convert old training example file to new format
+  const handleConvertFile = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith('.xml')) {
+      alert('Please select an XML file.');
+      return;
+    }
+
+    try {
+      const xmlText = await file.text();
+      const parsedData = parseOldXML(xmlText);
+
+      if (!parsedData) {
+        alert('Failed to parse XML file. Please ensure it\'s a valid training example.');
+        return;
+      }
+
+      // Generate base64 image from the parsed lines
+      const base64Image = await renderGameStateToBase64(
+        parsedData.lines,
+        canvasDimensions.width,
+        canvasDimensions.height
+      );
+
+      // Generate new XML with image
+      const newXmlContent = generateXML(
+        parsedData.name,
+        parsedData.description,
+        parsedData.lines,
+        base64Image
+      );
+
+      // Download the converted file
+      const blob = new Blob([newXmlContent], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `converted-${file.name}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      alert('File converted successfully!');
+    } catch (error) {
+      console.error('Failed to convert file:', error);
+      alert('Failed to convert file. Please check the file format and try again.');
+    }
+
+    // Reset file input
+    event.target.value = '';
+  }, [canvasDimensions]);
 
   return (
     <div className="flex flex-col gap-4 max-w-[512px]">
@@ -177,8 +239,112 @@ export const TrainingInterface = () => {
           </div>
         </div>
       </div>
+
+      {/* File converter section */}
+      <div className="border-t pt-4">
+        <div className="text-center p-2 bg-blue-50 rounded mb-2">
+          <div className="font-semibold text-blue-800">Format Converter</div>
+          <div className="text-sm text-blue-600">Convert old training examples to include base64 images</div>
+        </div>
+
+        <Button
+          label="Convert Old Example File"
+          onClick={handleConvertFile}
+          className="w-full"
+        />
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xml"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+        />
+      </div>
     </div>
   );
+};
+
+// Parse old XML format training example
+type ParsedTrainingExample = {
+  name: string;
+  description: string;
+  lines: Line[];
+};
+
+const parseOldXML = (xmlText: string): ParsedTrainingExample | null => {
+  try {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+
+    // Check for parser errors
+    const parserError = xmlDoc.querySelector('parsererror');
+    if (parserError) {
+      console.error('XML parsing error:', parserError.textContent);
+      return null;
+    }
+
+    const example = xmlDoc.querySelector('Example');
+    if (!example) {
+      console.error('No Example element found');
+      return null;
+    }
+
+    // Extract name and description
+    const nameElement = example.querySelector('Name');
+    const descriptionElement = example.querySelector('Description');
+
+    if (!nameElement || !descriptionElement) {
+      console.error('Missing Name or Description element');
+      return null;
+    }
+
+    const name = nameElement.textContent?.trim() || '';
+    const description = descriptionElement.textContent?.trim() || '';
+
+    // Extract lines and curves
+    const lineElements = example.querySelectorAll('Line');
+    const lines: Line[] = [];
+
+    for (const lineElement of lineElements) {
+      const curveElements = lineElement.querySelectorAll('BezierCurve');
+      const curves: BezierCurve[] = [];
+
+      for (const curveElement of curveElements) {
+        const curveText = curveElement.textContent?.trim();
+        if (!curveText) continue;
+
+        try {
+          // Parse the curve format: [[startX, startY], [cp1X, cp1Y], [cp2X, cp2Y], [endX, endY]]
+          const curveData = JSON.parse(curveText) as BezierCurve;
+
+          // Validate curve structure
+          if (Array.isArray(curveData) && curveData.length === 4 &&
+            curveData.every(point => Array.isArray(point) && point.length === 2)) {
+            curves.push(curveData);
+          } else {
+            console.warn('Invalid curve data:', curveData);
+          }
+        } catch (error) {
+          console.warn('Failed to parse curve:', curveText, error);
+        }
+      }
+
+      if (curves.length > 0) {
+        lines.push(curves);
+      }
+    }
+
+    if (lines.length === 0) {
+      console.error('No valid lines found in XML');
+      return null;
+    }
+
+    return { name, description, lines };
+  } catch (error) {
+    console.error('Failed to parse XML:', error);
+    return null;
+  }
 };
 
 // Generate XML content for the training example
