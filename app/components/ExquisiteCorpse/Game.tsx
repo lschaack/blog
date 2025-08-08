@@ -4,6 +4,7 @@ import { useCallback, useMemo, useEffect, useRef, useLayoutEffect, useState } fr
 
 import { BezierCurve, Line, Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
+import { Toggle } from '@/app/components/Toggle';
 import { useTurnManager, Turn } from './useTurnManager';
 import { useCurrentTurn } from './useCurrentTurn';
 import { useAITurn } from './useAITurn';
@@ -104,6 +105,9 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
   const [jsonText, setJsonText] = useState<string>("");
   const [jsonError, setJsonError] = useState<string | null>(null);
 
+  // AI turns toggle state
+  const [aiTurnsEnabled, setAiTurnsEnabled] = useState<boolean>(true);
+
   // Canvas dimensions (consistent throughout game)
   const canvasDimensions = useMemo(() => ({ width: 512, height: 512 }), []);
 
@@ -129,6 +133,11 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
     setJsonError(null);
   }, [gameStateJSON]);
 
+  // Update TurnManager's isAIEnabled field when toggle changes
+  useEffect(() => {
+    turnManager.isAIEnabled = aiTurnsEnabled;
+  }, [aiTurnsEnabled, turnManager]);
+
   // Auto-trigger AI turn when user completes their turn
   useEffect(() => {
     const processAITurnAutomatically = async () => {
@@ -136,7 +145,8 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
       // 1. It's AI's turn (user just finished)
       // 2. AI is not already processing
       // 3. We're viewing the current turn
-      if (turnManager.isAITurn && !aiTurn.isProcessing && turnManager.isViewingCurrentTurn) {
+      // 4. AI turns are enabled
+      if (turnManager.isAITurn && !aiTurn.isProcessing && turnManager.isViewingCurrentTurn && aiTurnsEnabled) {
         try {
           const result = await aiTurn.processAITurn(
             displayLines,
@@ -154,7 +164,7 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
     };
 
     processAITurnAutomatically();
-  }, [turnManager.isAITurn, aiTurn.isProcessing, turnManager.isViewingCurrentTurn, aiTurn, turnManager, displayLines, canvasDimensions, turns]);
+  }, [turnManager.isAITurn, aiTurn.isProcessing, turnManager.isViewingCurrentTurn, aiTurnsEnabled, aiTurn, turnManager, displayLines, canvasDimensions, turns]);
 
   // Action handlers
   const handleAddLine = useCallback((newLines: Line[]) => {
@@ -188,6 +198,12 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
     turnManager.clearAllTurns();
     currentTurn.resetCurrentTurn();
   }, [turnManager, currentTurn]);
+
+  const handleSkipAITurn = useCallback(() => {
+    // Skip AI turn by ending with an empty line (or minimal line)
+    // This effectively moves to the next user turn
+    turnManager.endAITurn([], "Turn skipped", "AI turns are disabled");
+  }, [turnManager]);
 
   const handleRender = useCallback(() => {
     renderToPNG(displayLines, 512, 512);
@@ -264,7 +280,11 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
         ) : turnManager.isUserTurn ? (
           <div className="font-semibold text-blue-600">Your Turn</div>
         ) : turnManager.isAITurn ? (
-          <div className="font-semibold text-purple-600">AI&apos;s Turn</div>
+          aiTurnsEnabled ? (
+            <div className="font-semibold text-purple-600">AI&apos;s Turn</div>
+          ) : (
+            <div className="font-semibold text-gray-600">AI Turn Skipped (Disabled)</div>
+          )
         ) : (
           <div className="font-semibold">Start Drawing!</div>
         )}
@@ -326,7 +346,13 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
         width={canvasDimensions.width}
         height={canvasDimensions.height}
         lines={displayLines}
-        handleAddLine={turnManager.isViewingCurrentTurn && turnManager.isUserTurn && !aiTurn.isProcessing ? handleAddLine : () => { }}
+        handleAddLine={line => {
+          const canAddLine = turnManager.isViewingCurrentTurn
+            && (turnManager.isUserTurn && !aiTurn.isProcessing)
+            || !aiTurnsEnabled;
+
+          if (canAddLine) handleAddLine(line);
+        }}
       />
 
       {/* Turn action buttons */}
@@ -348,11 +374,30 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
             />
           )}
 
+          {/* Skip AI turn button - when AI turns are disabled and it's AI's turn */}
+          {turnManager.isAITurn && !aiTurnsEnabled && !aiTurn.isProcessing && (
+            <Button
+              label="Skip AI Turn"
+              onClick={handleSkipAITurn}
+              className="w-full"
+            />
+          )}
+
           <Button
             label="Reset"
             onClick={handleClear}
             disabled={!turnManager.isViewingCurrentTurn || (turns.length === 0 && !currentTurn.hasLine)}
             className="flex-1"
+          />
+
+          <Toggle
+            id="ai-turns-enabled"
+            label="AI Turns"
+            value={aiTurnsEnabled}
+            onChange={setAiTurnsEnabled}
+            enabledText="On"
+            disabledText="Off"
+            className="w-full flex-row justify-between items-center"
           />
 
         </div>

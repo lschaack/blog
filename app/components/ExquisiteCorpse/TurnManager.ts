@@ -17,6 +17,7 @@ export class TurnManager {
   private _currentTurnIndex: number = 0;
   private _onTurnEnd?: (turn: Turn) => void;
   private _syncStateCallback: (turns: Turn[], currentTurnIndex: number) => void;
+  public isAIEnabled: boolean = true;
 
   constructor(
     onTurnEnd?: (turn: Turn) => void,
@@ -67,10 +68,16 @@ export class TurnManager {
   }
 
   get isUserTurn(): boolean {
+    if (!this.isAIEnabled) {
+      return true; // Always user's turn when AI is disabled
+    }
     return !this.lastTurn || this.lastTurn.author === "ai";
   }
 
   get isAITurn(): boolean {
+    if (!this.isAIEnabled) {
+      return false; // Never AI's turn when AI is disabled
+    }
     return Boolean(this.lastTurn && this.lastTurn.author === "user");
   }
 
