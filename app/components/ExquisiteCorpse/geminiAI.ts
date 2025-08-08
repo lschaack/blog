@@ -41,17 +41,27 @@ class GeminiAIService {
 
     return `You're playing a collaborative drawing game called "Exquisite Corpse."
 
+DRAWING PHILOSOPHY:
+Once you interpret what the drawing is becoming, LEAN INTO that interpretation! Make bold, expressive additions that fully capture your artistic vision. Don't hold back with tiny additions - create substantial, meaningful elements that bring your interpretation to life.
+
 DRAWING RULES:
 1. First, describe what you think the drawing is becoming
-2. Add exactly ONE flowing, artistic line that connects meaningfully to existing shapes
-3. Think like an artist - create curves that have natural flow and expression
-4. Build on what's there rather than starting something completely new
-5. Your addition should enhance and develop the existing drawing
+2. Add one cohesive artistic element that FULLY EXPRESSES your interpretation
+3. Think like a confident artist - create curves that make a strong visual statement
+4. Build on what's there and EXPAND it with your creative vision
+5. Your addition should be substantial enough to clearly advance the drawing toward your interpretation
+
+SCALE AND IMPACT GUIDELINES:
+- If you see a volcano, don't just add a tiny puff - create a bold plume of smoke with multiple flowing curves
+- If you see a face, don't just hint at features - draw a complete eye, mouth, or distinctive facial element
+- If you see an animal, add a defining characteristic like a full tail, ear, or distinctive body part
+- If you see a landscape, add a substantial element like rolling hills, flowing water, or dramatic sky
+- Make your addition VISIBLE and MEANINGFUL - aim to use 20-40% of the remaining canvas space when appropriate
 
 CANVAS INFO:
 - Dimensions: ${context.canvasDimensions.width}x${context.canvasDimensions.height} pixels
 - Coordinates: (0,0) is top-left, (${context.canvasDimensions.width},${context.canvasDimensions.height}) is bottom-right
-- Draw within these bounds
+- Draw within these bounds - use the space boldly!
 
 BEZIER CURVE DRAWING:
 You will draw using Bezier curves, which create smooth, artistic lines. Each curve has 4 points:
@@ -60,17 +70,22 @@ You will draw using Bezier curves, which create smooth, artistic lines. Each cur
 - Control Point 2: Pulls the curve toward the end (creates the final direction/bend)  
 - End Point: Where the curve ends
 
-ARTISTIC TECHNIQUE TIPS:
-- To create a smooth flowing line: Place control points along the general direction of flow
-- To create tight curves: Pull control points closer to start/end points
-- To create gentle curves: Place control points further from start/end points
-- To connect to existing shapes: Start your curve near or touching existing elements
-- To create natural flow: Think about how a pencil would naturally move
+CREATING SUBSTANTIAL ADDITIONS:
+- Use as many curves as needed to create your artistic element properly
+- Create overlapping elements (like loops for smoke, waves for water, petals for flowers)
+- Think about the full form of what you're drawing, not just a single stroke
+- Connect curves to create flowing, continuous forms that span meaningful distances
 
-EXAMPLES OF GOOD CURVES:
-- Gentle arc: [[50,100], [75,80], [125,80], [150,100]] (control points above the arc)
-- S-curve: [[100,50], [120,30], [130,70], [150,50]] (control points create flowing S shape)
-- Connecting line: [[10,20], [30,15], [70,45], [90,50]] (flows from one shape to another)
+ARTISTIC TECHNIQUE TIPS:
+- To create flowing sequences: Chain curves together with smooth transitions
+- To create volume and substance: Use curves that loop, spiral, or expand outward
+- To create natural elements: Think about how smoke billows, water flows, hair curls, leaves grow
+- To connect meaningfully: Start from existing elements but extend confidently into new space
+
+EXAMPLES OF SUBSTANTIAL ADDITIONS:
+- Volcano smoke (7 curves): Multiple looping curves expanding upward: [[100,50], [80,30], [120,10], [140,20]], [[140,20], [160,5], [180,25], [200,30]], [[200,30], [220,15], [240,35], [250,40]], [[180,25], [160,15], [140,25], [160,35]], [[240,35], [260,20], [280,40], [300,45]], [[160,35], [180,25], [200,35], [220,40]], [[220,40], [240,25], [260,45], [280,50]]
+- Flowing hair (5 curves): Cascading curves: [[150,100], [170,80], [190,120], [210,110]], [[210,110], [230,90], [250,130], [270,120]], [[190,120], [210,140], [230,160], [250,150]], [[250,130], [270,150], [290,170], [310,160]], [[270,120], [290,140], [310,160], [330,150]]
+- Rolling hills (4 curves): Undulating landscape: [[0,200], [50,180], [100,190], [150,185]], [[150,185], [200,175], [250,185], [300,180]], [[300,180], [350,170], [400,180], [450,175]], [[450,175], [480,165], [500,175], [512,170]]
 
 GAME HISTORY:
 ${historyText || "This is the first turn of the game."}
@@ -79,11 +94,11 @@ CURRENT TURN: ${context.currentTurn}
 
 TASK:
 1. Analyze the image carefully - look for shapes, lines, and potential connections
-2. Interpret what the drawing is becoming (be creative but grounded in what you see)
-3. Plan ONE artistic curve that will enhance the drawing
-4. Consider how your curve connects to or builds upon existing elements
-5. Choose start/end points that make visual sense
-6. Design control points that create beautiful, flowing curves
+2. Interpret what the drawing is becoming (be creative and confident!)
+3. Plan a SUBSTANTIAL artistic addition using as many curves as needed to fully express your interpretation
+4. Don't be timid - make an addition that clearly advances the drawing toward your vision
+5. Use curves that span meaningful distances and create recognizable elements
+6. Think about the complete form you want to make, then design curves to achieve it
 
 Respond with a JSON object in this exact format:
 {
@@ -91,14 +106,15 @@ Respond with a JSON object in this exact format:
   "curves": [
     [[startX, startY], [control1X, control1Y], [control2X, control2Y], [endX, endY]]
   ],
-  "reasoning": "Why you chose to add this specific curve and how it enhances the drawing"
+  "reasoning": "Why you chose to add this specific substantial element and how it brings your interpretation to life"
 }
 
 IMPORTANT: 
-- Use exactly 1-3 Bezier curves to create one flowing artistic line
-- Make sure your curves connect meaningfully to existing shapes
-- Think about the artistic flow and natural movement
-- Consider the overall composition and balance`;
+- Use as many Bezier curves as needed to create your artistic element properly
+- Make your addition BOLD and VISIBLE - don't be shy!
+- Fully express your interpretation through your curves
+- Think about the complete form, not just a single line segment
+- Create elements that other players can clearly see and build upon`;
   }
 
   private validateResponse(response: unknown): AITurnResponse {
@@ -112,8 +128,8 @@ IMPORTANT:
       throw new Error('Invalid or missing interpretation');
     }
 
-    if (!Array.isArray(curves) || curves.length < 1 || curves.length > 3) {
-      throw new Error('Must provide 1-3 Bezier curves');
+    if (!Array.isArray(curves) || curves.length < 1 || curves.length > 15) {
+      throw new Error('Must provide 1-15 Bezier curves');
     }
 
     if (typeof reasoning !== 'string' || reasoning.trim().length === 0) {
