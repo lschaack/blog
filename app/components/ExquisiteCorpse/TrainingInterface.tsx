@@ -3,14 +3,24 @@
 import { useState, useCallback, useMemo } from "react";
 import { Sketchpad, Line } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
+import { useUndoRedo } from './useUndoRedo';
+import { renderGameStateToBase64 } from './imageContext';
 
-type TrainingInterfaceProps = {};
-
-export const TrainingInterface = ({}: TrainingInterfaceProps) => {
+export const TrainingInterface = () => {
   // Form state
   const [exampleName, setExampleName] = useState<string>("");
   const [exampleDescription, setExampleDescription] = useState<string>("");
-  const [currentLine, setCurrentLine] = useState<Line[]>([]);
+
+  // Undo/Redo state for line management
+  const {
+    current: currentLine,
+    setCurrent: setCurrentLine,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    clear: clearLines
+  } = useUndoRedo<Line[]>([]);
 
   // Canvas dimensions (consistent with Game component)
   const canvasDimensions = useMemo(() => ({ width: 512, height: 512 }), []);
@@ -18,36 +28,53 @@ export const TrainingInterface = ({}: TrainingInterfaceProps) => {
   // Handler for adding lines from Sketchpad
   const handleAddLine = useCallback((newLines: Line[]) => {
     setCurrentLine(newLines);
-  }, []);
+  }, [setCurrentLine]);
 
   // Generate and download XML file
-  const handleDownloadExample = useCallback(() => {
+  const handleDownloadExample = useCallback(async () => {
     if (!exampleName.trim() || !exampleDescription.trim() || currentLine.length === 0) {
       alert("Please fill in all fields and draw at least one line before downloading.");
       return;
     }
 
-    // Generate XML content
-    const xmlContent = generateXML(exampleName.trim(), exampleDescription.trim(), currentLine);
-    
-    // Create and download file
-    const blob = new Blob([xmlContent], { type: 'application/xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `training-example-${exampleName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.xml`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [exampleName, exampleDescription, currentLine]);
+    try {
+      // Generate base64 image
+      const base64Image = await renderGameStateToBase64(
+        currentLine,
+        canvasDimensions.width,
+        canvasDimensions.height
+      );
+
+      // Generate XML content with image
+      const xmlContent = generateXML(
+        exampleName.trim(), 
+        exampleDescription.trim(), 
+        currentLine, 
+        base64Image
+      );
+
+      // Create and download file
+      const blob = new Blob([xmlContent], { type: 'application/xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `training-example-${exampleName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.xml`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Failed to generate training example:', error);
+      alert('Failed to generate training example. Please try again.');
+    }
+  }, [exampleName, exampleDescription, currentLine, canvasDimensions]);
 
   // Clear all fields and drawing
   const handleClear = useCallback(() => {
     setExampleName("");
     setExampleDescription("");
-    setCurrentLine([]);
-  }, []);
+    clearLines();
+  }, [clearLines]);
 
   return (
     <div className="flex flex-col gap-4 max-w-[512px]">
@@ -92,11 +119,28 @@ export const TrainingInterface = ({}: TrainingInterfaceProps) => {
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Drawing
         </label>
+
         <Sketchpad
           width={canvasDimensions.width}
           height={canvasDimensions.height}
           lines={currentLine}
           handleAddLine={handleAddLine}
+        />
+      </div>
+
+      {/* Undo/Redo controls */}
+      <div className="flex gap-2">
+        <Button
+          label="Undo"
+          onClick={undo}
+          disabled={!canUndo}
+          className="flex-1"
+        />
+        <Button
+          label="Redo"
+          onClick={redo}
+          disabled={!canRedo}
+          className="flex-1"
         />
       </div>
 
@@ -138,14 +182,14 @@ export const TrainingInterface = ({}: TrainingInterfaceProps) => {
 };
 
 // Generate XML content for the training example
-const generateXML = (name: string, description: string, lines: Line[]): string => {
+const generateXML = (name: string, description: string, lines: Line[], base64Image: string): string => {
   const xmlLines = lines.map(line => {
     const curves = line.map(curve => {
       // Format: [[startX, startY], [cp1X, cp1Y], [cp2X, cp2Y], [endX, endY]]
       const [start, cp1, cp2, end] = curve;
       return `      <BezierCurve>[[${start[0]}, ${start[1]}], [${cp1[0]}, ${cp1[1]}], [${cp2[0]}, ${cp2[1]}], [${end[0]}, ${end[1]}]]</BezierCurve>`;
     }).join('\n');
-    
+
     return `    <Line>
 ${curves}
     </Line>`;
@@ -155,6 +199,7 @@ ${curves}
 <Example>
   <Name>${escapeXml(name)}</Name>
   <Description>${escapeXml(description)}</Description>
+  <Image>${base64Image}</Image>
 ${xmlLines}
 </Example>`;
 };
