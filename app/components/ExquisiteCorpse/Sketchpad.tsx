@@ -224,6 +224,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      className="ring-2 ring-deep-500"
       style={{
         touchAction: 'none',
         cursor: 'crosshair',
