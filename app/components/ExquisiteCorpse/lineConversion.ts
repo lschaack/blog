@@ -1,5 +1,5 @@
 import fitCurve from 'fit-curve';
-import { Point, BezierCurve, Line } from '@/app/components/ExquisiteCorpse/Sketchpad';
+import { Point, BezierCurve, Line } from './Sketchpad';
 
 /**
  * Converts AI coordinate points to our Bezier curve format
@@ -176,7 +176,6 @@ export const calculateLineLength = (line: Line): number => {
 /**
  * Process AI Bezier curves directly (new preferred method)
  * @param aiCurves Direct Bezier curves from AI
- * @param bounds Canvas bounds for validation
  * @returns Processed and validated Line
  */
 export const processAIBezierCurves = (
@@ -219,7 +218,6 @@ export const processAIBezierCurves = (
 /**
  * Improve AI-generated curves for better drawing quality
  * @param curves Raw AI curves
- * @param bounds Canvas bounds
  * @returns Improved curves
  */
 const improveAICurves = (curves: BezierCurve[]): BezierCurve[] => {
@@ -246,7 +244,6 @@ const improveAICurves = (curves: BezierCurve[]): BezierCurve[] => {
 /**
  * Optimize control points for more natural curve behavior
  * @param curve Original curve
- * @param bounds Canvas bounds
  * @returns Optimized curve
  */
 const optimizeControlPoints = (curve: BezierCurve): BezierCurve => {

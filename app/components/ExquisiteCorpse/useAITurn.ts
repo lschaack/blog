@@ -1,9 +1,9 @@
 import { useState, useCallback } from "react";
 import { Line } from "./Sketchpad";
 import { Turn } from "./useTurnManager";
-import { getGeminiService, GameContext } from "@/app/services/geminiAI";
-import { renderGameStateToBase64, createGameContextSummary, checkImageSizeLimit } from "@/app/utils/imageContext";
-import { processAIBezierCurves } from "@/app/utils/lineConversion";
+import { getGeminiService, GameContext } from "./geminiAI";
+import { renderGameStateToBase64, createGameContextSummary, checkImageSizeLimit } from "./imageContext";
+import { processAIBezierCurves } from "./lineConversion";
 
 export type AITurnState = "idle" | "processing" | "error" | "complete";
 

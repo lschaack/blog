@@ -156,8 +156,8 @@ IMPORTANT:
       return curve.map(([x, y]) => [
         Math.max(0, Math.min(bounds.width, Math.round(x))),
         Math.max(0, Math.min(bounds.height, Math.round(y)))
-      ]) as Point;
-    }) as BezierCurve[];
+      ] as Point) as BezierCurve;
+    });
   }
 
   async generateTurn(context: GameContext): Promise<AITurnResponse> {

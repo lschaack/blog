@@ -1,4 +1,4 @@
-import { Line, BezierCurve } from '@/app/components/ExquisiteCorpse/Sketchpad';
+import { Line, BezierCurve } from './Sketchpad';
 
 // Canvas drawing utilities for AI context generation
 const drawBezierCurve = (ctx: CanvasRenderingContext2D, curve: BezierCurve) => {

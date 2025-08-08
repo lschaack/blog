@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useEffect } from "react";
+import { useCallback, useMemo, useEffect, useRef, useLayoutEffect } from "react";
 
 import { BezierCurve, Line, Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
@@ -86,6 +86,8 @@ type GameProps = {
 }
 
 export const Game = ({ handleEndTurn }: GameProps = {}) => {
+  const turnInfo = useRef<HTMLDivElement>(null);
+
   // Separate turn and line management using custom hooks
   const turnManager = useTurnManager(handleEndTurn);
   const currentTurn = useCurrentTurn();
@@ -140,14 +142,14 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
 
   const handleRetryAI = useCallback(async () => {
     if (!aiTurn.canRetry) return;
-    
+
     try {
       const result = await aiTurn.retryAITurn(
         displayLines,
         turnManager.turns,
         canvasDimensions
       );
-      
+
       turnManager.endAITurn(result.line, result.interpretation, result.reasoning);
     } catch (error) {
       console.error("AI retry failed:", error);
@@ -167,8 +169,17 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
     exportLinesToJSON(displayLines);
   }, [displayLines]);
 
+  useLayoutEffect(() => {
+    if (turnInfo.current) {
+      turnInfo.current?.scrollTo({
+        top: turnInfo.current.scrollHeight,
+        behavior: "smooth",
+      })
+    }
+  })
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 w-min">
       {/* Game status indicator */}
       <div className="text-center p-2 bg-gray-100 rounded">
         {aiTurn.isProcessing ? (
@@ -252,21 +263,20 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
         width={canvasDimensions.width}
         height={canvasDimensions.height}
         lines={displayLines}
-        handleAddLine={turnManager.isViewingCurrentTurn && turnManager.isUserTurn && !aiTurn.isProcessing ? handleAddLine : () => {}}
+        handleAddLine={turnManager.isViewingCurrentTurn && turnManager.isUserTurn && !aiTurn.isProcessing ? handleAddLine : () => { }}
       />
 
       {/* Turn action buttons */}
       {turnManager.isViewingCurrentTurn && (
         <div className="flex flex-col gap-2">
           {/* End turn button - only for user turns with a line */}
-          {turnManager.isUserTurn && currentTurn.hasLine && !aiTurn.isProcessing && (
-            <Button
-              label="End Turn"
-              onClick={handleEndTurnClick}
-              className="w-full"
-            />
-          )}
-          
+          <Button
+            label="End Turn"
+            onClick={handleEndTurnClick}
+            className="w-full"
+            disabled={!turnManager.isUserTurn || !currentTurn.hasLine || aiTurn.isProcessing}
+          />
+
           {/* AI retry button - only when AI failed */}
           {aiTurn.hasError && aiTurn.canRetry && (
             <Button
@@ -282,7 +292,7 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
       {turnManager.turns.length > 0 && (
         <div className="mt-4 p-3 bg-gray-50 rounded">
           <h3 className="font-semibold mb-2">Turn History</h3>
-          <div className="space-y-2 max-h-40 overflow-y-auto">
+          <div className="space-y-2 max-h-40 overflow-y-auto" ref={turnInfo}>
             {turnManager.turns.map((turn) => (
               <div key={turn.number} className="text-sm border-l-2 border-gray-300 pl-3">
                 <div className="font-medium">
