@@ -87,6 +87,12 @@ export const useTurnManager = (onTurnEnd?: (turn: Turn) => void) => {
     setCurrentTurnIndex(0);
   }, []);
 
+  // Restore state from JSON
+  const restoreState = useCallback((newTurns: Turn[], newCurrentTurnIndex: number) => {
+    setTurns(newTurns);
+    setCurrentTurnIndex(Math.min(newCurrentTurnIndex, newTurns.length));
+  }, []);
+
   // Turn metadata
   const currentTurnNumber = currentTurnIndex + 1;
   const totalTurns = turns.length + 1;
@@ -119,6 +125,7 @@ export const useTurnManager = (onTurnEnd?: (turn: Turn) => void) => {
     endUserTurn,
     endAITurn,
     clearAllTurns,
+    restoreState,
     
     // Display
     displayLines,

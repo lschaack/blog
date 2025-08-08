@@ -43,50 +43,39 @@ class GeminiAIService {
     return `You're playing a collaborative drawing game called "Exquisite Corpse."
 
 DRAWING PHILOSOPHY:
-Once you interpret what the drawing is becoming, LEAN INTO that interpretation! Make bold, expressive additions that fully capture your artistic vision. Don't hold back with tiny additions - create substantial, meaningful elements that bring your interpretation to life.
-
-DRAWING RULES:
-1. First, describe what you think the drawing is becoming
-2. Add one cohesive artistic element that FULLY EXPRESSES your interpretation
-3. Think like a confident artist - create curves that make a strong visual statement
-4. Build on what's there and EXPAND it with your creative vision
-5. Your addition should be substantial enough to clearly advance the drawing toward your interpretation
-
-SCALE AND IMPACT GUIDELINES:
-- If you see a volcano, don't just add a tiny puff - create a bold plume of smoke with multiple flowing curves
-- If you see a face, don't just hint at features - draw a complete eye, mouth, or distinctive facial element
-- If you see an animal, add a defining characteristic like a full tail, ear, or distinctive body part
-- If you see a landscape, add a substantial element like rolling hills, flowing water, or dramatic sky
-- Make your addition VISIBLE and MEANINGFUL - aim to use 20-40% of the remaining canvas space when appropriate
-
-CANVAS INFO:
-- Dimensions: ${context.canvasDimensions.width}x${context.canvasDimensions.height} pixels
-- Coordinates: (0,0) is top-left, (${context.canvasDimensions.width},${context.canvasDimensions.height}) is bottom-right
-- Draw within these bounds - use the space boldly!
+Create elegant geometry with sparse but confident lines that provide only the necessary features required to make the subject immediately recognizable. Think of the Pablo Picasso one-line drawings like "Camel" or "Flamingo." Produce each stroke with one long, flowing line; think "don't lift the pen."
 
 BEZIER CURVE DRAWING:
 You will draw using Bezier curves, which create smooth, artistic lines. Each curve has 4 points:
 - Start Point: Where the curve begins
 - Control Point 1: Pulls the curve from the start (creates the initial direction/bend)
-- Control Point 2: Pulls the curve toward the end (creates the final direction/bend)  
+- Control Point 2: Pulls the curve toward the end (creates the final direction/bend)
 - End Point: Where the curve ends
 
-CREATING SUBSTANTIAL ADDITIONS:
-- Use as many curves as needed to create your artistic element properly
-- Create overlapping elements (like loops for smoke, waves for water, petals for flowers)
-- Think about the full form of what you're drawing, not just a single stroke
-- Connect curves to create flowing, continuous forms that span meaningful distances
+DRAWING RULES:
+The following rules describe a possible evaluation of this line:
+[
+  [ [ 150, 117 ], [ 113.04066323404871, 117 ], [ 138.78539768444764, 154.21460231555236 ], [ 160, 133 ] ],
+  [ [ 160, 133 ], [ 181.7575157077113, 111.24248429228871 ], [ 154.75177820219437, 82.5620554494514 ], [ 129, 89 ] ],
+  [ [ 129, 89 ], [ 97.58619003694115, 96.85345249076471 ], [ 109.13302950012437, 150.47981770007462 ], [ 130, 163 ] ],
+  [ [ 130, 163 ], [ 172.36755732151366, 188.4205343929082 ], [ 225.28997569725234, 126.71996759633647 ], [ 197, 89 ] ],
+  [ [ 197, 89 ], [ 148.94396001300981, 24.925280017346395 ], [ 41.44940061014522, 104.41566768357536 ], [ 91, 187 ] ],
+  [ [ 91, 187 ], [ 137.86999598653003, 265.11665997755006 ], [ 320, 235.12786205264206 ], [ 320, 148 ] ]
+]
+1. First, describe what you think the drawing is becoming: "I see a spiral curve that starts from the upper left, curves down and around, creating an open spiral shape like a seashell"
+2. Decide on a single addition that expresses your interpretation: "I should create an opening to represent the mouth of the seashell"
+4. Define a geometric plan to produce that addition: "I will create a loop that joins the outer tip of the spiral to the nearest edge"
+    4.1. Specify connection points: "The loop should start at the outer tip of the spiral, connect to another point on the nearest edge, then return to the outer tip"
+    4.2. Map control points: "The bezier curve will have control points that curve the first and second parts of the line in opposite directions"
+5. Draw in the form of a bezier curve:
+[
+  [ [ 323, 149 ], [ 323, 102.46249647638308 ], [ 200.51468698308443, 100.05874793233771 ], [ 206, 122 ] ],
+  [ [ 206, 122 ], [ 211.62919227867525, 144.51676911470102 ], [ 325, 161.893029490424 ], [ 325, 148 ] ]
+]
 
-ARTISTIC TECHNIQUE TIPS:
-- To create flowing sequences: Chain curves together with smooth transitions
-- To create volume and substance: Use curves that loop, spiral, or expand outward
-- To create natural elements: Think about how smoke billows, water flows, hair curls, leaves grow
-- To connect meaningfully: Start from existing elements but extend confidently into new space
-
-EXAMPLES OF SUBSTANTIAL ADDITIONS:
-- Volcano smoke (7 curves): Multiple looping curves expanding upward: [[100,50], [80,30], [120,10], [140,20]], [[140,20], [160,5], [180,25], [200,30]], [[200,30], [220,15], [240,35], [250,40]], [[180,25], [160,15], [140,25], [160,35]], [[240,35], [260,20], [280,40], [300,45]], [[160,35], [180,25], [200,35], [220,40]], [[220,40], [240,25], [260,45], [280,50]]
-- Flowing hair (5 curves): Cascading curves: [[150,100], [170,80], [190,120], [210,110]], [[210,110], [230,90], [250,130], [270,120]], [[190,120], [210,140], [230,160], [250,150]], [[250,130], [270,150], [290,170], [310,160]], [[270,120], [290,140], [310,160], [330,150]]
-- Rolling hills (4 curves): Undulating landscape: [[0,200], [50,180], [100,190], [150,185]], [[150,185], [200,175], [250,185], [300,180]], [[300,180], [350,170], [400,180], [450,175]], [[450,175], [480,165], [500,175], [512,170]]
+CANVAS INFO:
+- Dimensions: ${context.canvasDimensions.width}x${context.canvasDimensions.height} pixels
+- Coordinates: (0,0) is top-left, (${context.canvasDimensions.width},${context.canvasDimensions.height}) is bottom-right
 
 GAME HISTORY:
 ${historyText || "This is the first turn of the game."}
@@ -108,14 +97,7 @@ Respond with a JSON object in this exact format:
     [[startX, startY], [control1X, control1Y], [control2X, control2Y], [endX, endY]]
   ],
   "reasoning": "Why you chose to add this specific substantial element and how it brings your interpretation to life"
-}
-
-IMPORTANT: 
-- Use as many Bezier curves as needed to create your artistic element properly
-- Make your addition BOLD and VISIBLE - don't be shy!
-- Fully express your interpretation through your curves
-- Think about the complete form, not just a single line segment
-- Create elements that other players can clearly see and build upon`;
+}`;
   }
 
   private validateResponse(response: unknown): AITurnResponse {
@@ -142,7 +124,7 @@ IMPORTANT:
       if (!Array.isArray(curve) || curve.length !== 4) {
         throw new Error('Each curve must have exactly 4 points: [start, control1, control2, end]');
       }
-      
+
       // Validate each point in the curve
       for (const point of curve) {
         if (!Array.isArray(point) || point.length !== 2) {
@@ -166,7 +148,7 @@ IMPORTANT:
   }
 
   private validateCurveBounds(
-    curves: BezierCurve[], 
+    curves: BezierCurve[],
     bounds: { width: number; height: number }
   ): BezierCurve[] {
     return curves.map(curve => {
@@ -182,10 +164,10 @@ IMPORTANT:
       const model = this.client.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
       const prompt = this.buildPrompt(context);
-      
+
       // Convert base64 image to proper format for Gemini
       const imageData = context.image.replace('data:image/png;base64,', '');
-      
+
       const imagePart = {
         inlineData: {
           data: imageData,
@@ -215,7 +197,7 @@ IMPORTANT:
 
       // Validate and clamp coordinates to canvas bounds
       const boundedCurves = this.validateCurveBounds(
-        validatedResponse.curves, 
+        validatedResponse.curves,
         context.canvasDimensions
       );
 
@@ -242,7 +224,7 @@ export async function POST(request: NextRequest) {
     }
 
     const context: GameContext = await request.json();
-    
+
     // Validate request body
     if (!context || !context.image || !context.canvasDimensions) {
       return NextResponse.json(
@@ -253,7 +235,7 @@ export async function POST(request: NextRequest) {
 
     const geminiService = new GeminiAIService(apiKey);
     const response = await geminiService.generateTurn(context);
-    
+
     return NextResponse.json(response);
   } catch (error) {
     console.error('API route error:', error);

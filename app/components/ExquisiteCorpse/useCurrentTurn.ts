@@ -48,6 +48,13 @@ export const useCurrentTurn = () => {
     setHistoryIndex(0);
   }, []);
 
+  // Restore current line from JSON
+  const restoreCurrentLine = useCallback((newCurrentLine: Line[]) => {
+    setCurrentLine(newCurrentLine);
+    setHistory([[], newCurrentLine]);
+    setHistoryIndex(newCurrentLine.length > 0 ? 1 : 0);
+  }, []);
+
   // State queries
   const canUndo = historyIndex > 0;
   const canRedo = historyIndex < history.length - 1;
@@ -69,5 +76,6 @@ export const useCurrentTurn = () => {
     
     // Turn lifecycle
     resetCurrentTurn,
+    restoreCurrentLine,
   };
 };

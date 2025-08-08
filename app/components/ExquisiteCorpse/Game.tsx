@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useEffect, useRef, useLayoutEffect } from "react";
+import { useCallback, useMemo, useEffect, useRef, useLayoutEffect, useState } from "react";
 
 import { BezierCurve, Line, Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
@@ -85,6 +85,13 @@ type GameProps = {
   handleEndTurn?: (turn: Turn) => void;
 }
 
+type GameState = {
+  turns: Turn[];
+  currentTurnIndex: number;
+  currentLine: Line[];
+  timestamp: string;
+}
+
 export const Game = ({ handleEndTurn }: GameProps = {}) => {
   const turnInfo = useRef<HTMLDivElement>(null);
 
@@ -93,6 +100,10 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
   const currentTurn = useCurrentTurn();
   const aiTurn = useAITurn();
 
+  // JSON editing state
+  const [jsonText, setJsonText] = useState<string>("");
+  const [jsonError, setJsonError] = useState<string | null>(null);
+
   // Canvas dimensions (consistent throughout game)
   const canvasDimensions = useMemo(() => ({ width: 512, height: 512 }), []);
 
@@ -100,6 +111,23 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
   const displayLines = useMemo(() => {
     return [...turnManager.displayLines, ...currentTurn.currentLine];
   }, [turnManager.displayLines, currentTurn.currentLine]);
+
+  // Serialize game state to JSON
+  const gameStateJSON = useMemo(() => {
+    const gameState: GameState = {
+      turns: turnManager.turns,
+      currentTurnIndex: turnManager.currentTurnIndex,
+      currentLine: currentTurn.currentLine,
+      timestamp: new Date().toISOString(),
+    };
+    return JSON.stringify(gameState, null, 2);
+  }, [turnManager.turns, turnManager.currentTurnIndex, currentTurn.currentLine]);
+
+  // Update JSON text when game state changes
+  useEffect(() => {
+    setJsonText(gameStateJSON);
+    setJsonError(null);
+  }, [gameStateJSON]);
 
   // Auto-trigger AI turn when user completes their turn
   useEffect(() => {
@@ -168,6 +196,47 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
   const handleExportJSON = useCallback(() => {
     exportLinesToJSON(displayLines);
   }, [displayLines]);
+
+  const handleSyncFromJSON = useCallback(() => {
+    try {
+      const parsedState = JSON.parse(jsonText) as GameState;
+
+      // Validate structure
+      if (!parsedState.turns || !Array.isArray(parsedState.turns)) {
+        throw new Error("Invalid game state: 'turns' must be an array");
+      }
+
+      if (typeof parsedState.currentTurnIndex !== 'number') {
+        throw new Error("Invalid game state: 'currentTurnIndex' must be a number");
+      }
+
+      if (!parsedState.currentLine || !Array.isArray(parsedState.currentLine)) {
+        throw new Error("Invalid game state: 'currentLine' must be an array");
+      }
+
+      // Validate turn structure
+      parsedState.turns.forEach((turn, index) => {
+        if (!turn.line || !Array.isArray(turn.line)) {
+          throw new Error(`Turn ${index + 1}: 'line' must be an array`);
+        }
+        if (!turn.author || !['user', 'ai'].includes(turn.author)) {
+          throw new Error(`Turn ${index + 1}: 'author' must be 'user' or 'ai'`);
+        }
+        if (typeof turn.number !== 'number') {
+          throw new Error(`Turn ${index + 1}: 'number' must be a number`);
+        }
+      });
+
+      // Apply state
+      turnManager.restoreState(parsedState.turns, parsedState.currentTurnIndex);
+      currentTurn.restoreCurrentLine(parsedState.currentLine);
+
+      setJsonError(null);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Invalid JSON format";
+      setJsonError(errorMessage);
+    }
+  }, [jsonText, turnManager, currentTurn]);
 
   useLayoutEffect(() => {
     if (turnInfo.current) {
@@ -263,11 +332,10 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
       {/* Turn action buttons */}
       {turnManager.isViewingCurrentTurn && (
         <div className="flex flex-col gap-4">
-          {/* End turn button - only for user turns with a line */}
           <Button
             label="End Turn"
             onClick={handleEndTurnClick}
-            className="w-full"
+            className="flex-1"
             disabled={!turnManager.isUserTurn || !currentTurn.hasLine || aiTurn.isProcessing}
           />
 
@@ -311,6 +379,39 @@ export const Game = ({ handleEndTurn }: GameProps = {}) => {
           </div>
         </div>
       )}
+
+      {/* JSON State Editor */}
+      <div className="mt-6 p-4 bg-gray-50 rounded">
+        <h3 className="font-semibold mb-2">Game State (JSON)</h3>
+        <textarea
+          value={jsonText}
+          onChange={(e) => setJsonText(e.target.value)}
+          className={`w-full h-64 p-2 font-mono text-sm border rounded resize-y ${jsonError ? 'border-red-500 bg-red-50' : 'border-gray-300'
+            }`}
+          placeholder="Game state will appear here..."
+        />
+        {jsonError && (
+          <div className="mt-2 text-sm text-red-600 bg-red-100 p-2 rounded">
+            Error: {jsonError}
+          </div>
+        )}
+        <div className="flex gap-2 mt-2">
+          <Button
+            label="Sync from JSON"
+            onClick={handleSyncFromJSON}
+            className="flex-1"
+            disabled={!jsonText.trim()}
+          />
+          <Button
+            label="Reset to Current"
+            onClick={() => {
+              setJsonText(gameStateJSON);
+              setJsonError(null);
+            }}
+            className="flex-1"
+          />
+        </div>
+      </div>
     </div>
   )
 }
