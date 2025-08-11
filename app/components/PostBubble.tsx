@@ -22,7 +22,7 @@ const PostBubbleContents = memo(function PostBubbleContents({ post }: PostBubble
           <Image
             src={post.heroImage.url!}
             alt={post.heroImage.description!}
-            className="object-cover"
+            className="object-contain"
             sizes="384px"
             fill
           />
