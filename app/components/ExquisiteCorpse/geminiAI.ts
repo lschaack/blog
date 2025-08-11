@@ -22,7 +22,7 @@ export type GameContext = {
 class GeminiAIService {
   async generateTurn(context: GameContext): Promise<AITurnResponse> {
     try {
-      const response = await fetch('/api/gemini', {
+      const response = await fetch('/api/exquisite-corpse/draw-curve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

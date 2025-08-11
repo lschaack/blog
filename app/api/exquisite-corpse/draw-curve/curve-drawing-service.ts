@@ -1,16 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
 import path from 'path';
 
 export type Point = [number, number];
 export type BezierCurve = [Point, Point, Point, Point];
-
-export type AITurnResponse = {
-  interpretation: string;
-  curves: BezierCurve[];
-  reasoning: string;
-};
 
 export type GameContext = {
   image: string; // base64 encoded PNG
@@ -24,16 +17,22 @@ export type GameContext = {
   }[];
 };
 
-class GeminiSketchbotService {
+export type AITurnResponse = {
+  interpretation: string;
+  curves: BezierCurve[];
+  reasoning: string;
+};
+
+export class CurveDrawingService {
   private client: GoogleGenerativeAI;
   private static systemPrompt: string | null = null;
 
   private static getSystemPrompt(): string {
-    if (GeminiSketchbotService.systemPrompt === null) {
-      const promptPath = path.join(process.cwd(), 'app', 'api', 'gemini', 'systemPrompt.txt');
-      GeminiSketchbotService.systemPrompt = fs.readFileSync(promptPath, 'utf8');
+    if (CurveDrawingService.systemPrompt === null) {
+      const promptPath = path.join(process.cwd(), 'app', 'api', 'exquisite-corpse', 'draw-curve', 'systemPrompt.txt');
+      CurveDrawingService.systemPrompt = fs.readFileSync(promptPath, 'utf8');
     }
-    return GeminiSketchbotService.systemPrompt;
+    return CurveDrawingService.systemPrompt;
   }
 
   constructor(apiKey: string) {
@@ -137,7 +136,7 @@ Respond with a JSON object in this exact format:
     try {
       const model = this.client.getGenerativeModel({
         model: "gemini-2.5-flash",
-        systemInstruction: GeminiSketchbotService.getSystemPrompt(),
+        systemInstruction: CurveDrawingService.getSystemPrompt(),
       });
 
       const prompt = this.buildPrompt(context);
@@ -187,38 +186,5 @@ Respond with a JSON object in this exact format:
       console.error('Gemini API error:', error);
       throw new Error(`AI turn generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-  }
-}
-
-export async function POST(request: NextRequest) {
-  try {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'Gemini API key not configured' },
-        { status: 500 }
-      );
-    }
-
-    const context: GameContext = await request.json();
-
-    // Validate request body
-    if (!context || !context.image || !context.canvasDimensions) {
-      return NextResponse.json(
-        { error: 'Invalid request body' },
-        { status: 400 }
-      );
-    }
-
-    const geminiService = new GeminiSketchbotService(apiKey);
-    const response = await geminiService.generateTurn(context);
-
-    return NextResponse.json(response);
-  } catch (error) {
-    console.error('API route error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
   }
 }
