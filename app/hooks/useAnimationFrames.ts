@@ -7,7 +7,7 @@ export type AnimationCallback = (delta: number) => void;
 /**
  * Handles boilerplate for animating in an effect
  *
- * NOTE: callback should be memoized for performance
+ * NOTE: callback should be memoized, otherwise it will be repeatedly unmounted and remounted
  */
 export const useAnimationFrames = (callback: AnimationCallback, enable = true) => {
   const fps = useRef(60);
@@ -16,9 +16,20 @@ export const useAnimationFrames = (callback: AnimationCallback, enable = true) =
     if (enable) {
       let frameId: number;
       let prevTime: number;
+      let isValidPrevTime = true;
+
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'hidden') {
+          isValidPrevTime = false;
+        }
+      }
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
 
       const animate: FrameRequestCallback = (currTime: number) => {
-        const delta = prevTime ? currTime - prevTime : PHYSICS_FRAME_RATE_MS;
+        const delta = (prevTime && isValidPrevTime)
+          ? currTime - prevTime
+          : PHYSICS_FRAME_RATE_MS;
         const momentaryFps = 1000 / delta;
 
         // avoid getting stuck at Infinity when currTime === prevTime,
@@ -28,6 +39,7 @@ export const useAnimationFrames = (callback: AnimationCallback, enable = true) =
         callback(delta);
 
         prevTime = currTime;
+        isValidPrevTime = true;
         frameId = requestAnimationFrame(animate);
       }
 

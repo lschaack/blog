@@ -15,7 +15,7 @@ class AnimationBatch {
   private running: boolean;
   fps: number;
 
-  static EXPECTED_FRAME_RATE_MS = 60;
+  static EXPECTED_FRAME_RATE_MS = 1000 / 60;
 
   constructor() {
     this.callbacks = new Set();
