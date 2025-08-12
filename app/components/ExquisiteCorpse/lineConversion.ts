@@ -1,5 +1,5 @@
 import fitCurve from 'fit-curve';
-import { Point, BezierCurve, Line } from './Sketchpad';
+import { BezierCurve, Line, Point } from './types';
 
 /**
  * Converts AI coordinate points to our Bezier curve format
@@ -30,7 +30,7 @@ export const convertAIPointsToLine = (points: Point[], maxError: number = 2): Li
     return curves as BezierCurve[];
   } catch (error) {
     console.warn('Curve fitting failed:', error);
-    
+
     // Fallback: create simple line segments between consecutive points
     return createFallbackLine(points);
   }
@@ -45,11 +45,11 @@ const createFallbackLine = (points: Point[]): Line => {
   if (points.length < 2) return [];
 
   const curves: BezierCurve[] = [];
-  
+
   for (let i = 0; i < points.length - 1; i++) {
     const start = points[i];
     const end = points[i + 1];
-    
+
     // Create control points 1/3 and 2/3 along the line for smooth curves
     const cp1: Point = [
       start[0] + (end[0] - start[0]) * 0.33,
@@ -59,10 +59,10 @@ const createFallbackLine = (points: Point[]): Line => {
       start[0] + (end[0] - start[0]) * 0.67,
       start[1] + (end[1] - start[1]) * 0.67
     ];
-    
+
     curves.push([start, cp1, cp2, end]);
   }
-  
+
   return curves;
 };
 
@@ -73,7 +73,7 @@ const createFallbackLine = (points: Point[]): Line => {
  * @returns Sanitized points array
  */
 export const sanitizeAIPoints = (
-  points: Point[], 
+  points: Point[],
   bounds: { width: number; height: number }
 ): Point[] => {
   return points
@@ -81,8 +81,8 @@ export const sanitizeAIPoints = (
       // Filter out invalid points
       if (!Array.isArray(point) || point.length !== 2) return false;
       const [x, y] = point;
-      return typeof x === 'number' && typeof y === 'number' && 
-             Number.isFinite(x) && Number.isFinite(y);
+      return typeof x === 'number' && typeof y === 'number' &&
+        Number.isFinite(x) && Number.isFinite(y);
     })
     .map(([x, y]) => {
       // Clamp coordinates to canvas bounds
@@ -108,24 +108,24 @@ export const smoothAIPoints = (points: Point[], windowSize: number = 3): Point[]
   if (points.length <= windowSize) return points;
 
   const smoothed: Point[] = [points[0]]; // Keep first point unchanged
-  
+
   for (let i = 1; i < points.length - 1; i++) {
     const start = Math.max(0, i - Math.floor(windowSize / 2));
     const end = Math.min(points.length, i + Math.floor(windowSize / 2) + 1);
-    
+
     let avgX = 0;
     let avgY = 0;
     let count = 0;
-    
+
     for (let j = start; j < end; j++) {
       avgX += points[j][0];
       avgY += points[j][1];
       count++;
     }
-    
+
     smoothed.push([avgX / count, avgY / count]);
   }
-  
+
   smoothed.push(points[points.length - 1]); // Keep last point unchanged
   return smoothed;
 };
@@ -137,20 +137,20 @@ export const smoothAIPoints = (points: Point[], windowSize: number = 3): Point[]
  */
 export const validateGeneratedLine = (line: Line): boolean => {
   if (!Array.isArray(line) || line.length === 0) return false;
-  
+
   // Check each curve in the line
   for (const curve of line) {
     if (!Array.isArray(curve) || curve.length !== 4) return false;
-    
+
     // Check each point in the curve
     for (const point of curve) {
       if (!Array.isArray(point) || point.length !== 2) return false;
       const [x, y] = point;
-      if (typeof x !== 'number' || typeof y !== 'number' || 
-          !Number.isFinite(x) || !Number.isFinite(y)) return false;
+      if (typeof x !== 'number' || typeof y !== 'number' ||
+        !Number.isFinite(x) || !Number.isFinite(y)) return false;
     }
   }
-  
+
   return true;
 };
 
@@ -161,7 +161,7 @@ export const validateGeneratedLine = (line: Line): boolean => {
  */
 export const calculateLineLength = (line: Line): number => {
   let totalLength = 0;
-  
+
   for (const curve of line) {
     const [start, , , end] = curve;
     // Simple distance calculation (not true curve length, but good approximation)
@@ -169,7 +169,7 @@ export const calculateLineLength = (line: Line): number => {
     const dy = end[1] - start[1];
     totalLength += Math.sqrt(dx * dx + dy * dy);
   }
-  
+
   return totalLength;
 };
 
@@ -191,12 +191,12 @@ export const processAIBezierCurves = (
     if (!Array.isArray(curve) || curve.length !== 4) {
       throw new Error('Invalid curve: must have 4 points [start, cp1, cp2, end]');
     }
-    
+
     for (const point of curve) {
       if (!Array.isArray(point) || point.length !== 2) {
         throw new Error('Invalid point in curve');
       }
-      
+
       const [x, y] = point;
       if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) {
         throw new Error('Invalid coordinates in curve');
@@ -229,7 +229,7 @@ const improveAICurves = (curves: BezierCurve[]): BezierCurve[] => {
     if (index > 0) {
       const prevCurve = curves[index - 1];
       const prevEnd = prevCurve[3];
-      
+
       // Make current start match previous end exactly for smooth connection
       start = prevEnd;
     }
@@ -268,20 +268,20 @@ const optimizeControlPoints = (curve: BezierCurve): BezierCurve => {
 
   // Adjust cp1 if too extreme
   const cp1Distance = Math.sqrt((cp1[0] - start[0]) ** 2 + (cp1[1] - start[1]) ** 2);
-  const newCp1 = cp1Distance > maxControlDistance 
+  const newCp1 = cp1Distance > maxControlDistance
     ? [
-        start[0] + (cp1[0] - start[0]) * (maxControlDistance / cp1Distance),
-        start[1] + (cp1[1] - start[1]) * (maxControlDistance / cp1Distance)
-      ] as Point
+      start[0] + (cp1[0] - start[0]) * (maxControlDistance / cp1Distance),
+      start[1] + (cp1[1] - start[1]) * (maxControlDistance / cp1Distance)
+    ] as Point
     : cp1;
 
   // Adjust cp2 if too extreme
   const cp2Distance = Math.sqrt((cp2[0] - end[0]) ** 2 + (cp2[1] - end[1]) ** 2);
-  const newCp2 = cp2Distance > maxControlDistance 
+  const newCp2 = cp2Distance > maxControlDistance
     ? [
-        end[0] + (cp2[0] - end[0]) * (maxControlDistance / cp2Distance),
-        end[1] + (cp2[1] - end[1]) * (maxControlDistance / cp2Distance)
-      ] as Point
+      end[0] + (cp2[0] - end[0]) * (maxControlDistance / cp2Distance),
+      end[1] + (cp2[1] - end[1]) * (maxControlDistance / cp2Distance)
+    ] as Point
     : cp2;
 
   return [start, newCp1, newCp2, end];
@@ -308,7 +308,7 @@ export const processAILine = (
 
   // 1. Sanitize points (bounds check, filter invalid)
   let processedPoints = sanitizeAIPoints(aiPoints, bounds);
-  
+
   if (processedPoints.length < 2) {
     throw new Error('Not enough valid points after sanitization');
   }

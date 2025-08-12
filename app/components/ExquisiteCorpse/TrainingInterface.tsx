@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef } from "react";
-import { Sketchpad, Line, BezierCurve } from "./Sketchpad";
+import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { useUndoRedo } from './useUndoRedo';
 import { renderGameStateToBase64 } from './imageContext';
+import { BezierCurve, Line } from "./types";
 
 export const TrainingInterface = () => {
   // Form state

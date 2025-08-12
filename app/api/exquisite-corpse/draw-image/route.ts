@@ -1,37 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GeminiService, GameContext } from '../gemini-service';
-
-export type AIImageResponse = {
-  interpretation: string;
-  image: string; // base64 encoded image representing the AI's addition
-  reasoning: string;
-};
-
-function validateResponse(response: unknown): AIImageResponse {
-  if (!response || typeof response !== 'object') {
-    throw new Error('Invalid AI response format');
-  }
-
-  const { interpretation, image, reasoning } = response as { interpretation: unknown; image: unknown; reasoning: unknown };
-
-  if (typeof interpretation !== 'string' || interpretation.trim().length === 0) {
-    throw new Error('Invalid or missing interpretation');
-  }
-
-  if (typeof image !== 'string' || image.trim().length === 0) {
-    throw new Error('Invalid or missing image');
-  }
-
-  if (typeof reasoning !== 'string' || reasoning.trim().length === 0) {
-    throw new Error('Invalid or missing reasoning');
-  }
-
-  return {
-    interpretation: interpretation.trim(),
-    image: image.trim(),
-    reasoning: reasoning.trim(),
-  };
-}
+import { ImageDrawingService, GameContext } from './image-drawing-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,10 +21,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const geminiService = new GeminiService(apiKey);
-    const response = await geminiService.generateContent(context, (response) => {
-      return validateResponse(response);
-    });
+    const imageService = new ImageDrawingService(apiKey);
+    const response = await imageService.generateTurn(context);
 
     return NextResponse.json(response);
   } catch (error) {

@@ -2,9 +2,8 @@
 
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { BaseTurn, isCurveTurn } from "./types";
+import { BaseTurn, BezierCurve, CurveTurn, isCurveTurn, Line, Turn } from "./types";
 import { getDisplayTurns } from "./gameReducer";
-import { Line, BezierCurve } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 
 type ExportUtilitiesProps = {
@@ -97,8 +96,9 @@ export const ExportUtilities = <T extends BaseTurn>({
     const lines: Line[] = [];
 
     for (const turn of displayTurns) {
-      if (isCurveTurn(turn)) {
-        lines.push(turn.line);
+      // FIXME: Just hammering these types, but this is actually broken though
+      if (isCurveTurn(turn as unknown as Turn)) {
+        lines.push((turn as unknown as CurveTurn).line);
       }
     }
 

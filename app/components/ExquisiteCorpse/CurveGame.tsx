@@ -31,7 +31,7 @@ const getAICurveTurn = async (
 
   // Step 4: Call AI service
   const geminiService = getGeminiService();
-  const aiResponse = await geminiService.generateTurn(gameContext);
+  const aiResponse = await geminiService.generateCurveTurn(gameContext);
 
   // Step 5: Convert AI Bezier curves to our line format
   const convertedLine = processAIBezierCurves(aiResponse.curves);

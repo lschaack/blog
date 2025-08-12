@@ -7,6 +7,12 @@ export type AITurnResponse = {
   reasoning: string;
 };
 
+export type AIImageResponse = {
+  interpretation: string;
+  image: string; // base64 encoded image representing the AI's addition
+  reasoning: string;
+};
+
 export type GameContext = {
   image: string; // base64 encoded PNG
   canvasDimensions: { width: number; height: number };
@@ -20,7 +26,7 @@ export type GameContext = {
 };
 
 class GeminiAIService {
-  async generateTurn(context: GameContext): Promise<AITurnResponse> {
+  async generateCurveTurn(context: GameContext): Promise<AITurnResponse> {
     try {
       const response = await fetch('/api/exquisite-corpse/draw-curve', {
         method: 'POST',
@@ -38,8 +44,31 @@ class GeminiAIService {
       const result: AITurnResponse = await response.json();
       return result;
     } catch (error) {
-      console.error('AI turn generation failed:', error);
-      throw new Error(`AI turn generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('AI curve turn generation failed:', error);
+      throw new Error(`AI curve turn generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async generateImageTurn(context: GameContext): Promise<AIImageResponse> {
+    try {
+      const response = await fetch('/api/exquisite-corpse/draw-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(context),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const result: AIImageResponse = await response.json();
+      return result;
+    } catch (error) {
+      console.error('AI image turn generation failed:', error);
+      throw new Error(`AI image turn generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 }

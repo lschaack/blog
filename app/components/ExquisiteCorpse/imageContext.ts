@@ -1,4 +1,4 @@
-import { Line, BezierCurve } from './Sketchpad';
+import { BezierCurve, Line } from "./types";
 
 // Canvas drawing utilities for AI context generation
 const drawBezierCurve = (ctx: CanvasRenderingContext2D, curve: BezierCurve) => {
@@ -30,7 +30,7 @@ export const renderGameStateToBase64 = async (
       // Create offscreen canvas for rendering
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      
+
       if (!ctx) {
         reject(new Error('Failed to get canvas context'));
         return;
@@ -109,7 +109,7 @@ export const validateBase64Image = (imageString: string): boolean => {
 
     // Extract base64 part
     const base64Data = imageString.replace('data:image/png;base64,', '');
-    
+
     // Validate base64 format
     const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
     if (!base64Regex.test(base64Data)) {

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Line } from "./Sketchpad";
+import { Line } from "./types";
 
 export const useCurrentTurn = () => {
   const [currentLine, setCurrentLine] = useState<Line[]>([]);
@@ -64,16 +64,16 @@ export const useCurrentTurn = () => {
     // Current state
     currentLine,
     hasLine,
-    
+
     // History controls
     canUndo,
     canRedo,
     undo,
     redo,
-    
+
     // Line editing
     setLine,
-    
+
     // Turn lifecycle
     resetCurrentTurn,
     restoreCurrentLine,
