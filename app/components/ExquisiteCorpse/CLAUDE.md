@@ -12,11 +12,21 @@ The game alternates between user and AI turns, with each participant adding exac
 **Self-Contained Directory Structure:**
 ```
 ExquisiteCorpse/
-├── Game.tsx                 # Main game orchestration and UI
+├── Game.tsx                 # Main game orchestration with GameProvider
+├── types.ts                 # Generic turn types and game state definitions
+├── gameReducer.ts          # useReducer-based game state management
+├── GameContext.tsx         # React context for sharing game state
+├── GameStatus.tsx          # Game status display component
+├── CurrentTurn.tsx         # Sketchpad, undo/redo, end turn controls
+├── TurnHistory.tsx         # Turn navigation and history display
+├── ExportUtilities.tsx     # PNG and JSON export functionality
+├── StateEditor.tsx         # JSON state editing component
+├── TurnRenderer.tsx        # Component for rendering turn information
 ├── Sketchpad.tsx           # Pure drawing canvas component
-├── useTurnManager.ts       # Turn navigation and storage
 ├── useCurrentTurn.ts       # Current turn line editing
 ├── useAITurn.ts           # AI turn processing and state
+├── TrainingInterface.tsx   # Training data generation interface
+├── useUndoRedo.ts         # Generic undo/redo functionality
 ├── geminiAI.ts            # Gemini API integration (self-contained)
 ├── imageContext.ts        # PNG rendering for AI context (self-contained)
 ├── lineConversion.ts      # Bezier curve processing (self-contained)
@@ -44,18 +54,52 @@ ExquisiteCorpse/
 
 ## Component Deep Dive
 
-### Game.tsx - Orchestration Layer
+### Game.tsx - Main Orchestration Component
 **Responsibilities:**
-- Coordinate between turn management, line editing, and AI processing hooks
-- Handle UI rendering and user interactions
-- Manage export functionality (PNG/JSON)
+- Mount all child components within GameContext.Provider
+- Manage game state with useReducer
+- Accept getAITurn prop for AI turn processing
 - Auto-trigger AI turns when user completes their turn
 
-**Key Features:**
-- Game status indicator (whose turn, AI processing, errors)
-- Turn navigation with viewing mode
-- Turn history panel showing AI interpretations and reasoning
-- Conditional UI (buttons only enabled when appropriate)
+**New Architecture:**
+- Uses generic turn types (BaseTurn, CurveTurn, ImageTurn)
+- Separates concerns into focused components
+- Provides clean props interface for AI turn processing
+
+### Component Architecture
+
+#### GameContext.tsx - State Management
+- React context provider for game state sharing
+- Generic type support for different turn variants
+- useReducer integration for state updates
+
+#### GameStatus.tsx - Status Display
+- Shows whose turn it is (user/AI/viewing)
+- Displays AI processing status and errors
+- Clean, focused status presentation
+
+#### CurrentTurn.tsx - Interactive Controls
+- Handles sketchpad interaction and drawing
+- Manages undo/redo for current turn
+- End turn functionality
+- Takes renderTurn prop for turn display customization
+- Supports readOnly mode for non-interactive states
+
+#### TurnHistory.tsx - Navigation & History
+- Previous/next turn navigation
+- Reset functionality
+- Turn history panel with AI interpretations
+- Turn metadata display
+
+#### ExportUtilities.tsx - Export Functions  
+- PNG export functionality
+- JSON export for game state
+- Clean separation of export concerns
+
+#### StateEditor.tsx - JSON Editing
+- JSON state editing and restoration
+- Validation and error handling
+- Sync capabilities for state management
 
 ### Sketchpad.tsx - Pure Drawing Component
 **Responsibilities:**
@@ -70,22 +114,47 @@ ExquisiteCorpse/
 - Uses `useAnimationFrames` for performance optimization
 - Fits Bezier curves in real-time as user draws
 
-### useTurnManager.ts - Turn Storage & Navigation
-**Responsibilities:**
-- Store completed turns with full metadata
-- Handle turn navigation (previous/next/current)
-- Determine whose turn it is (user/AI)
-- Provide display data for current viewing state
+### Generic Turn System
+**New Turn Architecture:**
+- Base turn type with shared metadata
+- Extensible for different turn variants (curve-based vs image-based games)
+- Type-safe generic system supporting multiple game types
 
-**Turn Data Structure:**
+**Turn Type Structure:**
 ```typescript
-type Turn = {
-  line: Line;              // Array of Bezier curves
+// Base turn with shared fields
+type BaseTurn = {
   author: "user" | "ai";   // Who created this turn
   timestamp: string;       // ISO timestamp
   number: number;          // Turn sequence number
   interpretation?: string; // AI's interpretation (AI turns only)
   reasoning?: string;      // AI's reasoning (AI turns only)
+}
+
+// Curve-based turn variant
+type CurveTurn = BaseTurn & {
+  line: Line;              // Array of Bezier curves
+}
+
+// Image-based turn variant  
+type ImageTurn = BaseTurn & {
+  image: string;           // base64-encoded PNG
+}
+
+// Union type for all variants
+type Turn = CurveTurn | ImageTurn;
+```
+
+**Game State Management:**
+```typescript
+type SerializableGameState<T extends BaseTurn> = {
+  turns: T[];
+}
+
+type GameState<T extends BaseTurn> = SerializableGameState<T> & {
+  currentTurnIndex: number;
+  isFirstTurn: boolean;
+  isLastTurn: boolean;
 }
 ```
 
