@@ -1,4 +1,10 @@
-import { Line } from "./Sketchpad";
+import type { ComponentType } from "react";
+
+export type Point = [number, number];
+export type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
+export type Line = BezierCurve[];
+
+export type CanvasDimensions = { width: number; height: number };
 
 // Base turn type with shared fields
 export type BaseTurn = {
@@ -36,13 +42,21 @@ export type GameState<T extends BaseTurn = Turn> = SerializableGameState<T> & {
 };
 
 // Game action types
-export type GameAction<T extends BaseTurn = Turn> = 
+export type GameAction<T extends BaseTurn = Turn> =
   | { type: "end_user_turn"; payload: Omit<T, "author" | "timestamp" | "number"> }
   | { type: "end_ai_turn"; payload: Omit<T, "author" | "timestamp" | "number"> }
   | { type: "increment_current_turn" }
   | { type: "decrement_current_turn" }
   | { type: "restore"; payload: SerializableGameState<T> }
   | { type: "reset" };
+
+export type TurnRendererProps<Turn extends BaseTurn> = {
+  handleEndTurn: (turnData: Omit<Turn, "author" | "timestamp" | "number">) => void;
+  canvasDimensions: { width: number; height: number };
+  readOnly?: boolean;
+}
+
+export type TurnRenderer<Turn extends BaseTurn> = ComponentType<TurnRendererProps<Turn>>;
 
 // Type guards to distinguish turn types
 export const isCurveTurn = (turn: Turn): turn is CurveTurn => {

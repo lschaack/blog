@@ -1,4 +1,4 @@
-import { GameState, GameAction, BaseTurn, SerializableGameState } from "./types";
+import { GameState, GameAction, BaseTurn } from "./types";
 
 // Create initial game state
 export const createInitialGameState = <T extends BaseTurn>(): GameState<T> => ({
@@ -57,7 +57,7 @@ export const gameReducer = <T extends BaseTurn>(
     case "increment_current_turn": {
       const maxIndex = state.turns.length;
       const newIndex = Math.min(state.currentTurnIndex + 1, maxIndex);
-      
+
       return {
         ...state,
         currentTurnIndex: newIndex,
@@ -68,7 +68,7 @@ export const gameReducer = <T extends BaseTurn>(
 
     case "decrement_current_turn": {
       const newIndex = Math.max(state.currentTurnIndex - 1, 0);
-      
+
       return {
         ...state,
         currentTurnIndex: newIndex,
@@ -79,7 +79,7 @@ export const gameReducer = <T extends BaseTurn>(
 
     case "restore": {
       const newCurrentTurnIndex = Math.min(action.payload.turns.length, action.payload.turns.length);
-      
+
       return {
         turns: action.payload.turns,
         currentTurnIndex: newCurrentTurnIndex,

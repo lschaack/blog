@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CurveDrawingService, GameContext, BezierCurve, AITurnResponse } from './curve-drawing-service';
+import { CurveDrawingService, GameContext } from './curve-drawing-service';
 
 
 export async function POST(request: NextRequest) {

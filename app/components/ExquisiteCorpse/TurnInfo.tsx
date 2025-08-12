@@ -2,11 +2,11 @@
 
 import { BaseTurn } from "./types";
 
-type TurnRendererProps<Turn extends BaseTurn> = {
+type TurnInfoProps<Turn extends BaseTurn> = {
   turn: Turn;
 };
 
-export const TurnRenderer = <Turn extends BaseTurn>({ turn }: TurnRendererProps<Turn>) => {
+export const TurnInfo = <Turn extends BaseTurn>({ turn }: TurnInfoProps<Turn>) => {
   return (
     <div className="space-y-2">
       <div className="font-medium">

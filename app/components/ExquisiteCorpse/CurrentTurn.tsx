@@ -1,45 +1,34 @@
-import { ComponentType, useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { BaseTurn, CurveTurn, isCurveTurn } from "./types";
+import { CurveTurn, Line } from "./types";
 import { isViewingCurrentTurn, isUserTurn, getDisplayTurns } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
-import { Sketchpad, Line } from "./Sketchpad";
+import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 
-type CurrentTurnProps<T extends BaseTurn> = {
-  handleEndTurn: (turnData: Omit<T, "author" | "timestamp" | "number">) => void;
-  renderTurn: ComponentType<{ turn: T }>;
+type CurveTurnRendererProps = {
+  handleEndTurn: (turnData: Omit<CurveTurn, "author" | "timestamp" | "number">) => void;
   readOnly?: boolean;
   canvasDimensions: { width: number; height: number };
 };
 
-export const CurrentTurn = <T extends BaseTurn>({
+export const CurveTurnRenderer = ({
   handleEndTurn,
-  renderTurn: RenderTurn,
   readOnly = false,
   canvasDimensions
-}: CurrentTurnProps<T>) => {
-  const gameState = useGameContext<T>();
+}: CurveTurnRendererProps) => {
+  const gameState = useGameContext<CurveTurn>();
   const currentTurn = useCurrentTurn();
 
   // Get display lines from completed turns
   const displayTurns = useMemo(() => getDisplayTurns(gameState), [gameState]);
 
-  // Extract lines from curve turns for display
-  const displayLines = useMemo(() => {
-    const lines: Line[] = [];
-    for (const turn of displayTurns) {
-      if (isCurveTurn(turn)) {
-        lines.push(turn.line);
-      }
-    }
-    return lines;
-  }, [displayTurns]);
-
   // Combined display lines: completed turns + current turn line
   const allDisplayLines = useMemo(() => {
-    return [...displayLines, ...currentTurn.currentLine];
-  }, [displayLines, currentTurn.currentLine]);
+    return displayTurns
+      .map(turn => turn.line)
+      .concat(currentTurn.currentLine);
+  }, [displayTurns, currentTurn.currentLine]);
 
   // Handle adding lines from Sketchpad
   const handleAddLine = useCallback((newLines: Line[]) => {
@@ -54,7 +43,7 @@ export const CurrentTurn = <T extends BaseTurn>({
     // For other turn types, this would be different
     const turnData = {
       line: currentTurn.currentLine[0]
-    } as Omit<T, "author" | "timestamp" | "number">;
+    } as Omit<CurveTurn, "author" | "timestamp" | "number">;
 
     handleEndTurn(turnData);
     currentTurn.resetCurrentTurn();
@@ -94,21 +83,12 @@ export const CurrentTurn = <T extends BaseTurn>({
       />
 
       {/* End turn button */}
-      {isViewingCurrentTurn(gameState) && (
-        <Button
-          label="End Turn"
-          onClick={handleEndTurnClick}
-          className="flex-1"
-          disabled={!canEndTurn}
-        />
-      )}
-
-      {/* Turn rendering - show current turn being viewed */}
-      {gameState.currentTurnIndex > 0 && gameState.currentTurnIndex <= gameState.turns.length && (
-        <div className="mt-4 p-3 bg-gray-50 rounded">
-          <RenderTurn turn={gameState.turns[gameState.currentTurnIndex - 1]} />
-        </div>
-      )}
+      <Button
+        label="End Turn"
+        onClick={handleEndTurnClick}
+        className="flex-1"
+        disabled={!isViewingCurrentTurn(gameState) || !canEndTurn}
+      />
     </div>
   );
 };

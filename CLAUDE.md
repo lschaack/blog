@@ -101,3 +101,4 @@ When working with this codebase:
 5. **Styling**: Use Tailwind classes; custom CSS in `globals.css` only when necessary
 
 The codebase emphasizes performance optimization, particularly for animations, and provides a rich debugging experience for development.
+- Minimize layout shift by disabling elements when they are unusable rather than removing them

@@ -12,8 +12,8 @@ The game alternates between user and AI turns, with each participant adding exac
 **Self-Contained Directory Structure:**
 ```
 ExquisiteCorpse/
-├── Game.tsx                 # Main game orchestration with GameProvider
-├── types.ts                 # Generic turn types and game state definitions
+├── Game.tsx                # Main game orchestration with GameProvider
+├── types.ts                # Generic turn types and game state definitions
 ├── gameReducer.ts          # useReducer-based game state management
 ├── GameContext.tsx         # React context for sharing game state
 ├── GameStatus.tsx          # Game status display component
@@ -21,16 +21,16 @@ ExquisiteCorpse/
 ├── TurnHistory.tsx         # Turn navigation and history display
 ├── ExportUtilities.tsx     # PNG and JSON export functionality
 ├── StateEditor.tsx         # JSON state editing component
-├── TurnRenderer.tsx        # Component for rendering turn information
+├── TurnInfo.tsx            # Component for rendering turn information
 ├── Sketchpad.tsx           # Pure drawing canvas component
 ├── useCurrentTurn.ts       # Current turn line editing
-├── useAITurn.ts           # AI turn processing and state
+├── useAITurn.ts            # AI turn processing and state
 ├── TrainingInterface.tsx   # Training data generation interface
-├── useUndoRedo.ts         # Generic undo/redo functionality
-├── geminiAI.ts            # Gemini API integration (self-contained)
-├── imageContext.ts        # PNG rendering for AI context (self-contained)
-├── lineConversion.ts      # Bezier curve processing (self-contained)
-└── CLAUDE.md              # This documentation
+├── useUndoRedo.ts          # Generic undo/redo functionality
+├── geminiAI.ts             # Gemini API integration (self-contained)
+├── imageContext.ts         # PNG rendering for AI context (self-contained)
+├── lineConversion.ts       # Bezier curve processing (self-contained)
+└── CLAUDE.md               # This documentation
 ```
 
 **Self-Containment Benefits:**

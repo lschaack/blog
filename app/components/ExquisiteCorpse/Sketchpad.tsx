@@ -2,10 +2,7 @@ import { FC, useEffect, useRef, useState, useCallback } from "react";
 import fitCurve from 'fit-curve';
 
 import { useAnimationFrames } from '@/app/hooks/useAnimationFrames';
-
-export type Point = [number, number];
-export type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
-export type Line = BezierCurve[];
+import { BezierCurve, Line, Point } from "./types";
 
 type SketchpadProps = {
   width: number;

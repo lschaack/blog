@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { BaseTurn, CurveTurn, isCurveTurn } from "./types";
+import { BaseTurn, isCurveTurn } from "./types";
 import { getDisplayTurns } from "./gameReducer";
 import { Line, BezierCurve } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
@@ -86,8 +86,8 @@ const exportToJSON = <T extends BaseTurn>(gameState: { turns: T[] }): void => {
   URL.revokeObjectURL(url);
 };
 
-export const ExportUtilities = <T extends BaseTurn>({ 
-  canvasDimensions 
+export const ExportUtilities = <T extends BaseTurn>({
+  canvasDimensions
 }: ExportUtilitiesProps) => {
   const gameState = useGameContext<T>();
 
@@ -95,13 +95,13 @@ export const ExportUtilities = <T extends BaseTurn>({
   const displayLines = useMemo(() => {
     const displayTurns = getDisplayTurns(gameState);
     const lines: Line[] = [];
-    
+
     for (const turn of displayTurns) {
       if (isCurveTurn(turn)) {
         lines.push(turn.line);
       }
     }
-    
+
     return lines;
   }, [gameState]);
 

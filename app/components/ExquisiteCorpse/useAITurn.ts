@@ -9,16 +9,18 @@ export type AITurnError = {
   retryable: boolean;
 };
 
-export const useAITurn = <T extends BaseTurn>(
-  aiFunction?: (history: T[]) => Promise<T>
+export type AITurnData<Turn extends BaseTurn> = Omit<Turn, 'author' | 'number' | 'timestamp'>;
+
+export const useAITurn = <Turn extends BaseTurn>(
+  aiFunction?: (history: Turn[]) => Promise<AITurnData<Turn>>
 ) => {
   const [state, setState] = useState<AITurnState>("idle");
   const [error, setError] = useState<AITurnError | null>(null);
   const [progress, setProgress] = useState<string>("");
 
   const processAITurn = useCallback(async (
-    turns: T[] // Game history for context
-  ): Promise<T> => {
+    turns: Turn[] // Game history for context
+  ): Promise<AITurnData<Turn>> => {
     if (!aiFunction) {
       throw new Error("No AI function provided");
     }
@@ -29,15 +31,15 @@ export const useAITurn = <T extends BaseTurn>(
 
     try {
       const result = await aiFunction(turns);
-      
+
       setState("complete");
       setProgress("");
-      
+
       return result;
 
     } catch (err) {
       console.error("AI turn processing failed:", err);
-      
+
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
       let errorType: AITurnError["type"] = "unknown";
       let retryable = true;
@@ -67,18 +69,18 @@ export const useAITurn = <T extends BaseTurn>(
       setState("error");
       setError(aiError);
       setProgress("");
-      
+
       throw aiError;
     }
   }, [aiFunction]);
 
   const retryAITurn = useCallback(async (
-    turns: T[]
+    turns: Turn[]
   ) => {
     if (state !== "error" || !error?.retryable) {
       throw new Error("Cannot retry - no retryable error state");
     }
-    
+
     return processAITurn(turns);
   }, [state, error, processAITurn]);
 
@@ -108,15 +110,15 @@ export const useAITurn = <T extends BaseTurn>(
     state,
     error,
     progress,
-    
+
     // Actions
     processAITurn,
     retryAITurn,
     resetAITurn,
-    
+
     // Utilities
     getErrorMessage,
-    
+
     // Status queries
     isProcessing: state === "processing",
     hasError: state === "error",
