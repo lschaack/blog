@@ -1,6 +1,7 @@
 "use client";
 
 import { CurveGame } from "@/app/components/ExquisiteCorpse/CurveGame";
+import { ImageGame } from "@/app/components/ExquisiteCorpse/ImageGame";
 import { useMemo } from "react";
 
 export default function Demo() {
@@ -10,6 +11,6 @@ export default function Demo() {
   }), []);
 
   return (
-    <CurveGame dimensions={dimensions} />
+    <ImageGame dimensions={dimensions} />
   );
 }
