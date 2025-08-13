@@ -1,6 +1,4 @@
 import { GoogleGenAI, Modality, GenerateContentResponse } from "@google/genai";
-import fs from 'fs';
-import path from 'path';
 
 export type GameContext = {
   image: string; // base64 encoded PNG
@@ -22,15 +20,6 @@ export type AIImageResponse = {
 
 export class ImageDrawingService {
   private client: GoogleGenAI;
-  private static systemPrompt: string | null = null;
-
-  private static getSystemPrompt(): string {
-    if (ImageDrawingService.systemPrompt === null) {
-      const promptPath = path.join(process.cwd(), 'app', 'api', 'exquisite-corpse', 'draw-image', 'systemPrompt.txt');
-      ImageDrawingService.systemPrompt = fs.readFileSync(promptPath, 'utf8');
-    }
-    return ImageDrawingService.systemPrompt;
-  }
 
   constructor(apiKey: string) {
     this.client = new GoogleGenAI({ apiKey });
@@ -42,7 +31,6 @@ export class ImageDrawingService {
 
   private parseAndValidateResponse(response: GenerateContentResponse): AIImageResponse {
     const parts = response.candidates?.[0]?.content?.parts;
-    console.log('parts', parts)
 
     if (!parts || !Array.isArray(parts)) {
       throw new Error('Invalid AI response format');
@@ -89,11 +77,6 @@ export class ImageDrawingService {
           responseModalities: [Modality.TEXT, Modality.IMAGE],
         }
       });
-
-      console.log('result.candidates[0].content.parts', result.candidates?.[0].content?.parts)
-      if ((result.candidates?.length ?? 0) > 1) {
-        console.info('received more than one response candidate');
-      }
 
       let parsedResponse: AIImageResponse;
       try {

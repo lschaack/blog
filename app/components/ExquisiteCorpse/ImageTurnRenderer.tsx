@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from "react";
-import Image from "next/image";
 import { useGameContext } from "./GameContext";
 import { ImageTurn, Line } from "./types";
 import { isViewingCurrentTurn, isUserTurn, getDisplayTurns } from "./gameReducer";
@@ -17,21 +16,44 @@ type ImageTurnRendererProps = {
 const renderLinesToBase64 = async (
   lines: Line[],
   width: number,
-  height: number
+  height: number,
+  backgroundImage?: string
 ): Promise<string> => {
+  // Get device pixel ratio for DPI scaling
+  const dpr = window.devicePixelRatio || 1;
+
   // Create an offscreen canvas
   const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
   const ctx = canvas.getContext('2d');
 
   if (!ctx) {
     throw new Error('Could not get canvas context');
   }
 
-  // Clear the canvas with white background
-  ctx.fillStyle = 'white';
-  ctx.fillRect(0, 0, width, height);
+  // Scale the context to handle DPI
+  ctx.scale(dpr, dpr);
+
+  // Clear the canvas with white background or draw background image
+  if (backgroundImage) {
+    // Create an image element to load the background
+    const img = document.createElement('img');
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Failed to load background image'));
+      img.src = backgroundImage.startsWith('data:image/png;base64,')
+        ? backgroundImage
+        : `data:image/png;base64,${backgroundImage}`;
+    });
+
+    // Draw the background image
+    ctx.drawImage(img, 0, 0, width, height);
+  } else {
+    // Clear with white background
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, width, height);
+  }
 
   // Set drawing style
   ctx.strokeStyle = 'black';
@@ -105,7 +127,8 @@ export const ImageTurnRenderer = ({
       const imageData = await renderLinesToBase64(
         allLines,
         canvasDimensions.width,
-        canvasDimensions.height
+        canvasDimensions.height,
+        backgroundImage || undefined
       );
 
       const turnData = {
@@ -117,7 +140,7 @@ export const ImageTurnRenderer = ({
     } catch (error) {
       console.error('Failed to render turn to image:', error);
     }
-  }, [currentTurn, handleEndTurn, canvasDimensions]);
+  }, [currentTurn, canvasDimensions.width, canvasDimensions.height, backgroundImage, handleEndTurn]);
 
   const canDraw = !readOnly && isViewingCurrentTurn(gameState) && isUserTurn(gameState);
   const canEndTurn = canDraw && currentTurn.hasLine;

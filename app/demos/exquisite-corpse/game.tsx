@@ -1,6 +1,6 @@
 "use client";
 
-import { CurveGame } from "@/app/components/ExquisiteCorpse/CurveGame";
+//import { CurveGame } from "@/app/components/ExquisiteCorpse/CurveGame";
 import { ImageGame } from "@/app/components/ExquisiteCorpse/ImageGame";
 import { useMemo } from "react";
 
