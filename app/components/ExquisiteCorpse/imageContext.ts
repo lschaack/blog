@@ -1,4 +1,4 @@
-import { BezierCurve, Line } from "./types";
+import { BezierCurve, Line } from "@/app/types/exquisiteCorpse";
 
 // Canvas drawing utilities for AI context generation
 const drawBezierCurve = (ctx: CanvasRenderingContext2D, curve: BezierCurve) => {

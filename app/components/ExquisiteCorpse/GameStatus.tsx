@@ -1,7 +1,7 @@
 "use client";
 
 import { useGameContext } from "./GameContext";
-import { BaseTurn } from "./types";
+import { BaseTurn } from "@/app/types/exquisiteCorpse";
 import { isUserTurn, isAITurn, isViewingCurrentTurn } from "./gameReducer";
 
 type GameStatusProps = {

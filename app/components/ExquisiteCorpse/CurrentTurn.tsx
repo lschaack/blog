@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { CurveTurn, Line } from "./types";
+import { CurveTurn, Line } from "@/app/types/exquisiteCorpse";
 import { isViewingCurrentTurn, isUserTurn, getDisplayTurns } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";

@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { BaseTurn } from "./types";
+import { BaseTurn } from "@/app/types/exquisiteCorpse";
 
 export type AITurnState = "idle" | "processing" | "error" | "complete";
 

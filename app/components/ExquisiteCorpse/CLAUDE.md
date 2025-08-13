@@ -330,3 +330,5 @@ This component system is designed to be:
 - **Maintainable**: Clear separation of concerns and comprehensive documentation
 
 The game integrates with the broader blog application through the demo system but operates independently with its own state management and API integrations.
+
+- Shared types should be placed in a .d.ts file with a descriptive name of the corresponding project in the @app/types directory. When a type is needed is already defined locally to a file, it should be refactored to be sourced from this file.

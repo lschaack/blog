@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useReducer, ReactNode, Dispatch } from "react";
-import { GameState, GameAction, BaseTurn } from "./types";
+import { GameState, GameAction, BaseTurn } from "@/app/types/exquisiteCorpse";
 import { gameReducer, createInitialGameState } from "./gameReducer";
 
 // Context type with dispatch function

@@ -1,4 +1,4 @@
-import { GameState, GameAction, BaseTurn } from "./types";
+import { GameState, GameAction, BaseTurn } from "@/app/types/exquisiteCorpse";
 
 // Create initial game state
 export const createInitialGameState = <T extends BaseTurn>(): GameState<T> => ({

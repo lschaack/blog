@@ -1,10 +1,11 @@
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { ImageTurn, Line } from "./types";
+import { ImageTurn, Line } from "@/app/types/exquisiteCorpse";
 import { isViewingCurrentTurn, isUserTurn, getDisplayTurns } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
+import { ensureStartsWith } from "@/app/utils/string";
 
 type ImageTurnRendererProps = {
   handleEndTurn: (turnData: Omit<ImageTurn, "author" | "timestamp" | "number">) => void;
@@ -42,9 +43,7 @@ const renderLinesToBase64 = async (
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
       img.onerror = () => reject(new Error('Failed to load background image'));
-      img.src = backgroundImage.startsWith('data:image/png;base64,')
-        ? backgroundImage
-        : `data:image/png;base64,${backgroundImage}`;
+      img.src = ensureStartsWith(backgroundImage, 'data:image/png;base64,');
     });
 
     // Draw the background image
@@ -169,11 +168,7 @@ export const ImageTurnRenderer = ({
         {backgroundImage && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            // FIXME: less jank pls
-            src={backgroundImage.startsWith('data:image/png;base64,')
-              ? backgroundImage
-              : `data:image/png;base64,${backgroundImage}`
-            }
+            src={ensureStartsWith(backgroundImage, 'data:image/png;base64,')}
             alt="Background"
             width={canvasDimensions.width}
             height={canvasDimensions.height}

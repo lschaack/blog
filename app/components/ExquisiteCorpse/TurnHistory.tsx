@@ -1,7 +1,7 @@
 "use client";
 
 import { useGameContext } from "./GameContext";
-import { BaseTurn } from "./types";
+import { BaseTurn } from "@/app/types/exquisiteCorpse";
 import { canGoToPrevious, canGoToNext, getCurrentTurnNumber, getTotalTurns, isViewingCurrentTurn } from "./gameReducer";
 import { Button } from '@/app/components/Button';
 import { TurnInfo } from "./TurnInfo";

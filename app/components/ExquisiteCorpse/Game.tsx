@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from "react";
 
-import { BaseTurn, CanvasDimensions, TurnRenderer } from './types';
+import { BaseTurn, CanvasDimensions, TurnRenderer } from '@/app/types/exquisiteCorpse';
 import { GameProvider, useGameContext } from './GameContext';
 import { GameStatus } from './GameStatus';
 import { TurnHistory } from './TurnHistory';

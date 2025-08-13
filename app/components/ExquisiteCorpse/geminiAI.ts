@@ -1,5 +1,4 @@
-export type Point = [number, number];
-export type BezierCurve = [Point, Point, Point, Point]; // [startPoint, controlPoint1, controlPoint2, endPoint]
+import { BezierCurve, GameContext } from "@/app/types/exquisiteCorpse";
 
 export type AITurnResponse = {
   interpretation: string;
@@ -11,18 +10,6 @@ export type AIImageResponse = {
   interpretation: string;
   image: string; // base64 encoded image representing the AI's addition
   reasoning: string;
-};
-
-export type GameContext = {
-  image: string; // base64 encoded PNG
-  canvasDimensions: { width: number; height: number };
-  currentTurn: number;
-  history: {
-    turn: number;
-    author: "user" | "ai";
-    interpretation?: string;
-    reasoning?: string;
-  }[];
 };
 
 class GeminiAIService {

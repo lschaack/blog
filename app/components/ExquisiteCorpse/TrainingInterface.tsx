@@ -5,7 +5,7 @@ import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { useUndoRedo } from './useUndoRedo';
 import { renderGameStateToBase64 } from './imageContext';
-import { BezierCurve, Line } from "./types";
+import { BezierCurve, Line } from "@/app/types/exquisiteCorpse";
 
 export const TrainingInterface = () => {
   // Form state

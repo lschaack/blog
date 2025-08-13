@@ -58,11 +58,15 @@ export type TurnRendererProps<Turn extends BaseTurn> = {
 
 export type TurnRenderer<Turn extends BaseTurn> = ComponentType<TurnRendererProps<Turn>>;
 
-// Type guards to distinguish turn types
-export const isCurveTurn = (turn: Turn): turn is CurveTurn => {
-  return 'line' in turn;
+export type GameContext = {
+  image: string; // base64 encoded PNG
+  canvasDimensions: { width: number; height: number };
+  currentTurn: number;
+  history: {
+    turn: number;
+    author: "user" | "ai";
+    interpretation?: string;
+    reasoning?: string;
+  }[];
 };
 
-export const isImageTurn = (turn: Turn): turn is ImageTurn => {
-  return 'image' in turn;
-};

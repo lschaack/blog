@@ -1,7 +1,7 @@
-import { CanvasDimensions, CurveTurn } from './types';
+import { CanvasDimensions, CurveTurn, GameContext } from '@/app/types/exquisiteCorpse';
 import { CurveTurnRenderer } from './CurrentTurn';
 import { renderGameStateToBase64, createGameContextSummary, checkImageSizeLimit } from "./imageContext";
-import { getGeminiService, GameContext } from "./geminiAI";
+import { getGeminiService } from "./geminiAI";
 import { processAIBezierCurves } from "./lineConversion";
 import { Game, GameProps } from "./Game";
 

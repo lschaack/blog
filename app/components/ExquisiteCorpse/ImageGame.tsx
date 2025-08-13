@@ -1,6 +1,6 @@
-import { CanvasDimensions, ImageTurn } from './types';
+import { CanvasDimensions, ImageTurn, GameContext } from '@/app/types/exquisiteCorpse';
 import { ImageTurnRenderer } from './ImageTurnRenderer';
-import { getGeminiService, GameContext } from "./geminiAI";
+import { getGeminiService } from "./geminiAI";
 import { Game, GameProps } from "./Game";
 
 const getAIImageTurn = async (
@@ -10,22 +10,22 @@ const getAIImageTurn = async (
   // For image-based turns, we send the most recent image to the AI
   // If there's no history, we start with a blank white canvas
   let baseImage: string;
-  
+
   if (history.length === 0) {
     // Create a blank white canvas as base64
     const canvas = document.createElement('canvas');
     canvas.width = dimensions.width;
     canvas.height = dimensions.height;
     const ctx = canvas.getContext('2d');
-    
+
     if (!ctx) {
       throw new Error('Could not create canvas context');
     }
-    
+
     // Fill with white background
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, dimensions.width, dimensions.height);
-    
+
     baseImage = canvas.toDataURL('image/png');
   } else {
     // Use the most recent turn's image
@@ -37,8 +37,8 @@ const getAIImageTurn = async (
     image: baseImage,
     canvasDimensions: dimensions,
     currentTurn: history.length + 1,
-    history: history.map((turn, index) => ({
-      turn: index + 1,
+    history: history.map(turn => ({
+      turn: turn.number,
       author: turn.author,
       interpretation: turn.interpretation,
       reasoning: turn.reasoning

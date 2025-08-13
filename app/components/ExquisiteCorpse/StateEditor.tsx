@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { BaseTurn, SerializableGameState } from "./types";
+import { BaseTurn, SerializableGameState } from "@/app/types/exquisiteCorpse";
 import { Button } from '@/app/components/Button';
 
 export const StateEditor = <T extends BaseTurn>() => {

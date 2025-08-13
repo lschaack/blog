@@ -1,5 +1,5 @@
 import fitCurve from 'fit-curve';
-import { BezierCurve, Line, Point } from './types';
+import { BezierCurve, Line, Point } from '@/app/types/exquisiteCorpse';
 
 /**
  * Converts AI coordinate points to our Bezier curve format

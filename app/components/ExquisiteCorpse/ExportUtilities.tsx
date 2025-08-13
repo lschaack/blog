@@ -2,15 +2,14 @@
 
 import { useCallback } from "react";
 import { useGameContext } from "./GameContext";
-import { BaseTurn, ImageTurn } from "./types";
+import { BaseTurn, ImageTurn } from "@/app/types/exquisiteCorpse";
 import { Button } from '@/app/components/Button';
+import { ensureStartsWith } from "@/app/utils/string";
 
 // PNG export utility
 const renderToPNG = (base64: string): void => {
   const a = document.createElement("a");
-  a.href = base64.startsWith('data:image/png;base64,')
-    ? base64
-    : `data:image/png;base64,${base64}`;
+  a.href = ensureStartsWith(base64, 'data:image/png;base64,');
   a.download = "sketch.png";
   a.click();
 };

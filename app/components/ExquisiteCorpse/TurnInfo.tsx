@@ -1,6 +1,6 @@
 "use client";
 
-import { BaseTurn } from "./types";
+import { BaseTurn } from "@/app/types/exquisiteCorpse";
 
 type TurnInfoProps<Turn extends BaseTurn> = {
   turn: Turn;
