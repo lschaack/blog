@@ -70,7 +70,7 @@ const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, getAITurn, dimension
 
       <TurnHistory />
 
-      <ExportUtilities canvasDimensions={dimensions} />
+      <ExportUtilities />
 
       <StateEditor />
     </div>
