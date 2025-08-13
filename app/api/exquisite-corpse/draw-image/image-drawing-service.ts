@@ -36,76 +36,41 @@ export class ImageDrawingService {
     this.client = new GoogleGenAI({ apiKey });
   }
 
-  private buildPrompt(context: GameContext): string {
-    const historyText = context.history
-      .map(turn => {
-        if (turn.author === "user") {
-          return `Turn ${turn.turn}: User drew on the image`;
-        } else {
-          return `Turn ${turn.turn}: AI saw "${turn.interpretation}" and ${turn.reasoning}`;
-        }
-      })
-      .join("\n");
-
-    return `GAME HISTORY:
-${historyText || "This is the first turn of the game."}
-
-CURRENT TURN: ${context.currentTurn}
-
-TASK:
-1. Analyze the current image carefully - look for shapes, lines, patterns, and potential connections
-2. Interpret what the drawing is becoming (be creative and confident!)
-3. Add detail to the image, or take it in an unexpected direction
-
-Respond with a text part JSON object in this exact format:
-{
-  "interpretation": "What you think this drawing represents or is becoming",
-  "reasoning": "Why you chose to add this specific element and how it brings your interpretation to life"
-}
-Include an inlineData image part containing a complete base64-encoded PNG image with your modifications`;
+  private buildPrompt(): string {
+    return `You are an AI artist participating in an "exquisite corpse" collaborative drawing game. Describe what you think the sketch represents or is becoming, draw on top of it to add your contribution to the collaborative artwork, and describe why you chose to add this specific element and how it brings your interpretation to life`;
   }
 
   private parseAndValidateResponse(response: GenerateContentResponse): AIImageResponse {
     const parts = response.candidates?.[0]?.content?.parts;
+    console.log('parts', parts)
 
     if (!parts || !Array.isArray(parts)) {
       throw new Error('Invalid AI response format');
     }
 
-    const [textPart, imagePart] = parts;
+    let textPart = '';
+    let imagePart = '';
 
-    if (!textPart.text) throw new Error('Missing text part of AI response');
-    if (!imagePart.inlineData) throw new Error('Missing image part of AI response');
-
-    // Extract JSON from response text (in case there's extra text)
-    const jsonMatch = textPart.text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      throw new Error('No JSON found in response');
-    }
-    const { interpretation, reasoning } = JSON.parse(jsonMatch[0]);
-
-    if (typeof interpretation !== 'string' || interpretation.trim().length === 0) {
-      throw new Error('Invalid or missing interpretation');
-    }
-
-    if (typeof reasoning !== 'string' || reasoning.trim().length === 0) {
-      throw new Error('Invalid or missing reasoning');
-    }
-
-    if (imagePart.inlineData.mimeType !== 'image/png' || !imagePart.inlineData.data) {
-      throw new Error('Invalid or missing image');
+    for (const part of parts) {
+      if (part.text) {
+        textPart = textPart.concat(part.text + '\n');
+      } else if (part.inlineData?.data) {
+        if (part.inlineData.mimeType === 'image/png') {
+          imagePart = imagePart.concat(part.inlineData.data);
+        }
+      }
     }
 
     return {
-      interpretation: interpretation.trim(),
-      image: imagePart.inlineData.data.trim(),
-      reasoning: reasoning.trim(),
+      interpretation: textPart.trim(),
+      image: imagePart.trim(),
+      reasoning: '',
     };
   }
 
   async generateTurn(context: GameContext): Promise<AIImageResponse> {
     try {
-      const prompt = this.buildPrompt(context);
+      const prompt = this.buildPrompt();
 
       // Convert base64 image to proper format for Gemini
       const imageData = context.image.replace('data:image/png;base64,', '');
@@ -121,7 +86,7 @@ Include an inlineData image part containing a complete base64-encoded PNG image 
         model: "gemini-2.0-flash-preview-image-generation",
         contents: [prompt, imagePart],
         config: {
-          responseModalities: [Modality.TEXT, Modality.IMAGE]
+          responseModalities: [Modality.TEXT, Modality.IMAGE],
         }
       });
 

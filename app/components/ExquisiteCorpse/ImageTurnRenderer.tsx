@@ -146,7 +146,11 @@ export const ImageTurnRenderer = ({
         {backgroundImage && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
-            src={backgroundImage}
+            // FIXME: less jank pls
+            src={backgroundImage.startsWith('data:image/png;base64,')
+              ? backgroundImage
+              : `data:image/png;base64,${backgroundImage}`
+            }
             alt="Background"
             width={canvasDimensions.width}
             height={canvasDimensions.height}
