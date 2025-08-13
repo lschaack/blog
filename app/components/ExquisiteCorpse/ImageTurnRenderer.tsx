@@ -24,7 +24,7 @@ const renderLinesToBase64 = async (
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
-  
+
   if (!ctx) {
     throw new Error('Could not get canvas context');
   }
@@ -96,7 +96,7 @@ export const ImageTurnRenderer = ({
     try {
       // Render the complete state (background + current line) to base64
       const allLines: Line[] = [];
-      
+
       // If there's a background image, we need to include it in the rendering
       // For now, we'll just render the current line on top of a white background
       // In a full implementation, you'd want to composite the background image + new line
@@ -144,16 +144,16 @@ export const ImageTurnRenderer = ({
       <div className="relative">
         {/* Background image if it exists */}
         {backgroundImage && (
-          <Image
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
             src={backgroundImage}
             alt="Background"
             width={canvasDimensions.width}
             height={canvasDimensions.height}
             className="absolute inset-0 object-contain"
-            unoptimized={true}
           />
         )}
-        
+
         {/* Sketchpad for drawing new lines */}
         <div className="relative">
           <Sketchpad

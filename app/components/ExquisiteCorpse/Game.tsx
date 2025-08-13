@@ -27,7 +27,7 @@ const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, getAITurn, dimension
       // 1. It's AI's turn (user just finished)
       // 2. AI is not already processing
       // 3. We're viewing the current turn
-      if (isAITurn(gameState) && !aiTurn.isProcessing && isViewingCurrentTurn(gameState)) {
+      if (isAITurn(gameState) && !aiTurn.isProcessing && !aiTurn.hasError && isViewingCurrentTurn(gameState)) {
         try {
           const displayTurns = getDisplayTurns(gameState);
           const payload = await aiTurn.processAITurn(displayTurns);
