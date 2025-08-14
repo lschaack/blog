@@ -22,8 +22,8 @@ export const GameStatus = <T extends BaseTurn>({
     if (aiProcessing) {
       return (
         <div>
-          <div className="font-semibold">AI is drawing...</div>
-          {aiProgress && <div className="text-sm text-gray-600">{aiProgress}</div>}
+          <div>AI is drawing...</div>
+          {aiProgress && <div className="text-sm text-deep-600">{aiProgress}</div>}
         </div>
       );
     }
@@ -41,7 +41,7 @@ export const GameStatus = <T extends BaseTurn>({
     // Not viewing current turn
     if (!isViewingCurrentTurn(gameState)) {
       return (
-        <div className="font-semibold text-gray-600">
+        <div className="font-semibold text-deep-600">
           Viewing Turn {gameState.currentTurnIndex + 1}
         </div>
       );
@@ -49,20 +49,20 @@ export const GameStatus = <T extends BaseTurn>({
 
     // User's turn
     if (isUserTurn(gameState)) {
-      return <div className="font-semibold text-blue-600">Your Turn</div>;
+      return <div>Your Turn</div>;
     }
 
     // AI's turn
     if (isAITurn(gameState)) {
-      return <div className="font-semibold text-purple-600">AI&apos;s Turn</div>;
+      return <div>AI&apos;s Turn</div>;
     }
 
     // Game start
-    return <div className="font-semibold">Start Drawing!</div>;
+    return <div>Start Drawing!</div>;
   };
 
   return (
-    <div className="text-center p-2 bg-gray-100 rounded">
+    <div className="text-center p-2 bg-deep-50 rounded-xl font-semibold text-deep-600">
       {renderStatus()}
     </div>
   );

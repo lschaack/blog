@@ -80,6 +80,7 @@ const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, getAITurn, dimension
         onClick={handleReset}
         className="w-full"
         disabled={gameState.turns.length === 0}
+        danger
       />
 
       <ExportUtilities />

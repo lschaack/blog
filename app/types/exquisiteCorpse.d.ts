@@ -51,7 +51,7 @@ export type GameAction<T extends BaseTurn = Turn> =
   | { type: "reset" };
 
 export type TurnRendererProps<Turn extends BaseTurn> = {
-  handleEndTurn: (turnData: Omit<Turn, "author" | "timestamp" | "number">) => void;
+  handleEndTurn: (turnData: Omit<Turn, keyof BaseTurn>) => void;
   canvasDimensions: { width: number; height: number };
   readOnly?: boolean;
 }
