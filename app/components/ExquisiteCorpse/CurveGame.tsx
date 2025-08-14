@@ -1,6 +1,6 @@
 import { CanvasDimensions, CurveTurn, GameContext } from '@/app/types/exquisiteCorpse';
 import { CurveTurnRenderer } from './CurveTurnRenderer';
-import { renderGameStateToBase64, createGameContextSummary, checkImageSizeLimit } from "./imageContext";
+import { renderLinesToBase64, createGameContextSummary, checkImageSizeLimit } from "./imageContext";
 import { getGeminiService } from "./geminiAI";
 import { processAIBezierCurves } from "./lineConversion";
 import { Game, GameProps } from "./Game";
@@ -10,7 +10,7 @@ const getAICurveTurn = async (
   dimensions: CanvasDimensions,
 ): Promise<CurveTurn> => {
   // Step 1: Render current game state to image
-  const base64Image = await renderGameStateToBase64(
+  const base64Image = await renderLinesToBase64(
     history.map(turn => turn.line),
     dimensions.width,
     dimensions.height

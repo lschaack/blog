@@ -4,7 +4,7 @@ import { useState, useCallback, useMemo, useRef } from "react";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { useUndoRedo } from './useUndoRedo';
-import { renderGameStateToBase64 } from './imageContext';
+import { renderLinesToBase64 } from './imageContext';
 import { BezierCurve, Line } from "@/app/types/exquisiteCorpse";
 
 export const TrainingInterface = () => {
@@ -43,7 +43,7 @@ export const TrainingInterface = () => {
 
     try {
       // Generate base64 image
-      const base64Image = await renderGameStateToBase64(
+      const base64Image = await renderLinesToBase64(
         currentLine,
         canvasDimensions.width,
         canvasDimensions.height

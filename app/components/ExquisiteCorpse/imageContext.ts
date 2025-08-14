@@ -1,4 +1,5 @@
 import { BezierCurve, Line } from "@/app/types/exquisiteCorpse";
+import { ensureStartsWith } from "@/app/utils/string";
 
 // Canvas drawing utilities for AI context generation
 const drawBezierCurve = (ctx: CanvasRenderingContext2D, curve: BezierCurve) => {
@@ -14,71 +15,63 @@ const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {
 };
 
 /**
- * Renders the current game state to a base64-encoded PNG for AI context
+ * Renders the provided bezier curves to a base64-encoded PNG
  * @param lines Array of lines representing the current drawing
  * @param width Canvas width in pixels
  * @param height Canvas height in pixels
  * @returns Promise resolving to base64-encoded PNG string
  */
-export const renderGameStateToBase64 = async (
+export const renderLinesToBase64 = async (
   lines: Line[],
   width: number,
-  height: number
+  height: number,
+  backgroundImage?: string
 ): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    try {
-      // Create offscreen canvas for rendering
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
+  // Get device pixel ratio for DPI scaling
+  const dpr = window.devicePixelRatio || 1;
 
-      if (!ctx) {
-        reject(new Error('Failed to get canvas context'));
-        return;
-      }
+  // Create an offscreen canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
 
-      // Set canvas dimensions
-      canvas.width = width;
-      canvas.height = height;
+  if (!ctx) {
+    throw new Error('Could not get canvas context');
+  }
 
-      // Enable high-quality rendering
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
+  // Scale the context to handle DPI
+  ctx.scale(dpr, dpr);
 
-      // Set drawing style - consistent with main app
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+  // Clear the canvas with white background or draw background image
+  if (backgroundImage) {
+    // Create an image element to load the background
+    const img = document.createElement('img');
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Failed to load background image'));
+      img.src = ensureStartsWith(backgroundImage, 'data:image/png;base64,');
+    });
 
-      // Fill with white background for better AI analysis
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, width, height);
+    // Draw the background image
+    ctx.drawImage(img, 0, 0, width, height);
+  } else {
+    // Clear with white background
+    ctx.fillStyle = 'white';
+    ctx.fillRect(0, 0, width, height);
+  }
 
-      // Draw all lines
-      lines.forEach(line => drawLine(ctx, line));
+  // Set drawing style
+  ctx.strokeStyle = 'black';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
 
-      // Convert to base64 PNG
-      canvas.toBlob((blob) => {
-        if (!blob) {
-          reject(new Error('Failed to create image blob'));
-          return;
-        }
+  // Draw each line
+  lines.forEach(line => drawLine(ctx, line));
 
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result);
-        };
-        reader.onerror = () => {
-          reject(new Error('Failed to read image blob'));
-        };
-        reader.readAsDataURL(blob);
-      }, 'image/png', 1.0);
-
-    } catch (error) {
-      reject(error);
-    }
-  });
+  // Convert to base64
+  return canvas.toDataURL('image/png');
 };
 
 /**

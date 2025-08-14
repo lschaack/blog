@@ -17,7 +17,6 @@ ExquisiteCorpse/
 ├── gameReducer.ts          # useReducer-based game state management
 ├── GameContext.tsx         # React context for sharing game state
 ├── GameStatus.tsx          # Game status display component
-├── CurrentTurn.tsx         # Sketchpad, undo/redo, end turn controls
 ├── TurnHistory.tsx         # Turn navigation and history display
 ├── ExportUtilities.tsx     # PNG and JSON export functionality
 ├── StateEditor.tsx         # JSON state editing component
