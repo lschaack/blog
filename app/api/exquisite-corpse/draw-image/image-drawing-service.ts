@@ -1,11 +1,5 @@
-import { GameContext } from "@/app/types/exquisiteCorpse";
+import { AIImageResponse, GameContext } from "@/app/types/exquisiteCorpse";
 import { GoogleGenAI, Modality, GenerateContentResponse } from "@google/genai";
-
-export type AIImageResponse = {
-  interpretation: string;
-  image: string; // base64 encoded image representing the AI's addition
-  reasoning: string;
-};
 
 export class ImageDrawingService {
   private client: GoogleGenAI;

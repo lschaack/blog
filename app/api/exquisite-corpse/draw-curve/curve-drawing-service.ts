@@ -1,13 +1,7 @@
-import { BezierCurve, GameContext, Point } from "@/app/types/exquisiteCorpse";
+import { AITurnResponse, BezierCurve, GameContext, Point } from "@/app/types/exquisiteCorpse";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
 import path from 'path';
-
-export type AITurnResponse = {
-  interpretation: string;
-  curves: BezierCurve[];
-  reasoning: string;
-};
 
 export class CurveDrawingService {
   private client: GoogleGenerativeAI;
@@ -138,7 +132,7 @@ Respond with a JSON object in this exact format:
       };
 
       const result = await model.generateContent([prompt, imagePart]);
-      const response = await result.response;
+      const response = result.response;
       const text = response.text();
 
       // Parse JSON response

@@ -1,16 +1,4 @@
-import { BezierCurve, GameContext } from "@/app/types/exquisiteCorpse";
-
-export type AITurnResponse = {
-  interpretation: string;
-  curves: BezierCurve[];  // Direct Bezier curve output
-  reasoning: string;
-};
-
-export type AIImageResponse = {
-  interpretation: string;
-  image: string; // base64 encoded image representing the AI's addition
-  reasoning: string;
-};
+import { AIImageResponse, AITurnResponse, GameContext } from "@/app/types/exquisiteCorpse";
 
 class GeminiAIService {
   async generateCurveTurn(context: GameContext): Promise<AITurnResponse> {

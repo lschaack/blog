@@ -70,3 +70,15 @@ export type GameContext = {
   }[];
 };
 
+export type AIImageResponse = {
+  interpretation: string;
+  image: string; // base64 encoded image representing the AI's addition
+  reasoning: string;
+};
+
+export type AITurnResponse = {
+  interpretation: string;
+  curves: BezierCurve[];  // Direct Bezier curve output
+  reasoning: string;
+};
+
