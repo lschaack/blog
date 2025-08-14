@@ -1,16 +1,5 @@
+import { GameContext } from "@/app/types/exquisiteCorpse";
 import { GoogleGenAI, Modality, GenerateContentResponse } from "@google/genai";
-
-export type GameContext = {
-  image: string; // base64 encoded PNG
-  canvasDimensions: { width: number; height: number };
-  currentTurn: number;
-  history: {
-    turn: number;
-    author: "user" | "ai";
-    interpretation?: string;
-    reasoning?: string;
-  }[];
-};
 
 export type AIImageResponse = {
   interpretation: string;

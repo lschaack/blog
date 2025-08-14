@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ImageDrawingService, GameContext } from './image-drawing-service';
+import { ImageDrawingService } from './image-drawing-service';
+import { GameContext } from '@/app/types/exquisiteCorpse';
 
 export async function POST(request: NextRequest) {
   try {

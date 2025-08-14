@@ -1,21 +1,7 @@
+import { BezierCurve, GameContext, Point } from "@/app/types/exquisiteCorpse";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
 import path from 'path';
-
-export type Point = [number, number];
-export type BezierCurve = [Point, Point, Point, Point];
-
-export type GameContext = {
-  image: string; // base64 encoded PNG
-  canvasDimensions: { width: number; height: number };
-  currentTurn: number;
-  history: {
-    turn: number;
-    author: "user" | "ai";
-    interpretation?: string;
-    reasoning?: string;
-  }[];
-};
 
 export type AITurnResponse = {
   interpretation: string;

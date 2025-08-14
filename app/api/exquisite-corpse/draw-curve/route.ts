@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { CurveDrawingService, GameContext } from './curve-drawing-service';
-
+import { CurveDrawingService } from './curve-drawing-service';
+import { GameContext } from '@/app/types/exquisiteCorpse';
 
 export async function POST(request: NextRequest) {
   try {
