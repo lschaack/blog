@@ -16,6 +16,8 @@ export type GameProps<Turn extends BaseTurn> = {
   dimensions: CanvasDimensions;
 };
 
+const isDev = process.env.NODE_ENV === "development";
+
 // Internal game component that uses the context
 const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, getAITurn, dimensions }: GameProps<Turn>) => {
   const gameState = useGameContext<Turn>();
@@ -80,12 +82,11 @@ const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, getAITurn, dimension
         onClick={handleReset}
         className="w-full"
         disabled={gameState.turns.length === 0}
-        danger
       />
 
       <ExportUtilities />
 
-      <StateEditor />
+      {isDev && <StateEditor />}
     </div>
   );
 };
