@@ -76,7 +76,7 @@ export type AIImageResponse = {
   reasoning: string;
 };
 
-export type AITurnResponse = {
+export type AICurveResponse = {
   interpretation: string;
   curves: BezierCurve[];  // Direct Bezier curve output
   reasoning: string;

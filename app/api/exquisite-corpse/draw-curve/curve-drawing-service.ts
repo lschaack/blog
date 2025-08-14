@@ -1,4 +1,4 @@
-import { AITurnResponse, BezierCurve, GameContext, Point } from "@/app/types/exquisiteCorpse";
+import { AICurveResponse, BezierCurve, GameContext, Point } from "@/app/types/exquisiteCorpse";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
 import path from 'path';
@@ -53,7 +53,7 @@ Respond with a JSON object in this exact format:
 }`;
   }
 
-  private validateResponse(response: unknown): AITurnResponse {
+  private validateResponse(response: unknown): AICurveResponse {
     if (!response || typeof response !== 'object') {
       throw new Error('Invalid AI response format');
     }
@@ -112,7 +112,7 @@ Respond with a JSON object in this exact format:
     });
   }
 
-  async generateTurn(context: GameContext): Promise<AITurnResponse> {
+  async generateTurn(context: GameContext): Promise<AICurveResponse> {
     try {
       const model = this.client.getGenerativeModel({
         model: "gemini-2.5-flash",

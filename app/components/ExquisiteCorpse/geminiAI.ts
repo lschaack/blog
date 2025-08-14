@@ -1,7 +1,7 @@
-import { AIImageResponse, AITurnResponse, GameContext } from "@/app/types/exquisiteCorpse";
+import { AIImageResponse, AICurveResponse, GameContext } from "@/app/types/exquisiteCorpse";
 
 class GeminiAIService {
-  async generateCurveTurn(context: GameContext): Promise<AITurnResponse> {
+  async generateCurveTurn(context: GameContext): Promise<AICurveResponse> {
     try {
       const response = await fetch('/api/exquisite-corpse/draw-curve', {
         method: 'POST',
@@ -16,7 +16,7 @@ class GeminiAIService {
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const result: AITurnResponse = await response.json();
+      const result: AICurveResponse = await response.json();
       return result;
     } catch (error) {
       console.error('AI curve turn generation failed:', error);
