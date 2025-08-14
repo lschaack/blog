@@ -1,6 +1,6 @@
 // Tailwind classes need to appear in full to not be stripped from the build,
 // so afaict some form of this is necessary
-// TODO: but rename some of these though and come up with a better system cause this kind of sucks
+// FIXME: This is unused in any public code path, just need to refactor AnimatedVariables to get rid of them
 export const inputColorClasses = {
   amber: {
     track: 'bg-amber-200/75',
