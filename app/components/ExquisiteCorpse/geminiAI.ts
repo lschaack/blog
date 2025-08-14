@@ -1,22 +1,16 @@
 import { AIImageResponse, AICurveResponse, GameContext } from "@/app/types/exquisiteCorpse";
 
 class GeminiAIService {
-  async generateCurveTurn(context: GameContext): Promise<AICurveResponse> {
+  async extractJson(request: Promise<Response>) {
     try {
-      const response = await fetch('/api/exquisite-corpse/draw-curve', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(context),
-      });
+      const response = await request;
 
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      const result: AICurveResponse = await response.json();
+      const result = await response.json();
       return result;
     } catch (error) {
       console.error('AI curve turn generation failed:', error);
@@ -24,27 +18,24 @@ class GeminiAIService {
     }
   }
 
+  async generateCurveTurn(context: GameContext): Promise<AICurveResponse> {
+    return this.extractJson(fetch('/api/exquisite-corpse/draw-curve', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(context),
+    }));
+  }
+
   async generateImageTurn(context: GameContext): Promise<AIImageResponse> {
-    try {
-      const response = await fetch('/api/exquisite-corpse/draw-image', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(context),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
-      }
-
-      const result: AIImageResponse = await response.json();
-      return result;
-    } catch (error) {
-      console.error('AI image turn generation failed:', error);
-      throw new Error(`AI image turn generation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
+    return this.extractJson(fetch('/api/exquisite-corpse/draw-image', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(context),
+    }));
   }
 }
 
