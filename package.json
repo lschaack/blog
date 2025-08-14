@@ -37,7 +37,8 @@
     "next": "^15.2.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "simplex-noise": "^4.0.3"
+    "simplex-noise": "^4.0.3",
+    "zod": "^4.0.17"
   },
   "devDependencies": {
     "@0no-co/graphqlsp": "^1.12.16",
