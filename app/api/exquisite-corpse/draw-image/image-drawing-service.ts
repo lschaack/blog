@@ -1,8 +1,11 @@
 import { AIImageResponse, GameContext } from "@/app/types/exquisiteCorpse";
+import { getBase64FileSizeMb } from "@/app/utils/base64";
 import { GoogleGenAI, Modality, GenerateContentResponse } from "@google/genai";
 
 export class ImageDrawingService {
   private client: GoogleGenAI;
+
+  private static MAX_IMG_SIZE_MB = 3;
 
   constructor(apiKey: string) {
     this.client = new GoogleGenAI({ apiKey });
@@ -45,6 +48,11 @@ export class ImageDrawingService {
 
       // Convert base64 image to proper format for Gemini
       const imageData = context.image.replace('data:image/png;base64,', '');
+      const imageSize = getBase64FileSizeMb(imageData);
+
+      if (imageSize > ImageDrawingService.MAX_IMG_SIZE_MB) {
+        throw new Error(`Image size ${imageSize}mb is greater than the max ${ImageDrawingService.MAX_IMG_SIZE_MB}mb`);
+      }
 
       const imagePart = {
         inlineData: {

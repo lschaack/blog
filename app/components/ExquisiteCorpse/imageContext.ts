@@ -71,7 +71,7 @@ export const renderLinesToBase64 = async (
   lines.forEach(line => drawLine(ctx, line));
 
   // Convert to base64
-  return canvas.toDataURL('image/png');
+  return canvas.toDataURL('image/png', 0.9);
 };
 
 /**

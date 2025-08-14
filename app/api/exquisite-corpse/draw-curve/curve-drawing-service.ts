@@ -1,4 +1,5 @@
 import { AICurveResponse, BezierCurve, GameContext, Point } from "@/app/types/exquisiteCorpse";
+import { getBase64FileSizeMb } from "@/app/utils/base64";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
 import path from 'path';
@@ -6,6 +7,7 @@ import path from 'path';
 export class CurveDrawingService {
   private client: GoogleGenerativeAI;
   private static systemPrompt: string | null = null;
+  private static MAX_IMG_SIZE_MB = 3;
 
   private static getSystemPrompt(): string {
     if (CurveDrawingService.systemPrompt === null) {
@@ -123,6 +125,11 @@ Respond with a JSON object in this exact format:
 
       // Convert base64 image to proper format for Gemini
       const imageData = context.image.replace('data:image/png;base64,', '');
+      const imageSize = getBase64FileSizeMb(imageData);
+
+      if (imageSize > CurveDrawingService.MAX_IMG_SIZE_MB) {
+        throw new Error(`Image size ${imageSize}mb is greater than the max ${CurveDrawingService.MAX_IMG_SIZE_MB}mb`);
+      }
 
       const imagePart = {
         inlineData: {
