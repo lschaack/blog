@@ -3,6 +3,17 @@ import { getBase64FileSizeMb } from "@/app/utils/base64";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
 import path from 'path';
+import { z } from "zod";
+
+const PointSchema = z.tuple([z.number().finite(), z.number().finite()]);
+
+const BezierCurveSchema = z.tuple([PointSchema, PointSchema, PointSchema, PointSchema]);
+
+const AICurveResponseSchema = z.object({
+  interpretation: z.string().min(1, "Interpretation cannot be empty"),
+  curves: z.array(BezierCurveSchema).min(1, "Must provide at least 1 curve").max(15, "Cannot provide more than 15 curves"),
+  reasoning: z.string().min(1, "Reasoning cannot be empty")
+});
 
 export class CurveDrawingService {
   private client: GoogleGenerativeAI;
@@ -56,49 +67,12 @@ Respond with a JSON object in this exact format:
   }
 
   private validateResponse(response: unknown): AICurveResponse {
-    if (!response || typeof response !== 'object') {
-      throw new Error('Invalid AI response format');
-    }
-
-    const { interpretation, curves, reasoning } = response as { interpretation: unknown; curves: unknown; reasoning: unknown };
-
-    if (typeof interpretation !== 'string' || interpretation.trim().length === 0) {
-      throw new Error('Invalid or missing interpretation');
-    }
-
-    if (!Array.isArray(curves) || curves.length < 1 || curves.length > 15) {
-      throw new Error('Must provide 1-15 Bezier curves');
-    }
-
-    if (typeof reasoning !== 'string' || reasoning.trim().length === 0) {
-      throw new Error('Invalid or missing reasoning');
-    }
-
-    // Validate each Bezier curve
-    for (const curve of curves) {
-      if (!Array.isArray(curve) || curve.length !== 4) {
-        throw new Error('Each curve must have exactly 4 points: [start, control1, control2, end]');
-      }
-
-      // Validate each point in the curve
-      for (const point of curve) {
-        if (!Array.isArray(point) || point.length !== 2) {
-          throw new Error('Each point must be a [x, y] coordinate array');
-        }
-        const [x, y] = point;
-        if (typeof x !== 'number' || typeof y !== 'number') {
-          throw new Error('Coordinates must be numbers');
-        }
-        if (!Number.isFinite(x) || !Number.isFinite(y)) {
-          throw new Error('Coordinates must be finite numbers');
-        }
-      }
-    }
-
+    const validatedResponse = AICurveResponseSchema.parse(response);
+    
     return {
-      interpretation: interpretation.trim(),
-      curves: curves as BezierCurve[],
-      reasoning: reasoning.trim(),
+      interpretation: validatedResponse.interpretation.trim(),
+      curves: validatedResponse.curves as BezierCurve[],
+      reasoning: validatedResponse.reasoning.trim(),
     };
   }
 

@@ -1,6 +1,28 @@
 import { AIImageResponseGeminiFlashPreview, GameContext } from "@/app/types/exquisiteCorpse";
 import { getBase64FileSizeMb } from "@/app/utils/base64";
 import { GoogleGenAI, Modality, GenerateContentResponse } from "@google/genai";
+import { z } from "zod";
+
+const ResponsePartSchema = z.object({
+  text: z.string().optional(),
+  inlineData: z.object({
+    data: z.string(),
+    mimeType: z.literal('image/png')
+  }).optional()
+});
+
+const GeminiResponseSchema = z.object({
+  candidates: z.array(z.object({
+    content: z.object({
+      parts: z.array(ResponsePartSchema)
+    }).optional()
+  })).optional()
+});
+
+const AIImageResponseSchema = z.object({
+  interpretation: z.string().min(1, "Interpretation cannot be empty"),
+  image: z.string().min(1, "Image data cannot be empty")
+});
 
 export class ImageDrawingService {
   private client: GoogleGenAI;
@@ -26,7 +48,9 @@ ${context.history.map(turn => `On turn ${turn.turn}, you thought "${turn.interpr
   }
 
   private parseAndValidateResponse(response: GenerateContentResponse): AIImageResponseGeminiFlashPreview {
-    const parts = response.candidates?.[0]?.content?.parts;
+    const validatedResponse = GeminiResponseSchema.parse(response);
+    
+    const parts = validatedResponse.candidates?.[0]?.content?.parts;
 
     if (!parts || !Array.isArray(parts)) {
       throw new Error('Invalid AI response format');
@@ -45,10 +69,12 @@ ${context.history.map(turn => `On turn ${turn.turn}, you thought "${turn.interpr
       }
     }
 
-    return {
+    const result = {
       interpretation: textPart.trim(),
       image: imagePart.trim(),
     };
+
+    return AIImageResponseSchema.parse(result);
   }
 
   async generateTurn(context: GameContext): Promise<AIImageResponseGeminiFlashPreview> {
