@@ -4,7 +4,7 @@ export type Point = [number, number];
 export type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
 export type Line = BezierCurve[];
 
-export type CanvasDimensions = { width: number; height: number };
+export type CanvasDimensions = CanvasDimensions;
 
 // Base turn type with shared fields
 export type BaseTurn = {
@@ -43,8 +43,8 @@ export type GameState<T extends BaseTurn = Turn> = SerializableGameState<T> & {
 
 // Game action types
 export type GameAction<T extends BaseTurn = Turn> =
-  | { type: "end_user_turn"; payload: Omit<T, "author" | "timestamp" | "number"> }
-  | { type: "end_ai_turn"; payload: Omit<T, "author" | "timestamp" | "number"> }
+  | { type: "end_user_turn"; payload: Omit<T, keyof BaseTurn> }
+  | { type: "end_ai_turn"; payload: Omit<T, keyof BaseTurn> }
   | { type: "increment_current_turn" }
   | { type: "decrement_current_turn" }
   | { type: "restore"; payload: SerializableGameState<T> }
@@ -52,7 +52,7 @@ export type GameAction<T extends BaseTurn = Turn> =
 
 export type TurnRendererProps<Turn extends BaseTurn> = {
   handleEndTurn: (turnData: Omit<Turn, keyof BaseTurn>) => void;
-  canvasDimensions: { width: number; height: number };
+  canvasDimensions: CanvasDimensions;
   readOnly?: boolean;
 }
 
@@ -60,7 +60,7 @@ export type TurnRenderer<Turn extends BaseTurn> = ComponentType<TurnRendererProp
 
 export type GameContext = {
   image: string; // base64 encoded PNG
-  canvasDimensions: { width: number; height: number };
+  canvasDimensions: CanvasDimensions;
   currentTurn: number;
   history: {
     turn: number;

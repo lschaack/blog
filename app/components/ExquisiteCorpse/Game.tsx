@@ -12,7 +12,7 @@ import { Button } from "@/app/components/Button";
 
 export type GameProps<Turn extends BaseTurn> = {
   CurrentTurn: TurnRenderer<Turn>,
-  getAITurn: (history: Turn[]) => Promise<Omit<Turn, 'author' | 'number' | 'timestamp'>>;
+  getAITurn: (history: Turn[]) => Promise<Omit<Turn, keyof BaseTurn>>;
   dimensions: CanvasDimensions;
 };
 
@@ -48,7 +48,7 @@ const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, getAITurn, dimension
   }, [gameState, aiTurn]);
 
   // Handle user turn completion
-  const handleEndTurn = (turnData: Omit<Turn, "author" | "timestamp" | "number">) => {
+  const handleEndTurn = (turnData: Omit<Turn, keyof BaseTurn>) => {
     gameState.dispatch({
       type: "end_user_turn",
       payload: turnData

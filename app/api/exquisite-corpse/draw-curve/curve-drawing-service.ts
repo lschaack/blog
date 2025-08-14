@@ -1,4 +1,4 @@
-import { AICurveResponse, BezierCurve, GameContext, Point } from "@/app/types/exquisiteCorpse";
+import { AICurveResponse, BezierCurve, CanvasDimensions, GameContext, Point } from "@/app/types/exquisiteCorpse";
 import { getBase64FileSizeMb } from "@/app/utils/base64";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
@@ -104,7 +104,7 @@ Respond with a JSON object in this exact format:
 
   private validateCurveBounds(
     curves: BezierCurve[],
-    bounds: { width: number; height: number }
+    bounds: CanvasDimensions
   ): BezierCurve[] {
     return curves.map(curve => {
       return curve.map(([x, y]) => [

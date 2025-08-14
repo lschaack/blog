@@ -1,5 +1,5 @@
 import fitCurve from 'fit-curve';
-import { BezierCurve, Line, Point } from '@/app/types/exquisiteCorpse';
+import { BezierCurve, CanvasDimensions, Line, Point } from '@/app/types/exquisiteCorpse';
 
 /**
  * Converts AI coordinate points to our Bezier curve format
@@ -74,7 +74,7 @@ const createFallbackLine = (points: Point[]): Line => {
  */
 export const sanitizeAIPoints = (
   points: Point[],
-  bounds: { width: number; height: number }
+  bounds: CanvasDimensions
 ): Point[] => {
   return points
     .filter(point => {
@@ -293,7 +293,7 @@ const optimizeControlPoints = (curve: BezierCurve): BezierCurve => {
  */
 export const processAILine = (
   aiPoints: Point[],
-  bounds: { width: number; height: number },
+  bounds: CanvasDimensions,
   options: {
     maxError?: number;
     enableSmoothing?: boolean;

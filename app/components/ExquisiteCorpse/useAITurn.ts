@@ -9,7 +9,7 @@ export type AITurnError = {
   retryable: boolean;
 };
 
-export type AITurnData<Turn extends BaseTurn> = Omit<Turn, 'author' | 'number' | 'timestamp'>;
+export type AITurnData<Turn extends BaseTurn> = Omit<Turn, keyof BaseTurn>;
 
 export const useAITurn = <Turn extends BaseTurn>(
   aiFunction?: (history: Turn[]) => Promise<AITurnData<Turn>>

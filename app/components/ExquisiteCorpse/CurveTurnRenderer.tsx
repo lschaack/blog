@@ -1,15 +1,15 @@
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { CurveTurn, Line } from "@/app/types/exquisiteCorpse";
+import { BaseTurn, CanvasDimensions, CurveTurn, Line } from "@/app/types/exquisiteCorpse";
 import { isViewingCurrentTurn, isUserTurn, getDisplayTurns } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 
 type CurveTurnRendererProps = {
-  handleEndTurn: (turnData: Omit<CurveTurn, "author" | "timestamp" | "number">) => void;
+  handleEndTurn: (turnData: Omit<CurveTurn, keyof BaseTurn>) => void;
   readOnly?: boolean;
-  canvasDimensions: { width: number; height: number };
+  canvasDimensions: CanvasDimensions;
 };
 
 export const CurveTurnRenderer = ({
@@ -43,7 +43,7 @@ export const CurveTurnRenderer = ({
     // For other turn types, this would be different
     const turnData = {
       line: currentTurn.currentLine[0]
-    } as Omit<CurveTurn, "author" | "timestamp" | "number">;
+    } as Omit<CurveTurn, keyof BaseTurn>;
 
     handleEndTurn(turnData);
     currentTurn.resetCurrentTurn();

@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { ImageGeminiFlashPreviewTurn, Line } from "@/app/types/exquisiteCorpse";
+import { BaseTurn, CanvasDimensions, ImageGeminiFlashPreviewTurn, Line } from "@/app/types/exquisiteCorpse";
 import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
@@ -9,9 +9,9 @@ import { ensureStartsWith } from "@/app/utils/string";
 import { renderLinesToBase64 } from "./imageContext";
 
 type ImageTurnRendererProps = {
-  handleEndTurn: (turnData: Omit<ImageGeminiFlashPreviewTurn, "author" | "timestamp" | "number">) => void;
+  handleEndTurn: (turnData: Omit<ImageGeminiFlashPreviewTurn, keyof BaseTurn>) => void;
   readOnly?: boolean;
-  canvasDimensions: { width: number; height: number };
+  canvasDimensions: CanvasDimensions;
 };
 
 export const ImageTurnRenderer = ({
@@ -68,7 +68,7 @@ export const ImageTurnRenderer = ({
 
       const turnData = {
         image: imageData
-      } as Omit<ImageGeminiFlashPreviewTurn, "author" | "timestamp" | "number">;
+      } as Omit<ImageGeminiFlashPreviewTurn, keyof BaseTurn>;
 
       handleEndTurn(turnData);
       currentTurn.resetCurrentTurn();
