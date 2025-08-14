@@ -11,23 +11,23 @@ export type BaseTurn = {
   author: "user" | "ai";
   timestamp: string;
   number: number;
-  // AI-specific fields
-  interpretation?: string; // AI's interpretation of what the drawing represents
-  reasoning?: string; // AI's reasoning for adding their line
 };
 
 // Turn variant with Line-based drawing
 export type CurveTurn = BaseTurn & {
   line: Line;
+  interpretation?: string; // AI's interpretation of what the drawing represents
+  reasoning?: string; // AI's reasoning for adding their line
 };
 
 // Turn variant with base64 image
-export type ImageTurn = BaseTurn & {
+export type ImageGeminiFlashPreviewTurn = BaseTurn & {
   image: string; // base64-encoded PNG
+  interpretation?: string; // AI's interpretation of what the drawing represents
 };
 
 // Union type for all turn variants
-export type Turn = CurveTurn | ImageTurn;
+export type Turn = CurveTurn | ImageGeminiFlashPreviewTurn;
 
 // Serializable game state
 export type SerializableGameState<T extends BaseTurn = Turn> = {
@@ -70,10 +70,9 @@ export type GameContext = {
   }[];
 };
 
-export type AIImageResponse = {
+export type AIImageResponseGeminiFlashPreview = {
   interpretation: string;
   image: string; // base64 encoded image representing the AI's addition
-  reasoning: string;
 };
 
 export type AICurveResponse = {

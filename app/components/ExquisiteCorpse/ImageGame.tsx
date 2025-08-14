@@ -1,12 +1,12 @@
-import { CanvasDimensions, ImageTurn, GameContext } from '@/app/types/exquisiteCorpse';
+import { CanvasDimensions, ImageGeminiFlashPreviewTurn, GameContext } from '@/app/types/exquisiteCorpse';
 import { ImageTurnRenderer } from './ImageTurnRenderer';
 import { getGeminiService } from "./geminiAI";
 import { Game, GameProps } from "./Game";
 
 const getAIImageTurn = async (
-  history: ImageTurn[],
+  history: ImageGeminiFlashPreviewTurn[],
   dimensions: CanvasDimensions,
-): Promise<ImageTurn> => {
+): Promise<ImageGeminiFlashPreviewTurn> => {
   // For image-based turns, we send the most recent image to the AI
   // If there's no history, we start with a blank white canvas
   let baseImage: string;
@@ -41,7 +41,6 @@ const getAIImageTurn = async (
       turn: turn.number,
       author: turn.author,
       interpretation: turn.interpretation,
-      reasoning: turn.reasoning
     }))
   };
 
@@ -53,13 +52,12 @@ const getAIImageTurn = async (
   return {
     image: aiResponse.image,
     interpretation: aiResponse.interpretation,
-    reasoning: aiResponse.reasoning
-  } as ImageTurn;
+  } as ImageGeminiFlashPreviewTurn;
 }
 
-export const ImageGame = ({ dimensions }: Pick<GameProps<ImageTurn>, 'dimensions'>) => {
+export const ImageGame = ({ dimensions }: Pick<GameProps<ImageGeminiFlashPreviewTurn>, 'dimensions'>) => {
   return (
-    <Game<ImageTurn>
+    <Game<ImageGeminiFlashPreviewTurn>
       CurrentTurn={ImageTurnRenderer}
       dimensions={dimensions}
       getAITurn={history => getAIImageTurn(history, dimensions)}

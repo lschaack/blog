@@ -20,7 +20,6 @@ ExquisiteCorpse/
 ├── TurnHistory.tsx         # Turn navigation and history display
 ├── ExportUtilities.tsx     # PNG and JSON export functionality
 ├── StateEditor.tsx         # JSON state editing component
-├── TurnInfo.tsx            # Component for rendering turn information
 ├── Sketchpad.tsx           # Pure drawing canvas component
 ├── useCurrentTurn.ts       # Current turn line editing
 ├── useAITurn.ts            # AI turn processing and state

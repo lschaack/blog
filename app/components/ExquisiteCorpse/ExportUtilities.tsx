@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useGameContext } from "./GameContext";
-import { BaseTurn, ImageTurn } from "@/app/types/exquisiteCorpse";
+import { BaseTurn, ImageGeminiFlashPreviewTurn } from "@/app/types/exquisiteCorpse";
 import { Button } from '@/app/components/Button';
 import { ensureStartsWith } from "@/app/utils/string";
 
@@ -43,7 +43,7 @@ export const ExportUtilities = <T extends BaseTurn>() => {
   const handleExportPNG = () => {
     renderToPNG((gameState.turns.at(
       Math.max(0, Math.min(gameState.currentTurnIndex - 1, gameState.turns.length - 1))
-    ) as unknown as ImageTurn).image);
+    ) as unknown as ImageGeminiFlashPreviewTurn).image);
   }
 
   const handleExportJSON = useCallback(() => {

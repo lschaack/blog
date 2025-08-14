@@ -1,4 +1,4 @@
-import { AIImageResponse, GameContext } from "@/app/types/exquisiteCorpse";
+import { AIImageResponseGeminiFlashPreview, GameContext } from "@/app/types/exquisiteCorpse";
 import { getBase64FileSizeMb } from "@/app/utils/base64";
 import { GoogleGenAI, Modality, GenerateContentResponse } from "@google/genai";
 
@@ -11,11 +11,21 @@ export class ImageDrawingService {
     this.client = new GoogleGenAI({ apiKey });
   }
 
-  private buildPrompt(): string {
-    return `You are an AI artist participating in an "exquisite corpse" collaborative drawing game. Describe what you think the sketch represents or is becoming, draw on top of it to add your contribution to the collaborative artwork, and describe why you chose to add this specific element and how it brings your interpretation to life`;
+  private buildPrompt(context: GameContext): string {
+    return `
+You are an AI artist participating in an "exquisite corpse" collaborative drawing game. Describe what you think the sketch represents or is becoming, draw on top of it to add your contribution to the collaborative artwork, and describe why you chose to add this specific element and how it brings your interpretation to life
+
+DRAWING RULES:
+- Only use 2px black strokes against the white background
+- Draw with a single line, think "don't lift the pen"
+- Don't change the size of the image
+
+GAME HISTORY:
+${context.history.map(turn => `On turn ${turn.turn}, you thought "${turn.interpretation}"`).join('\n')}
+`.trim();
   }
 
-  private parseAndValidateResponse(response: GenerateContentResponse): AIImageResponse {
+  private parseAndValidateResponse(response: GenerateContentResponse): AIImageResponseGeminiFlashPreview {
     const parts = response.candidates?.[0]?.content?.parts;
 
     if (!parts || !Array.isArray(parts)) {
@@ -38,13 +48,12 @@ export class ImageDrawingService {
     return {
       interpretation: textPart.trim(),
       image: imagePart.trim(),
-      reasoning: '',
     };
   }
 
-  async generateTurn(context: GameContext): Promise<AIImageResponse> {
+  async generateTurn(context: GameContext): Promise<AIImageResponseGeminiFlashPreview> {
     try {
-      const prompt = this.buildPrompt();
+      const prompt = this.buildPrompt(context);
 
       // Convert base64 image to proper format for Gemini
       const imageData = context.image.replace('data:image/png;base64,', '');
@@ -69,7 +78,7 @@ export class ImageDrawingService {
         }
       });
 
-      let parsedResponse: AIImageResponse;
+      let parsedResponse: AIImageResponseGeminiFlashPreview;
       try {
         parsedResponse = this.parseAndValidateResponse(result);
       } catch (parseError) {

@@ -106,6 +106,10 @@ export const getCurrentTurnNumber = <T extends BaseTurn>(state: GameState<T>): n
   return state.currentTurnIndex + 1;
 };
 
+export const getPreviousTurn = <T extends BaseTurn>(state: GameState<T>) => {
+  return state.turns[state.currentTurnIndex - 1]
+}
+
 export const getTotalTurns = <T extends BaseTurn>(state: GameState<T>): number => {
   return state.turns.length + 1;
 };

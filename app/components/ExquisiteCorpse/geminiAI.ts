@@ -1,4 +1,4 @@
-import { AIImageResponse, AICurveResponse, GameContext } from "@/app/types/exquisiteCorpse";
+import { AIImageResponseGeminiFlashPreview, AICurveResponse, GameContext } from "@/app/types/exquisiteCorpse";
 
 class GeminiAIService {
   async extractJson(request: Promise<Response>) {
@@ -28,7 +28,7 @@ class GeminiAIService {
     }));
   }
 
-  async generateImageTurn(context: GameContext): Promise<AIImageResponse> {
+  async generateImageTurn(context: GameContext): Promise<AIImageResponseGeminiFlashPreview> {
     return this.extractJson(fetch('/api/exquisite-corpse/draw-image', {
       method: 'POST',
       headers: {

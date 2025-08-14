@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { ImageTurn, Line } from "@/app/types/exquisiteCorpse";
-import { isViewingCurrentTurn, isUserTurn, getDisplayTurns } from "./gameReducer";
+import { ImageGeminiFlashPreviewTurn, Line } from "@/app/types/exquisiteCorpse";
+import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
@@ -9,7 +9,7 @@ import { ensureStartsWith } from "@/app/utils/string";
 import { renderLinesToBase64 } from "./imageContext";
 
 type ImageTurnRendererProps = {
-  handleEndTurn: (turnData: Omit<ImageTurn, "author" | "timestamp" | "number">) => void;
+  handleEndTurn: (turnData: Omit<ImageGeminiFlashPreviewTurn, "author" | "timestamp" | "number">) => void;
   readOnly?: boolean;
   canvasDimensions: { width: number; height: number };
 };
@@ -19,8 +19,9 @@ export const ImageTurnRenderer = ({
   readOnly = false,
   canvasDimensions
 }: ImageTurnRendererProps) => {
-  const gameState = useGameContext<ImageTurn>();
+  const gameState = useGameContext<ImageGeminiFlashPreviewTurn>();
   const currentTurn = useCurrentTurn();
+  const prevTurn = getPreviousTurn(gameState);
 
   // Get display turns from completed image turns
   const displayTurns = useMemo(() => getDisplayTurns(gameState), [gameState]);
@@ -67,7 +68,7 @@ export const ImageTurnRenderer = ({
 
       const turnData = {
         image: imageData
-      } as Omit<ImageTurn, "author" | "timestamp" | "number">;
+      } as Omit<ImageGeminiFlashPreviewTurn, "author" | "timestamp" | "number">;
 
       handleEndTurn(turnData);
       currentTurn.resetCurrentTurn();
@@ -133,6 +134,19 @@ export const ImageTurnRenderer = ({
         className="flex-1"
         disabled={!isViewingCurrentTurn(gameState) || !canEndTurn}
       />
+
+      {prevTurn && (
+        <div className="space-y-2 bg-deep-50 rounded-xl p-4">
+          <div className="font-medium">
+            Turn {prevTurn.number} - {prevTurn.author === "user" ? "You" : "AI"}
+          </div>
+          {prevTurn.interpretation && (
+            <div className="text-gray-500 font-geist-mono text-sm">
+              &ldquo;{prevTurn.interpretation}&rdquo;
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

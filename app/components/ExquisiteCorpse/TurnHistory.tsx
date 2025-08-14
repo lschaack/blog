@@ -4,35 +4,6 @@ import { useGameContext } from "./GameContext";
 import { BaseTurn } from "@/app/types/exquisiteCorpse";
 import { canGoToPrevious, canGoToNext, getCurrentTurnNumber, getTotalTurns, isViewingCurrentTurn } from "./gameReducer";
 import { Button } from '@/app/components/Button';
-import { TurnInfo } from "./TurnInfo";
-
-// TODO: Re-enable or remove (currently showing individual history entries under current turn)
-//const TurnScrollback = <T extends BaseTurn>() => {
-//  const gameState = useGameContext<T>();
-//
-//  return (
-//    gameState.turns.length > 0 && (
-//      <div className="mt-4 p-3 bg-gray-50 rounded">
-//        <h3 className="font-semibold mb-2">Turn History</h3>
-//        <div className="space-y-2 max-h-40 overflow-y-auto">
-//          {gameState.turns.map((turn) => (
-//            <div key={turn.number} className="text-sm border-l-2 border-gray-300 pl-3">
-//              <div className="font-medium">
-//                Turn {turn.number} - {turn.author === "user" ? "You" : "AI"}
-//              </div>
-//              {turn.interpretation && (
-//                <div className="text-gray-600 italic">&ldquo;{turn.interpretation}&rdquo;</div>
-//              )}
-//              {turn.reasoning && (
-//                <div className="text-gray-500 text-xs">{turn.reasoning}</div>
-//              )}
-//            </div>
-//          ))}
-//        </div>
-//      </div>
-//    )
-//  )
-//}
 
 export const TurnHistory = <T extends BaseTurn>() => {
   const gameState = useGameContext<T>();
@@ -45,13 +16,8 @@ export const TurnHistory = <T extends BaseTurn>() => {
     gameState.dispatch({ type: "increment_current_turn" });
   };
 
-  const handleReset = () => {
-    gameState.dispatch({ type: "reset" });
-  };
-
   const currentTurnNumber = getCurrentTurnNumber(gameState);
   const totalTurns = getTotalTurns(gameState);
-  const showReset = gameState.turns.length > 0;
 
   return (
     <div className="flex flex-col gap-2">
@@ -74,22 +40,6 @@ export const TurnHistory = <T extends BaseTurn>() => {
           className="flex-1"
         />
       </div>
-
-      {/* Turn rendering - show current turn being viewed */}
-      {gameState.currentTurnIndex > 0 && gameState.currentTurnIndex <= gameState.turns.length && (
-        <div className="p-3 bg-gray-50 rounded">
-          <TurnInfo turn={gameState.turns[gameState.currentTurnIndex - 1]} />
-        </div>
-      )}
-
-      {/* Reset button */}
-      {showReset && (
-        <Button
-          label="Reset"
-          onClick={handleReset}
-          className="w-full"
-        />
-      )}
     </div>
   );
 };

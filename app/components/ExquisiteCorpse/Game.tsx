@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useEffect } from "react";
 
 import { BaseTurn, CanvasDimensions, TurnRenderer } from '@/app/types/exquisiteCorpse';
 import { GameProvider, useGameContext } from './GameContext';
@@ -8,6 +8,7 @@ import { ExportUtilities } from './ExportUtilities';
 import { StateEditor } from './StateEditor';
 import { useAITurn } from './useAITurn';
 import { getDisplayTurns, isAITurn, isViewingCurrentTurn } from './gameReducer';
+import { Button } from "@/app/components/Button";
 
 export type GameProps<Turn extends BaseTurn> = {
   CurrentTurn: TurnRenderer<Turn>,
@@ -47,12 +48,16 @@ const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, getAITurn, dimension
   }, [gameState, aiTurn]);
 
   // Handle user turn completion
-  const handleEndTurn = useCallback((turnData: Omit<Turn, "author" | "timestamp" | "number">) => {
+  const handleEndTurn = (turnData: Omit<Turn, "author" | "timestamp" | "number">) => {
     gameState.dispatch({
       type: "end_user_turn",
       payload: turnData
     });
-  }, [gameState]);
+  };
+
+  const handleReset = () => {
+    gameState.dispatch({ type: "reset" });
+  };
 
   return (
     <div className="flex flex-col gap-4 max-w-[512px]">
@@ -62,13 +67,20 @@ const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, getAITurn, dimension
         aiProgress={aiTurn.progress}
       />
 
+      <TurnHistory />
+
       <CurrentTurn
         handleEndTurn={handleEndTurn}
         readOnly={aiTurn.isProcessing}
         canvasDimensions={dimensions}
       />
 
-      <TurnHistory />
+      <Button
+        label="Reset"
+        onClick={handleReset}
+        className="w-full"
+        disabled={gameState.turns.length === 0}
+      />
 
       <ExportUtilities />
 
