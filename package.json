@@ -35,6 +35,7 @@
     "lucide-react": "^0.513.0",
     "material-symbols": "^0.29.0",
     "next": "^15.2.1",
+    "parse-svg-path": "^0.1.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "simplex-noise": "^4.0.3",

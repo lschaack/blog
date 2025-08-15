@@ -36,6 +36,8 @@ export class CurveDrawingService {
     const historyText = context.history
       .map(turn => {
         if (turn.author === "user") {
+          // FIXME: Should include the user's line at each turn as well as the full set of paths in the current state
+          // ^ and also I guess the image?
           return `Turn ${turn.turn}: User drew a line`;
         } else {
           return `Turn ${turn.turn}: AI saw "${turn.interpretation}" and ${turn.reasoning}`;
@@ -43,32 +45,32 @@ export class CurveDrawingService {
       })
       .join("\n");
 
-    return `GAME HISTORY:
+    return `
+You are an expert graphic designer specializing in SVG art using the pen tool. You're playing a collaborative drawing game called "Exquisite Corpse."
+
+DRAWING RULES:
+- Dimensions: ${context.canvasDimensions.width}x${context.canvasDimensions.height} pixels
+- Define your drawing as an <svg> element using only the <path> elements
+- Assume all paths will be drawn with \`stroke="black"\` and \`stroke-width="2"\`
+
+GAME HISTORY:
 ${historyText || "This is the first turn of the game."}
 
-CURRENT TURN: ${context.currentTurn}
-
 TASK:
-1. Analyze the image carefully - look for shapes, lines, and potential connections
-2. Interpret what the drawing is becoming (be creative and confident!)
-3. Plan a SUBSTANTIAL artistic addition using as many curves as needed to fully express your interpretation
-4. Don't be timid - make an addition that clearly advances the drawing toward your vision
-5. Use curves that span meaningful distances and create recognizable elements
-6. Think about the complete form you want to make, then design curves to achieve it
+Describe what you think the sketch represents or is becoming, draw on top of it to add your contribution to the collaborative artwork, and describe why you chose to add this specific element and how it brings your interpretation to life
 
 Respond with a JSON object in this exact format:
 {
   "interpretation": "What you think this drawing represents or is becoming",
-  "curves": [
-    [[startX, startY], [control1X, control1Y], [control2X, control2Y], [endX, endY]]
-  ],
+  "svg": "Your change in the form of an <svg> element using only <path> elements",
   "reasoning": "Why you chose to add this specific substantial element and how it brings your interpretation to life"
-}`;
+}
+`.trim();
   }
 
   private validateResponse(response: unknown): AICurveResponse {
     const validatedResponse = AICurveResponseSchema.parse(response);
-    
+
     return {
       interpretation: validatedResponse.interpretation.trim(),
       curves: validatedResponse.curves as BezierCurve[],
