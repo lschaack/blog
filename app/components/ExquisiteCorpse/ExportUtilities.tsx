@@ -1,13 +1,11 @@
-"use client";
-
 import { useCallback } from "react";
 import { useGameContext } from "./GameContext";
-import { BaseTurn, ImageGeminiFlashPreviewTurn } from "@/app/types/exquisiteCorpse";
+import { BaseTurn, RenderPNG } from "@/app/types/exquisiteCorpse";
 import { Button } from '@/app/components/Button';
 import { ensureStartsWith } from "@/app/utils/string";
 
 // PNG export utility
-const renderToPNG = (base64: string): void => {
+const exportToPNG = (base64: string): void => {
   const a = document.createElement("a");
   a.href = ensureStartsWith(base64, 'data:image/png;base64,');
   a.download = "sketch.png";
@@ -37,13 +35,14 @@ const exportToJSON = <T extends BaseTurn>(gameState: { turns: T[] }): void => {
   URL.revokeObjectURL(url);
 };
 
-export const ExportUtilities = <T extends BaseTurn>() => {
+type ExportUtilitiesProps<Turn extends BaseTurn> = {
+  renderPNG: RenderPNG<Turn>;
+}
+export const ExportUtilities = <T extends BaseTurn>({ renderPNG }: ExportUtilitiesProps<T>) => {
   const gameState = useGameContext<T>();
 
   const handleExportPNG = () => {
-    renderToPNG((gameState.turns.at(
-      Math.max(0, Math.min(gameState.currentTurnIndex - 1, gameState.turns.length - 1))
-    ) as unknown as ImageGeminiFlashPreviewTurn).image);
+    renderPNG(gameState.turns, gameState.currentTurnIndex).then(exportToPNG);
   }
 
   const handleExportJSON = useCallback(() => {

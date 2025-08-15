@@ -69,6 +69,8 @@ export type GameContext<Turn extends BaseTurn> = {
   history: Turn[];
 };
 
+export type RenderPNG<Turn extends BaseTurn> = (history: Turn[], index: number) => Promise<string>;
+
 export type AIImageResponseGeminiFlashPreview = {
   interpretation: string;
   image: string; // base64 encoded image representing the AI's addition

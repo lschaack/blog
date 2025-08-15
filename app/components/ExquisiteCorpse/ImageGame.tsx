@@ -1,4 +1,4 @@
-import { CanvasDimensions, ImageGeminiFlashPreviewTurn, GameContext } from '@/app/types/exquisiteCorpse';
+import { CanvasDimensions, ImageGeminiFlashPreviewTurn, GameContext, RenderPNG } from '@/app/types/exquisiteCorpse';
 import { ImageTurnRenderer } from './ImageTurnRenderer';
 import { getGeminiService } from "./geminiAI";
 import { Game, GameProps } from "./Game";
@@ -51,10 +51,19 @@ const getAIImageTurn = async (
   } as ImageGeminiFlashPreviewTurn;
 }
 
+const renderImageTurnPNG: RenderPNG<ImageGeminiFlashPreviewTurn> = (history, index) => {
+  return Promise.resolve(
+    history.at(
+      Math.max(0, Math.min(index - 1, history.length - 1))
+    )!.image
+  );
+}
+
 export const ImageGame = ({ dimensions }: Pick<GameProps<ImageGeminiFlashPreviewTurn>, 'dimensions'>) => {
   return (
     <Game<ImageGeminiFlashPreviewTurn>
       CurrentTurn={ImageTurnRenderer}
+      renderPNG={renderImageTurnPNG}
       dimensions={dimensions}
       getAITurn={history => getAIImageTurn(history, dimensions)}
     />

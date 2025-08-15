@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { BaseTurn, CanvasDimensions, TurnRenderer } from '@/app/types/exquisiteCorpse';
+import { BaseTurn, CanvasDimensions, RenderPNG, TurnRenderer } from '@/app/types/exquisiteCorpse';
 import { GameProvider, useGameContext } from './GameContext';
 import { GameStatus } from './GameStatus';
 import { TurnHistory } from './TurnHistory';
@@ -11,7 +11,8 @@ import { getDisplayTurns, isAITurn, isViewingCurrentTurn } from './gameReducer';
 import { Button } from "@/app/components/Button";
 
 export type GameProps<Turn extends BaseTurn> = {
-  CurrentTurn: TurnRenderer<Turn>,
+  CurrentTurn: TurnRenderer<Turn>;
+  renderPNG: RenderPNG<Turn>;
   getAITurn: (history: Turn[]) => Promise<Omit<Turn, keyof BaseTurn>>;
   dimensions: CanvasDimensions;
 };
@@ -19,7 +20,7 @@ export type GameProps<Turn extends BaseTurn> = {
 const isDev = process.env.NODE_ENV === "development";
 
 // Internal game component that uses the context
-const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, getAITurn, dimensions }: GameProps<Turn>) => {
+const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, renderPNG, getAITurn, dimensions }: GameProps<Turn>) => {
   const gameState = useGameContext<Turn>();
   const aiTurn = useAITurn<Turn>(getAITurn);
 
@@ -84,18 +85,19 @@ const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, getAITurn, dimension
         disabled={gameState.turns.length === 0}
       />
 
-      <ExportUtilities />
+      <ExportUtilities renderPNG={renderPNG} />
 
       {isDev && <StateEditor />}
     </div>
   );
 };
 
-export const Game = <Turn extends BaseTurn>({ CurrentTurn, getAITurn, dimensions }: GameProps<Turn>) => {
+export const Game = <Turn extends BaseTurn>({ CurrentTurn, renderPNG, getAITurn, dimensions }: GameProps<Turn>) => {
   return (
     <GameProvider<Turn>>
       <GameInternal
         CurrentTurn={CurrentTurn}
+        renderPNG={renderPNG}
         getAITurn={getAITurn}
         dimensions={dimensions}
       />
