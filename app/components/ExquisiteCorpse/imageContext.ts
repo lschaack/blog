@@ -1,4 +1,4 @@
-import { BezierCurve, Line } from "@/app/types/exquisiteCorpse";
+import { BezierCurve, Line, PathCommand, isMoveToCommand, isMoveToRelativeCommand, isLineToCommand, isLineToRelativeCommand, isCubicBezierCommand, isCubicBezierRelativeCommand, isQuadraticBezierCommand, isQuadraticBezierRelativeCommand, isClosePathCommand } from "@/app/types/exquisiteCorpse";
 import { ensureStartsWith } from "@/app/utils/string";
 
 // Canvas drawing utilities for AI context generation
@@ -10,8 +10,39 @@ const drawBezierCurve = (ctx: CanvasRenderingContext2D, curve: BezierCurve) => {
   ctx.stroke();
 };
 
+// New function to draw parsed path commands
+const drawParsedPath = (ctx: CanvasRenderingContext2D, path: PathCommand[]) => {
+  ctx.beginPath();
+  
+  for (const command of path) {
+    if (isMoveToCommand(command)) {
+      ctx.moveTo(command[1], command[2]);
+    } else if (isMoveToRelativeCommand(command)) {
+      ctx.moveTo(command[1], command[2]); // Note: relative commands would need current position tracking
+    } else if (isLineToCommand(command)) {
+      ctx.lineTo(command[1], command[2]);
+    } else if (isLineToRelativeCommand(command)) {
+      ctx.lineTo(command[1], command[2]); // Note: relative commands would need current position tracking
+    } else if (isCubicBezierCommand(command)) {
+      ctx.bezierCurveTo(command[1], command[2], command[3], command[4], command[5], command[6]);
+    } else if (isCubicBezierRelativeCommand(command)) {
+      ctx.bezierCurveTo(command[1], command[2], command[3], command[4], command[5], command[6]); // Note: relative commands would need current position tracking
+    } else if (isQuadraticBezierCommand(command)) {
+      ctx.quadraticCurveTo(command[1], command[2], command[3], command[4]);
+    } else if (isQuadraticBezierRelativeCommand(command)) {
+      ctx.quadraticCurveTo(command[1], command[2], command[3], command[4]); // Note: relative commands would need current position tracking
+    } else if (isClosePathCommand(command)) {
+      ctx.closePath();
+    }
+    // Add more command types as needed
+  }
+  
+  ctx.stroke();
+};
+
 const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {
-  line.forEach(curve => drawBezierCurve(ctx, curve));
+  // Line is now ParsedPath format
+  drawParsedPath(ctx, line);
 };
 
 /**

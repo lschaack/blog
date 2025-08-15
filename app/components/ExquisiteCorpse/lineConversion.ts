@@ -1,11 +1,89 @@
 import fitCurve from 'fit-curve';
-import { BezierCurve, CanvasDimensions, Line, Point } from '@/app/types/exquisiteCorpse';
+import { BezierCurve, CanvasDimensions, Line, Point, ParsedPath, PathCommand, CubicBezierCommand, isMoveToCommand, isMoveToRelativeCommand, isLineToCommand, isLineToRelativeCommand, isCubicBezierCommand, isCubicBezierRelativeCommand } from '@/app/types/exquisiteCorpse';
+
+// Utility functions for converting between formats
 
 /**
- * Converts AI coordinate points to our Bezier curve format
+ * Converts BezierCurve to SVG path commands
+ * @param curve BezierCurve to convert
+ * @param isFirst Whether this is the first curve (needs MoveTo)
+ * @returns Array of path commands
+ */
+export const bezierCurveToPathCommands = (curve: BezierCurve, isFirst: boolean = false): PathCommand[] => {
+  const [start, cp1, cp2, end] = curve;
+  const commands: PathCommand[] = [];
+  
+  if (isFirst) {
+    commands.push(['M', start[0], start[1]]);
+  }
+  
+  commands.push(['C', cp1[0], cp1[1], cp2[0], cp2[1], end[0], end[1]]);
+  return commands;
+};
+
+/**
+ * Converts array of BezierCurves to ParsedPath
+ * @param curves Array of BezierCurves
+ * @returns ParsedPath with path commands
+ */
+export const bezierCurvesToParsedPath = (curves: BezierCurve[]): ParsedPath => {
+  if (curves.length === 0) return [];
+  
+  const commands: PathCommand[] = [];
+  
+  curves.forEach((curve, index) => {
+    commands.push(...bezierCurveToPathCommands(curve, index === 0));
+  });
+  
+  return commands;
+};
+
+/**
+ * Converts ParsedPath back to BezierCurve array for backward compatibility
+ * @param path ParsedPath to convert
+ * @returns Array of BezierCurves
+ */
+export const parsedPathToBezierCurves = (path: ParsedPath): BezierCurve[] => {
+  const curves: BezierCurve[] = [];
+  let currentPos: Point = [0, 0];
+  
+  for (const command of path) {
+    switch (command[0]) {
+      case 'M':
+      case 'm':
+        currentPos = [command[1], command[2]];
+        break;
+      case 'C':
+        curves.push([
+          currentPos,
+          [command[1], command[2]],
+          [command[3], command[4]],
+          [command[5], command[6]]
+        ]);
+        currentPos = [command[5], command[6]];
+        break;
+      case 'c':
+        const newEnd: Point = [currentPos[0] + command[5], currentPos[1] + command[6]];
+        curves.push([
+          currentPos,
+          [currentPos[0] + command[1], currentPos[1] + command[2]],
+          [currentPos[0] + command[3], currentPos[1] + command[4]],
+          newEnd
+        ]);
+        currentPos = newEnd;
+        break;
+      // Add more command types as needed
+    }
+  }
+  
+  return curves;
+};
+
+/**
+ * Converts AI coordinate points to our new parsed path format
  * @param points Array of [x, y] coordinate points from AI
  * @param maxError Maximum error tolerance for curve fitting (default: 2)
- * @returns Line array containing fitted Bezier curves
+ * @returns Line array containing parsed path commands
  */
 export const convertAIPointsToLine = (points: Point[], maxError: number = 2): Line => {
   // Validate input
@@ -26,8 +104,9 @@ export const convertAIPointsToLine = (points: Point[], maxError: number = 2): Li
 
   try {
     // Use fit-curve to convert points to Bezier curves
-    const curves = fitCurve(points, maxError);
-    return curves as BezierCurve[];
+    const curves = fitCurve(points, maxError) as BezierCurve[];
+    // Convert to parsed path format
+    return bezierCurvesToParsedPath(curves);
   } catch (error) {
     console.warn('Curve fitting failed:', error);
 
@@ -39,7 +118,7 @@ export const convertAIPointsToLine = (points: Point[], maxError: number = 2): Li
 /**
  * Creates a fallback line using simple linear interpolation between points
  * @param points Array of coordinate points
- * @returns Line with simple Bezier curves approximating straight line segments
+ * @returns Line with parsed path commands approximating straight line segments
  */
 const createFallbackLine = (points: Point[]): Line => {
   if (points.length < 2) return [];
@@ -63,7 +142,7 @@ const createFallbackLine = (points: Point[]): Line => {
     curves.push([start, cp1, cp2, end]);
   }
 
-  return curves;
+  return bezierCurvesToParsedPath(curves);
 };
 
 /**
@@ -132,22 +211,60 @@ export const smoothAIPoints = (points: Point[], windowSize: number = 3): Point[]
 
 /**
  * Validates that a line has reasonable characteristics for drawing
- * @param line Line to validate
+ * @param line Line to validate (ParsedPath format)
  * @returns boolean indicating if line is valid
  */
 export const validateGeneratedLine = (line: Line): boolean => {
   if (!Array.isArray(line) || line.length === 0) return false;
 
-  // Check each curve in the line
-  for (const curve of line) {
-    if (!Array.isArray(curve) || curve.length !== 4) return false;
-
-    // Check each point in the curve
-    for (const point of curve) {
-      if (!Array.isArray(point) || point.length !== 2) return false;
-      const [x, y] = point;
-      if (typeof x !== 'number' || typeof y !== 'number' ||
-        !Number.isFinite(x) || !Number.isFinite(y)) return false;
+  // Check each path command in the line
+  for (const command of line) {
+    if (!Array.isArray(command) || command.length < 1) return false;
+    
+    const [commandType, ...params] = command;
+    if (typeof commandType !== 'string') return false;
+    
+    // Validate parameters based on command type
+    switch (commandType) {
+      case 'M':
+      case 'm':
+      case 'L':
+      case 'l':
+      case 'T':
+      case 't':
+        if (params.length !== 2) return false;
+        break;
+      case 'H':
+      case 'h':
+      case 'V':
+      case 'v':
+        if (params.length !== 1) return false;
+        break;
+      case 'C':
+      case 'c':
+        if (params.length !== 6) return false;
+        break;
+      case 'S':
+      case 's':
+      case 'Q':
+      case 'q':
+        if (params.length !== 4) return false;
+        break;
+      case 'A':
+      case 'a':
+        if (params.length !== 7) return false;
+        break;
+      case 'Z':
+      case 'z':
+        if (params.length !== 0) return false;
+        break;
+      default:
+        return false;
+    }
+    
+    // Check that all parameters are finite numbers
+    for (const param of params) {
+      if (typeof param !== 'number' || !Number.isFinite(param)) return false;
     }
   }
 
@@ -156,18 +273,43 @@ export const validateGeneratedLine = (line: Line): boolean => {
 
 /**
  * Calculates the total length of a line (approximate)
- * @param line Line to measure
+ * @param line Line to measure (ParsedPath format)
  * @returns Approximate length in pixels
  */
 export const calculateLineLength = (line: Line): number => {
   let totalLength = 0;
+  let currentPos: Point = [0, 0];
 
-  for (const curve of line) {
-    const [start, , , end] = curve;
-    // Simple distance calculation (not true curve length, but good approximation)
-    const dx = end[0] - start[0];
-    const dy = end[1] - start[1];
-    totalLength += Math.sqrt(dx * dx + dy * dy);
+  for (const command of line) {
+    if (isMoveToCommand(command)) {
+      currentPos = [command[1], command[2]];
+    } else if (isMoveToRelativeCommand(command)) {
+      currentPos = [currentPos[0] + command[1], currentPos[1] + command[2]];
+    } else if (isLineToCommand(command)) {
+      const newPos: Point = [command[1], command[2]];
+      const dx = newPos[0] - currentPos[0];
+      const dy = newPos[1] - currentPos[1];
+      totalLength += Math.sqrt(dx * dx + dy * dy);
+      currentPos = newPos;
+    } else if (isLineToRelativeCommand(command)) {
+      const dx = command[1];
+      const dy = command[2];
+      totalLength += Math.sqrt(dx * dx + dy * dy);
+      currentPos = [currentPos[0] + dx, currentPos[1] + dy];
+    } else if (isCubicBezierCommand(command)) {
+      const endPos: Point = [command[5], command[6]];
+      // Approximate cubic bezier length using start-end distance
+      const dx = endPos[0] - currentPos[0];
+      const dy = endPos[1] - currentPos[1];
+      totalLength += Math.sqrt(dx * dx + dy * dy);
+      currentPos = endPos;
+    } else if (isCubicBezierRelativeCommand(command)) {
+      const dx = command[5];
+      const dy = command[6];
+      totalLength += Math.sqrt(dx * dx + dy * dy);
+      currentPos = [currentPos[0] + dx, currentPos[1] + dy];
+    }
+    // Add more command types as needed
   }
 
   return totalLength;
@@ -176,7 +318,7 @@ export const calculateLineLength = (line: Line): number => {
 /**
  * Process AI Bezier curves directly (new preferred method)
  * @param aiCurves Direct Bezier curves from AI
- * @returns Processed and validated Line
+ * @returns Processed and validated Line (ParsedPath format)
  */
 export const processAIBezierCurves = (
   aiCurves: BezierCurve[]
@@ -207,12 +349,15 @@ export const processAIBezierCurves = (
   // Apply curve quality improvements
   const improvedCurves = improveAICurves(aiCurves);
 
+  // Convert to parsed path format
+  const parsedPath = bezierCurvesToParsedPath(improvedCurves);
+
   // Validate the final result
-  if (!validateGeneratedLine(improvedCurves)) {
+  if (!validateGeneratedLine(parsedPath)) {
     throw new Error('Generated line failed validation');
   }
 
-  return improvedCurves;
+  return parsedPath;
 };
 
 /**

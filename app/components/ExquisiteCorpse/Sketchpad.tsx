@@ -2,7 +2,8 @@ import { FC, useEffect, useRef, useState, useCallback } from "react";
 import fitCurve from 'fit-curve';
 
 import { useAnimationFrames } from '@/app/hooks/useAnimationFrames';
-import { BezierCurve, Line, Point } from "@/app/types/exquisiteCorpse";
+import { BezierCurve, Line, Point, PathCommand, isMoveToCommand, isMoveToRelativeCommand, isLineToCommand, isLineToRelativeCommand, isCubicBezierCommand, isCubicBezierRelativeCommand, isQuadraticBezierCommand, isQuadraticBezierRelativeCommand, isClosePathCommand } from "@/app/types/exquisiteCorpse";
+import { bezierCurvesToParsedPath } from './lineConversion';
 
 type SketchpadProps = {
   width: number;
@@ -24,8 +25,38 @@ const drawBezierCurve = (ctx: CanvasRenderingContext2D, curve: BezierCurve) => {
   ctx.stroke();
 };
 
+// Function to draw parsed path commands
+const drawParsedPath = (ctx: CanvasRenderingContext2D, path: PathCommand[]) => {
+  ctx.beginPath();
+  
+  for (const command of path) {
+    if (isMoveToCommand(command)) {
+      ctx.moveTo(command[1], command[2]);
+    } else if (isMoveToRelativeCommand(command)) {
+      ctx.moveTo(command[1], command[2]);
+    } else if (isLineToCommand(command)) {
+      ctx.lineTo(command[1], command[2]);
+    } else if (isLineToRelativeCommand(command)) {
+      ctx.lineTo(command[1], command[2]);
+    } else if (isCubicBezierCommand(command)) {
+      ctx.bezierCurveTo(command[1], command[2], command[3], command[4], command[5], command[6]);
+    } else if (isCubicBezierRelativeCommand(command)) {
+      ctx.bezierCurveTo(command[1], command[2], command[3], command[4], command[5], command[6]);
+    } else if (isQuadraticBezierCommand(command)) {
+      ctx.quadraticCurveTo(command[1], command[2], command[3], command[4]);
+    } else if (isQuadraticBezierRelativeCommand(command)) {
+      ctx.quadraticCurveTo(command[1], command[2], command[3], command[4]);
+    } else if (isClosePathCommand(command)) {
+      ctx.closePath();
+    }
+  }
+  
+  ctx.stroke();
+};
+
 const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {
-  line.forEach(curve => drawBezierCurve(ctx, curve));
+  // Line is now ParsedPath format
+  drawParsedPath(ctx, line);
 };
 
 const drawRawPoints = (ctx: CanvasRenderingContext2D, points: Point[]) => {
@@ -44,8 +75,9 @@ const fitCurvesToPoints = (points: Point[], maxError: number = 50): Line => {
   if (points.length < 2) return [];
 
   try {
-    const curves = fitCurve(points, maxError);
-    return curves as BezierCurve[];
+    const curves = fitCurve(points, maxError) as BezierCurve[];
+    // Convert to parsed path format
+    return bezierCurvesToParsedPath(curves);
   } catch (error) {
     console.warn('Curve fitting failed:', error);
     return [];
@@ -101,7 +133,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
       const tempCurves = fitCurvesToPoints(currentPoints.current);
       if (tempCurves.length > 0) {
         ctx.strokeStyle = '#000';
-        tempCurves.forEach(curve => drawBezierCurve(ctx, curve));
+        drawParsedPath(ctx, tempCurves);
       }
     }
   }, [isDrawing, lines, width, height]);

@@ -5,7 +5,8 @@ import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { useUndoRedo } from './useUndoRedo';
 import { renderLinesToBase64 } from './imageContext';
-import { BezierCurve, Line } from "@/app/types/exquisiteCorpse";
+import { BezierCurve, Line, PathCommand } from "@/app/types/exquisiteCorpse";
+import { parsedPathToBezierCurves, bezierCurvesToParsedPath } from './lineConversion';
 
 export const TrainingInterface = () => {
   // Form state
@@ -311,7 +312,9 @@ const parseXML = (xmlText: string): ParsedTrainingExample | null => {
       }
 
       if (curves.length > 0) {
-        lines.push(curves);
+        // Convert BezierCurves to ParsedPath format
+        const parsedPath = bezierCurvesToParsedPath(curves);
+        lines.push(parsedPath);
       }
     }
 
@@ -330,14 +333,16 @@ const parseXML = (xmlText: string): ParsedTrainingExample | null => {
 // Generate XML content for the training example
 const generateXML = (name: string, description: string, lines: Line[], base64Image: string): string => {
   const xmlLines = lines.map(line => {
-    const curves = line.map(curve => {
+    // Convert ParsedPath back to BezierCurves for XML compatibility
+    const curves = parsedPathToBezierCurves(line);
+    const curveXml = curves.map(curve => {
       // Format: [[startX, startY], [cp1X, cp1Y], [cp2X, cp2Y], [endX, endY]]
       const [start, cp1, cp2, end] = curve;
       return `      <BezierCurve>[[${start[0]}, ${start[1]}], [${cp1[0]}, ${cp1[1]}], [${cp2[0]}, ${cp2[1]}], [${end[0]}, ${end[1]}]]</BezierCurve>`;
     }).join('\n');
 
     return `    <Line>
-${curves}
+${curveXml}
     </Line>`;
   }).join('\n');
 

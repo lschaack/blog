@@ -1,8 +1,79 @@
 import type { ComponentType } from "react";
 
 export type Point = [number, number];
+
+// SVG Path Command Types (parse-svg-path format)
+// Move commands
+export type MoveToCommand = ['M', number, number];
+export type MoveToRelativeCommand = ['m', number, number];
+
+// Line commands  
+export type LineToCommand = ['L', number, number];
+export type LineToRelativeCommand = ['l', number, number];
+export type HorizontalLineToCommand = ['H', number];
+export type HorizontalLineToRelativeCommand = ['h', number];
+export type VerticalLineToCommand = ['V', number];
+export type VerticalLineToRelativeCommand = ['v', number];
+
+// Cubic Bezier curve commands
+export type CubicBezierCommand = ['C', number, number, number, number, number, number];
+export type CubicBezierRelativeCommand = ['c', number, number, number, number, number, number];
+export type SmoothCubicBezierCommand = ['S', number, number, number, number];
+export type SmoothCubicBezierRelativeCommand = ['s', number, number, number, number];
+
+// Quadratic Bezier curve commands
+export type QuadraticBezierCommand = ['Q', number, number, number, number];
+export type QuadraticBezierRelativeCommand = ['q', number, number, number, number];
+export type SmoothQuadraticBezierCommand = ['T', number, number];
+export type SmoothQuadraticBezierRelativeCommand = ['t', number, number];
+
+// Arc command
+export type ArcCommand = ['A', number, number, number, number, number, number, number];
+export type ArcRelativeCommand = ['a', number, number, number, number, number, number, number];
+
+// Close path command
+export type ClosePathCommand = ['Z'] | ['z'];
+
+// Union type for all path commands
+export type PathCommand = 
+  | MoveToCommand | MoveToRelativeCommand
+  | LineToCommand | LineToRelativeCommand
+  | HorizontalLineToCommand | HorizontalLineToRelativeCommand
+  | VerticalLineToCommand | VerticalLineToRelativeCommand
+  | CubicBezierCommand | CubicBezierRelativeCommand
+  | SmoothCubicBezierCommand | SmoothCubicBezierRelativeCommand
+  | QuadraticBezierCommand | QuadraticBezierRelativeCommand
+  | SmoothQuadraticBezierCommand | SmoothQuadraticBezierRelativeCommand
+  | ArcCommand | ArcRelativeCommand
+  | ClosePathCommand;
+
+// A parsed SVG path is an array of path commands
+export type ParsedPath = PathCommand[];
+
+// Type guard functions for path commands
+export const isMoveToCommand = (command: PathCommand): command is MoveToCommand => command[0] === 'M';
+export const isMoveToRelativeCommand = (command: PathCommand): command is MoveToRelativeCommand => command[0] === 'm';
+export const isLineToCommand = (command: PathCommand): command is LineToCommand => command[0] === 'L';
+export const isLineToRelativeCommand = (command: PathCommand): command is LineToRelativeCommand => command[0] === 'l';
+export const isHorizontalLineToCommand = (command: PathCommand): command is HorizontalLineToCommand => command[0] === 'H';
+export const isHorizontalLineToRelativeCommand = (command: PathCommand): command is HorizontalLineToRelativeCommand => command[0] === 'h';
+export const isVerticalLineToCommand = (command: PathCommand): command is VerticalLineToCommand => command[0] === 'V';
+export const isVerticalLineToRelativeCommand = (command: PathCommand): command is VerticalLineToRelativeCommand => command[0] === 'v';
+export const isCubicBezierCommand = (command: PathCommand): command is CubicBezierCommand => command[0] === 'C';
+export const isCubicBezierRelativeCommand = (command: PathCommand): command is CubicBezierRelativeCommand => command[0] === 'c';
+export const isSmoothCubicBezierCommand = (command: PathCommand): command is SmoothCubicBezierCommand => command[0] === 'S';
+export const isSmoothCubicBezierRelativeCommand = (command: PathCommand): command is SmoothCubicBezierRelativeCommand => command[0] === 's';
+export const isQuadraticBezierCommand = (command: PathCommand): command is QuadraticBezierCommand => command[0] === 'Q';
+export const isQuadraticBezierRelativeCommand = (command: PathCommand): command is QuadraticBezierRelativeCommand => command[0] === 'q';
+export const isSmoothQuadraticBezierCommand = (command: PathCommand): command is SmoothQuadraticBezierCommand => command[0] === 'T';
+export const isSmoothQuadraticBezierRelativeCommand = (command: PathCommand): command is SmoothQuadraticBezierRelativeCommand => command[0] === 't';
+export const isArcCommand = (command: PathCommand): command is ArcCommand => command[0] === 'A';
+export const isArcRelativeCommand = (command: PathCommand): command is ArcRelativeCommand => command[0] === 'a';
+export const isClosePathCommand = (command: PathCommand): command is ClosePathCommand => command[0] === 'Z' || command[0] === 'z';
+
+// Legacy types for backward compatibility during transition
 export type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
-export type Line = BezierCurve[];
+export type Line = ParsedPath; // Updated to use parsed path format
 
 export type CanvasDimensions = CanvasDimensions;
 
