@@ -1,19 +1,10 @@
-import { BezierCurve, Line, PathCommand, isMoveToCommand, isMoveToRelativeCommand, isLineToCommand, isLineToRelativeCommand, isCubicBezierCommand, isCubicBezierRelativeCommand, isQuadraticBezierCommand, isQuadraticBezierRelativeCommand, isClosePathCommand } from "@/app/types/exquisiteCorpse";
+import { Line, PathCommand, isMoveToCommand, isMoveToRelativeCommand, isLineToCommand, isLineToRelativeCommand, isCubicBezierCommand, isCubicBezierRelativeCommand, isQuadraticBezierCommand, isQuadraticBezierRelativeCommand, isClosePathCommand } from "@/app/types/exquisiteCorpse";
 import { ensureStartsWith } from "@/app/utils/string";
 
-// Canvas drawing utilities for AI context generation
-const drawBezierCurve = (ctx: CanvasRenderingContext2D, curve: BezierCurve) => {
-  const [start, cp1, cp2, end] = curve;
-  ctx.beginPath();
-  ctx.moveTo(start[0], start[1]);
-  ctx.bezierCurveTo(cp1[0], cp1[1], cp2[0], cp2[1], end[0], end[1]);
-  ctx.stroke();
-};
-
 // New function to draw parsed path commands
-const drawParsedPath = (ctx: CanvasRenderingContext2D, path: PathCommand[]) => {
+export const drawParsedPath = (ctx: CanvasRenderingContext2D, path: PathCommand[]) => {
   ctx.beginPath();
-  
+
   for (const command of path) {
     if (isMoveToCommand(command)) {
       ctx.moveTo(command[1], command[2]);
@@ -36,7 +27,7 @@ const drawParsedPath = (ctx: CanvasRenderingContext2D, path: PathCommand[]) => {
     }
     // Add more command types as needed
   }
-  
+
   ctx.stroke();
 };
 

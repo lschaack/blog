@@ -2,8 +2,9 @@ import { FC, useEffect, useRef, useState, useCallback } from "react";
 import fitCurve from 'fit-curve';
 
 import { useAnimationFrames } from '@/app/hooks/useAnimationFrames';
-import { BezierCurve, Line, Point, PathCommand, isMoveToCommand, isMoveToRelativeCommand, isLineToCommand, isLineToRelativeCommand, isCubicBezierCommand, isCubicBezierRelativeCommand, isQuadraticBezierCommand, isQuadraticBezierRelativeCommand, isClosePathCommand } from "@/app/types/exquisiteCorpse";
+import { BezierCurve, Line, Point } from "@/app/types/exquisiteCorpse";
 import { bezierCurvesToParsedPath } from './lineConversion';
+import { drawParsedPath } from "./imageContext";
 
 type SketchpadProps = {
   width: number;
@@ -15,43 +16,6 @@ type SketchpadProps = {
 // Canvas drawing utilities
 const clearCanvas = (ctx: CanvasRenderingContext2D, width: number, height: number) => {
   ctx.clearRect(0, 0, width, height);
-};
-
-const drawBezierCurve = (ctx: CanvasRenderingContext2D, curve: BezierCurve) => {
-  const [start, cp1, cp2, end] = curve;
-  ctx.beginPath();
-  ctx.moveTo(start[0], start[1]);
-  ctx.bezierCurveTo(cp1[0], cp1[1], cp2[0], cp2[1], end[0], end[1]);
-  ctx.stroke();
-};
-
-// Function to draw parsed path commands
-const drawParsedPath = (ctx: CanvasRenderingContext2D, path: PathCommand[]) => {
-  ctx.beginPath();
-  
-  for (const command of path) {
-    if (isMoveToCommand(command)) {
-      ctx.moveTo(command[1], command[2]);
-    } else if (isMoveToRelativeCommand(command)) {
-      ctx.moveTo(command[1], command[2]);
-    } else if (isLineToCommand(command)) {
-      ctx.lineTo(command[1], command[2]);
-    } else if (isLineToRelativeCommand(command)) {
-      ctx.lineTo(command[1], command[2]);
-    } else if (isCubicBezierCommand(command)) {
-      ctx.bezierCurveTo(command[1], command[2], command[3], command[4], command[5], command[6]);
-    } else if (isCubicBezierRelativeCommand(command)) {
-      ctx.bezierCurveTo(command[1], command[2], command[3], command[4], command[5], command[6]);
-    } else if (isQuadraticBezierCommand(command)) {
-      ctx.quadraticCurveTo(command[1], command[2], command[3], command[4]);
-    } else if (isQuadraticBezierRelativeCommand(command)) {
-      ctx.quadraticCurveTo(command[1], command[2], command[3], command[4]);
-    } else if (isClosePathCommand(command)) {
-      ctx.closePath();
-    }
-  }
-  
-  ctx.stroke();
 };
 
 const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {

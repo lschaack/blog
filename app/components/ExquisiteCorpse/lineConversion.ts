@@ -1,5 +1,4 @@
-import fitCurve from 'fit-curve';
-import { BezierCurve, CanvasDimensions, Line, Point, ParsedPath, PathCommand, CubicBezierCommand, isMoveToCommand, isMoveToRelativeCommand, isLineToCommand, isLineToRelativeCommand, isCubicBezierCommand, isCubicBezierRelativeCommand } from '@/app/types/exquisiteCorpse';
+import { BezierCurve, CanvasDimensions, Line, Point, ParsedPath, PathCommand } from '@/app/types/exquisiteCorpse';
 
 // Utility functions for converting between formats
 
@@ -12,11 +11,11 @@ import { BezierCurve, CanvasDimensions, Line, Point, ParsedPath, PathCommand, Cu
 export const bezierCurveToPathCommands = (curve: BezierCurve, isFirst: boolean = false): PathCommand[] => {
   const [start, cp1, cp2, end] = curve;
   const commands: PathCommand[] = [];
-  
+
   if (isFirst) {
     commands.push(['M', start[0], start[1]]);
   }
-  
+
   commands.push(['C', cp1[0], cp1[1], cp2[0], cp2[1], end[0], end[1]]);
   return commands;
 };
@@ -28,13 +27,13 @@ export const bezierCurveToPathCommands = (curve: BezierCurve, isFirst: boolean =
  */
 export const bezierCurvesToParsedPath = (curves: BezierCurve[]): ParsedPath => {
   if (curves.length === 0) return [];
-  
+
   const commands: PathCommand[] = [];
-  
+
   curves.forEach((curve, index) => {
     commands.push(...bezierCurveToPathCommands(curve, index === 0));
   });
-  
+
   return commands;
 };
 
@@ -46,7 +45,7 @@ export const bezierCurvesToParsedPath = (curves: BezierCurve[]): ParsedPath => {
 export const parsedPathToBezierCurves = (path: ParsedPath): BezierCurve[] => {
   const curves: BezierCurve[] = [];
   let currentPos: Point = [0, 0];
-  
+
   for (const command of path) {
     switch (command[0]) {
       case 'M':
@@ -75,74 +74,8 @@ export const parsedPathToBezierCurves = (path: ParsedPath): BezierCurve[] => {
       // Add more command types as needed
     }
   }
-  
+
   return curves;
-};
-
-/**
- * Converts AI coordinate points to our new parsed path format
- * @param points Array of [x, y] coordinate points from AI
- * @param maxError Maximum error tolerance for curve fitting (default: 2)
- * @returns Line array containing parsed path commands
- */
-export const convertAIPointsToLine = (points: Point[], maxError: number = 2): Line => {
-  // Validate input
-  if (!Array.isArray(points) || points.length < 2) {
-    throw new Error('At least 2 points required for line conversion');
-  }
-
-  // Validate each point
-  for (const point of points) {
-    if (!Array.isArray(point) || point.length !== 2) {
-      throw new Error('Each point must be a [x, y] coordinate array');
-    }
-    const [x, y] = point;
-    if (typeof x !== 'number' || typeof y !== 'number' || !Number.isFinite(x) || !Number.isFinite(y)) {
-      throw new Error('Point coordinates must be finite numbers');
-    }
-  }
-
-  try {
-    // Use fit-curve to convert points to Bezier curves
-    const curves = fitCurve(points, maxError) as BezierCurve[];
-    // Convert to parsed path format
-    return bezierCurvesToParsedPath(curves);
-  } catch (error) {
-    console.warn('Curve fitting failed:', error);
-
-    // Fallback: create simple line segments between consecutive points
-    return createFallbackLine(points);
-  }
-};
-
-/**
- * Creates a fallback line using simple linear interpolation between points
- * @param points Array of coordinate points
- * @returns Line with parsed path commands approximating straight line segments
- */
-const createFallbackLine = (points: Point[]): Line => {
-  if (points.length < 2) return [];
-
-  const curves: BezierCurve[] = [];
-
-  for (let i = 0; i < points.length - 1; i++) {
-    const start = points[i];
-    const end = points[i + 1];
-
-    // Create control points 1/3 and 2/3 along the line for smooth curves
-    const cp1: Point = [
-      start[0] + (end[0] - start[0]) * 0.33,
-      start[1] + (end[1] - start[1]) * 0.33
-    ];
-    const cp2: Point = [
-      start[0] + (end[0] - start[0]) * 0.67,
-      start[1] + (end[1] - start[1]) * 0.67
-    ];
-
-    curves.push([start, cp1, cp2, end]);
-  }
-
-  return bezierCurvesToParsedPath(curves);
 };
 
 /**
@@ -210,6 +143,7 @@ export const smoothAIPoints = (points: Point[], windowSize: number = 3): Point[]
 };
 
 /**
+ * FIXME: Do thorough zod validation on the backend and trust api responses
  * Validates that a line has reasonable characteristics for drawing
  * @param line Line to validate (ParsedPath format)
  * @returns boolean indicating if line is valid
@@ -220,10 +154,10 @@ export const validateGeneratedLine = (line: Line): boolean => {
   // Check each path command in the line
   for (const command of line) {
     if (!Array.isArray(command) || command.length < 1) return false;
-    
+
     const [commandType, ...params] = command;
     if (typeof commandType !== 'string') return false;
-    
+
     // Validate parameters based on command type
     switch (commandType) {
       case 'M':
@@ -261,7 +195,7 @@ export const validateGeneratedLine = (line: Line): boolean => {
       default:
         return false;
     }
-    
+
     // Check that all parameters are finite numbers
     for (const param of params) {
       if (typeof param !== 'number' || !Number.isFinite(param)) return false;
@@ -272,50 +206,7 @@ export const validateGeneratedLine = (line: Line): boolean => {
 };
 
 /**
- * Calculates the total length of a line (approximate)
- * @param line Line to measure (ParsedPath format)
- * @returns Approximate length in pixels
- */
-export const calculateLineLength = (line: Line): number => {
-  let totalLength = 0;
-  let currentPos: Point = [0, 0];
-
-  for (const command of line) {
-    if (isMoveToCommand(command)) {
-      currentPos = [command[1], command[2]];
-    } else if (isMoveToRelativeCommand(command)) {
-      currentPos = [currentPos[0] + command[1], currentPos[1] + command[2]];
-    } else if (isLineToCommand(command)) {
-      const newPos: Point = [command[1], command[2]];
-      const dx = newPos[0] - currentPos[0];
-      const dy = newPos[1] - currentPos[1];
-      totalLength += Math.sqrt(dx * dx + dy * dy);
-      currentPos = newPos;
-    } else if (isLineToRelativeCommand(command)) {
-      const dx = command[1];
-      const dy = command[2];
-      totalLength += Math.sqrt(dx * dx + dy * dy);
-      currentPos = [currentPos[0] + dx, currentPos[1] + dy];
-    } else if (isCubicBezierCommand(command)) {
-      const endPos: Point = [command[5], command[6]];
-      // Approximate cubic bezier length using start-end distance
-      const dx = endPos[0] - currentPos[0];
-      const dy = endPos[1] - currentPos[1];
-      totalLength += Math.sqrt(dx * dx + dy * dy);
-      currentPos = endPos;
-    } else if (isCubicBezierRelativeCommand(command)) {
-      const dx = command[5];
-      const dy = command[6];
-      totalLength += Math.sqrt(dx * dx + dy * dy);
-      currentPos = [currentPos[0] + dx, currentPos[1] + dy];
-    }
-    // Add more command types as needed
-  }
-
-  return totalLength;
-};
-
-/**
+ * FIXME: Do thorough zod validation on the backend and trust api responses
  * Process AI Bezier curves directly (new preferred method)
  * @param aiCurves Direct Bezier curves from AI
  * @returns Processed and validated Line (ParsedPath format)
@@ -346,11 +237,8 @@ export const processAIBezierCurves = (
     }
   }
 
-  // Apply curve quality improvements
-  const improvedCurves = improveAICurves(aiCurves);
-
   // Convert to parsed path format
-  const parsedPath = bezierCurvesToParsedPath(improvedCurves);
+  const parsedPath = bezierCurvesToParsedPath(aiCurves);
 
   // Validate the final result
   if (!validateGeneratedLine(parsedPath)) {
@@ -358,118 +246,4 @@ export const processAIBezierCurves = (
   }
 
   return parsedPath;
-};
-
-/**
- * Improve AI-generated curves for better drawing quality
- * @param curves Raw AI curves
- * @returns Improved curves
- */
-const improveAICurves = (curves: BezierCurve[]): BezierCurve[] => {
-  return curves.map((curve, index) => {
-    let [start] = curve;
-    const [, cp1, cp2, end] = curve;
-
-    // 1. Ensure smooth connections between curves
-    if (index > 0) {
-      const prevCurve = curves[index - 1];
-      const prevEnd = prevCurve[3];
-
-      // Make current start match previous end exactly for smooth connection
-      start = prevEnd;
-    }
-
-    // 2. Improve control point positions for more natural curves
-    const improvedCurve = optimizeControlPoints([start, cp1, cp2, end]);
-
-    return improvedCurve;
-  });
-};
-
-/**
- * Optimize control points for more natural curve behavior
- * @param curve Original curve
- * @returns Optimized curve
- */
-const optimizeControlPoints = (curve: BezierCurve): BezierCurve => {
-  const [start, cp1, cp2, end] = curve;
-
-  // Calculate the direct line vector from start to end
-  const directVector = [end[0] - start[0], end[1] - start[1]];
-  const directLength = Math.sqrt(directVector[0] ** 2 + directVector[1] ** 2);
-
-  // If the curve is very short, make it simpler
-  if (directLength < 10) {
-    return [
-      start,
-      [start[0] + directVector[0] * 0.3, start[1] + directVector[1] * 0.3],
-      [start[0] + directVector[0] * 0.7, start[1] + directVector[1] * 0.7],
-      end
-    ];
-  }
-
-  // Check if control points are too far from the main line
-  const maxControlDistance = directLength * 0.5; // Control points shouldn't be more than 50% of line length away
-
-  // Adjust cp1 if too extreme
-  const cp1Distance = Math.sqrt((cp1[0] - start[0]) ** 2 + (cp1[1] - start[1]) ** 2);
-  const newCp1 = cp1Distance > maxControlDistance
-    ? [
-      start[0] + (cp1[0] - start[0]) * (maxControlDistance / cp1Distance),
-      start[1] + (cp1[1] - start[1]) * (maxControlDistance / cp1Distance)
-    ] as Point
-    : cp1;
-
-  // Adjust cp2 if too extreme
-  const cp2Distance = Math.sqrt((cp2[0] - end[0]) ** 2 + (cp2[1] - end[1]) ** 2);
-  const newCp2 = cp2Distance > maxControlDistance
-    ? [
-      end[0] + (cp2[0] - end[0]) * (maxControlDistance / cp2Distance),
-      end[1] + (cp2[1] - end[1]) * (maxControlDistance / cp2Distance)
-    ] as Point
-    : cp2;
-
-  return [start, newCp1, newCp2, end];
-};
-
-/**
- * Legacy function - complete pipeline to process AI points into a validated line
- * @deprecated Use processAIBezierCurves for better quality
- */
-export const processAILine = (
-  aiPoints: Point[],
-  bounds: CanvasDimensions,
-  options: {
-    maxError?: number;
-    enableSmoothing?: boolean;
-    smoothingWindow?: number;
-  } = {}
-): Line => {
-  const {
-    maxError = 2,
-    enableSmoothing = true,
-    smoothingWindow = 3
-  } = options;
-
-  // 1. Sanitize points (bounds check, filter invalid)
-  let processedPoints = sanitizeAIPoints(aiPoints, bounds);
-
-  if (processedPoints.length < 2) {
-    throw new Error('Not enough valid points after sanitization');
-  }
-
-  // 2. Optional smoothing
-  if (enableSmoothing && processedPoints.length > smoothingWindow) {
-    processedPoints = smoothAIPoints(processedPoints, smoothingWindow);
-  }
-
-  // 3. Convert to Bezier curves
-  const line = convertAIPointsToLine(processedPoints, maxError);
-
-  // 4. Validate result
-  if (!validateGeneratedLine(line)) {
-    throw new Error('Generated line failed validation');
-  }
-
-  return line;
 };

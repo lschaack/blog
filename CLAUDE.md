@@ -5,18 +5,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Core Commands
-- `npm run dev` - Start development server with Turbopack (http://localhost:3000)
+
+- `npm run dev` - Start development server with Turbopack (<http://localhost:3000>)
 - `npm run build` - Build production application
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint (Next.js + TypeScript config)
 - `npm run codegen` - Generate GraphQL types from Contentful schema
 
 ### Type Checking
+
 No dedicated typecheck script exists. Run `npx tsc --noEmit` to check TypeScript types.
 
 ## Architecture Overview
 
 ### Tech Stack
+
 - **Framework**: Next.js 15 (App Router)
 - **Content Management**: Contentful CMS with GraphQL API
 - **GraphQL**: Apollo Client with code generation
@@ -27,6 +30,7 @@ No dedicated typecheck script exists. Run `npx tsc --noEmit` to check TypeScript
 ### Project Structure
 
 #### Core Application
+
 - `app/` - Next.js App Router structure
   - `layout.tsx` - Root layout with DebugProvider and Header
   - `page.tsx` - Home page displaying blog posts
@@ -34,6 +38,7 @@ No dedicated typecheck script exists. Run `npx tsc --noEmit` to check TypeScript
   - `globals.css` - Global styles and Tailwind imports
 
 #### Content Management
+
 - `app/utils/contentful/` - Contentful integration
   - `client.ts` - Apollo Client configuration
   - `predicates.ts` - Type predicates for Contentful entries
@@ -44,6 +49,7 @@ No dedicated typecheck script exists. Run `npx tsc --noEmit` to check TypeScript
 - `codegen.ts` - GraphQL Code Generator configuration
 
 #### Interactive Features
+
 - `app/demos/` - Interactive demo components embedded in blog posts
   - Lazy-loaded components organized by feature (bubble effects, dock magnification)
   - Demo registry in `index.tsx` maps Contentful demo IDs to components
@@ -53,6 +59,7 @@ No dedicated typecheck script exists. Run `npx tsc --noEmit` to check TypeScript
   - Content rendering (CodeBlock, CaptionedImage)
 
 #### Animation System
+
 - `app/hooks/` - Custom React hooks
   - `useBatchedAnimation.tsx` - Performance optimization for multiple animations
   - `useAnimationFrames.ts` - requestAnimationFrame wrapper
@@ -64,7 +71,9 @@ No dedicated typecheck script exists. Run `npx tsc --noEmit` to check TypeScript
   - `requestEasingFrames.ts` - Frame-based animation timing
 
 ### Content Types
+
 Contentful defines these content types:
+
 - **BlogPost**: Main blog posts with rich text body, author, hero image, tags
 - **Author**: Author profiles with name and profile picture
 - **Demo**: Interactive components referenced by ID
@@ -72,19 +81,23 @@ Contentful defines these content types:
 - **CodeBlock**: Syntax-highlighted code snippets
 
 ### Environment Configuration
+
 Required environment variables (defined in `.env`):
+
 - `CONTENTFUL_SPACE_ID` - Contentful space identifier
 - `CONTENTFUL_ENVIRONMENT_ID` - Contentful environment (typically "master")
 - `CONTENTFUL_PREVIEW_TOKEN` - Preview API token (development)
 - `CONTENTFUL_DELIVERY_TOKEN` - Delivery API token (production)
 
 ### Development Features
+
 - **Debug System**: Global debug context with toggleable debug menu
 - **Performance Monitoring**: Built-in performance marks for animation batching
 - **Responsive Design**: Mobile-first approach with Tailwind breakpoints
 - **Image Optimization**: Next.js Image component with Contentful CDN integration
 
 ### Build Configuration
+
 - **TypeScript**: Strict mode enabled with GraphQL plugin for query validation
 - **ESLint**: Next.js recommended rules with TypeScript support
 - **Tailwind**: v4 configuration with custom font variables
@@ -101,4 +114,8 @@ When working with this codebase:
 5. **Styling**: Use Tailwind classes; custom CSS in `globals.css` only when necessary
 
 The codebase emphasizes performance optimization, particularly for animations, and provides a rich debugging experience for development.
+
 - Minimize layout shift by disabling elements when they are unusable rather than removing them
+- Shared types should be placed in a .d.ts file with a descriptive name of the corresponding project in the @app/types directory. When a type is needed is already defined locally to a file, it should be refactored to be sourced from this file.
+- Always single-source functions. If you find yourself redefining a function because it's not exported from another file, export it (moving it to a common file if necessary to avoid circular dependencies) and use the exported version
+

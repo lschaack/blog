@@ -35,7 +35,7 @@ export type ArcRelativeCommand = ['a', number, number, number, number, number, n
 export type ClosePathCommand = ['Z'] | ['z'];
 
 // Union type for all path commands
-export type PathCommand = 
+export type PathCommand =
   | MoveToCommand | MoveToRelativeCommand
   | LineToCommand | LineToRelativeCommand
   | HorizontalLineToCommand | HorizontalLineToRelativeCommand
@@ -73,6 +73,7 @@ export const isClosePathCommand = (command: PathCommand): command is ClosePathCo
 
 // Legacy types for backward compatibility during transition
 export type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
+// FIXME: Line is now effectively any number of lines
 export type Line = ParsedPath; // Updated to use parsed path format
 
 export type CanvasDimensions = CanvasDimensions;
