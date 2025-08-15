@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
 import { BaseTurn, CanvasDimensions, CurveTurn, Line } from "@/app/types/exquisiteCorpse";
-import { isViewingCurrentTurn, isUserTurn, getDisplayTurns } from "./gameReducer";
+import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
@@ -19,6 +19,7 @@ export const CurveTurnRenderer = ({
 }: CurveTurnRendererProps) => {
   const gameState = useGameContext<CurveTurn>();
   const currentTurn = useCurrentTurn();
+  const prevTurn = getPreviousTurn(gameState);
 
   // Get display lines from completed turns
   const displayTurns = useMemo(() => getDisplayTurns(gameState), [gameState]);
@@ -89,6 +90,24 @@ export const CurveTurnRenderer = ({
         className="flex-1"
         disabled={!isViewingCurrentTurn(gameState) || !canEndTurn}
       />
+
+      {prevTurn && (
+        <div className="space-y-2 bg-deep-50 rounded-xl p-4">
+          <div className="font-medium">
+            Turn {prevTurn.number} - {prevTurn.author === "user" ? "You" : "AI"}
+          </div>
+          {prevTurn.interpretation && (
+            <div className="text-gray-600 font-geist-mono">
+              &ldquo;{prevTurn.interpretation}&rdquo;
+            </div>
+          )}
+          {prevTurn.reasoning && (
+            <div className="text-gray-500 font-geist-mono text-sm italic">
+              &ldquo;{prevTurn.reasoning}&rdquo;
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
