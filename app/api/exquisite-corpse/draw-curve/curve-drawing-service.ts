@@ -1,20 +1,41 @@
-import { AICurveResponse, BezierCurve, CanvasDimensions, GameContext, Point, BaseTurn } from "@/app/types/exquisiteCorpse";
+import { AICurveResponse, BezierCurve, CanvasDimensions, GameContext, Point, CurveTurn } from "@/app/types/exquisiteCorpse";
 import { getBase64FileSizeMb } from "@/app/utils/base64";
+import { renderPathCommandsToSvg } from "@/app/utils/svg";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
 import path from 'path';
 import { z } from "zod";
-
-const PointSchema = z.tuple([z.number().finite(), z.number().finite()]);
-
-const BezierCurveSchema = z.tuple([PointSchema, PointSchema, PointSchema, PointSchema]);
+import parseSvgPath from "parse-svg-path";
 
 const AICurveResponseSchema = z.object({
   interpretation: z.string().min(1, "Interpretation cannot be empty"),
-  curves: z.array(BezierCurveSchema).min(1, "Must provide at least 1 curve").max(15, "Cannot provide more than 15 curves"),
+  path: z
+    .string()
+    .min(1, "Path cannot be empty")
+    .transform((string, ctx) => {
+      // extract the `d` property
+      const match = string.match(/^([MLHVCSQTAZ0-9\s,.\-+]+)$/);
+
+      if (!match) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Path must be a single line of only absolute (uppercase) commands",
+          input: string,
+        });
+
+        return z.NEVER;
+      }
+
+      const path = match[1];
+
+      return parseSvgPath(path);
+    }),
   reasoning: z.string().min(1, "Reasoning cannot be empty")
 });
 
+// FIXME:
+// - validate input as curve turn
+// - validate output against schema
 export class CurveDrawingService {
   private client: GoogleGenerativeAI;
   private static systemPrompt: string | null = null;
@@ -32,31 +53,19 @@ export class CurveDrawingService {
     this.client = new GoogleGenerativeAI(apiKey);
   }
 
-  private buildPrompt<Turn extends BaseTurn>(context: GameContext<Turn>): string {
-    const historyText = context.history
-      .map((turn, index) => {
-        if (turn.author === "user") {
-          // FIXME: Should include the user's line at each turn as well as the full set of paths in the current state
-          // ^ and also I guess the image?
-          return `Turn ${index + 1}: User drew a line`;
-        } else {
-          const interpretation = 'interpretation' in turn ? turn.interpretation : undefined;
-          const reasoning = 'reasoning' in turn ? turn.reasoning : undefined;
-          return `Turn ${index + 1}: AI saw "${interpretation || 'the drawing'}" and ${reasoning || 'added their contribution'}`;
-        }
-      })
-      .join("\n");
-
+  // FIXME: history should include:
+  // - the current svg with data- properties indicating the author and turn number of each path element
+  // - the history of the AI's interpretations and reasonings, with reasonings possibly also being in a data- prop for the associated path
+  private buildPrompt(context: GameContext<CurveTurn>): string {
     return `
 You are an expert graphic designer specializing in SVG art using the pen tool. You're playing a collaborative drawing game called "Exquisite Corpse."
 
 DRAWING RULES:
-- Dimensions: ${context.canvasDimensions.width}x${context.canvasDimensions.height} pixels
-- Define your drawing as an <svg> element using only the <path> elements
-- Assume all paths will be drawn with \`stroke="black"\` and \`stroke-width="2"\`
+- Define your addition as a single line of path commands as used in the \`d\` parameter of a \`<path>\` element
+- Only use absolute commands
 
-GAME HISTORY:
-${historyText || "This is the first turn of the game."}
+GAME STATE:
+${renderPathCommandsToSvg(context.history.map(turn => turn.path), context.canvasDimensions)}
 
 TASK:
 Describe what you think the sketch represents or is becoming, draw on top of it to add your contribution to the collaborative artwork, and describe why you chose to add this specific element and how it brings your interpretation to life
@@ -64,18 +73,18 @@ Describe what you think the sketch represents or is becoming, draw on top of it 
 Respond with a JSON object in this exact format:
 {
   "interpretation": "What you think this drawing represents or is becoming",
-  "svg": "Your change in the form of an <svg> element using only <path> elements",
+  "path": "Your addition as a line of path commands",
   "reasoning": "Why you chose to add this specific substantial element and how it brings your interpretation to life"
 }
 `.trim();
   }
 
-  private validateResponse(response: unknown): AICurveResponse {
-    const validatedResponse = AICurveResponseSchema.parse(response);
+  private validateResponse(json: unknown): AICurveResponse {
+    const validatedResponse = AICurveResponseSchema.parse(json);
 
     return {
       interpretation: validatedResponse.interpretation.trim(),
-      curves: validatedResponse.curves as BezierCurve[],
+      path: validatedResponse.path,
       reasoning: validatedResponse.reasoning.trim(),
     };
   }
@@ -92,14 +101,13 @@ Respond with a JSON object in this exact format:
     });
   }
 
-  async generateTurn<Turn extends BaseTurn>(context: GameContext<Turn>): Promise<AICurveResponse> {
+  async generateTurn(context: GameContext<CurveTurn>): Promise<AICurveResponse> {
     try {
       const model = this.client.getGenerativeModel({
         model: "gemini-2.5-flash",
-        systemInstruction: CurveDrawingService.getSystemPrompt(),
       });
 
-      const prompt = this.buildPrompt<Turn>(context);
+      const prompt = this.buildPrompt(context);
 
       // Convert base64 image to proper format for Gemini
       const imageData = context.image.replace('data:image/png;base64,', '');
@@ -117,8 +125,10 @@ Respond with a JSON object in this exact format:
       };
 
       const result = await model.generateContent([prompt, imagePart]);
+      //const result = await model.generateContent(prompt);
       const response = result.response;
       const text = response.text();
+      console.log('text', text)
 
       // Parse JSON response
       let parsedResponse;
@@ -136,16 +146,7 @@ Respond with a JSON object in this exact format:
       // Validate the response structure
       const validatedResponse = this.validateResponse(parsedResponse);
 
-      // Validate and clamp coordinates to canvas bounds
-      const boundedCurves = this.validateCurveBounds(
-        validatedResponse.curves,
-        context.canvasDimensions
-      );
-
-      return {
-        ...validatedResponse,
-        curves: boundedCurves,
-      };
+      return validatedResponse;
 
     } catch (error) {
       console.error('Gemini API error:', error);

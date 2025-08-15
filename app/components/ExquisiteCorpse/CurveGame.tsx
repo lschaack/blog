@@ -2,7 +2,6 @@ import { CanvasDimensions, CurveTurn, GameContext } from '@/app/types/exquisiteC
 import { CurveTurnRenderer } from './CurveTurnRenderer';
 import { renderLinesToBase64, checkImageSizeLimit } from "./imageContext";
 import { getGeminiService } from "./geminiAI";
-import { processAIBezierCurves } from "./lineConversion";
 import { Game, GameProps } from "./Game";
 
 const getAICurveTurn = async (
@@ -11,7 +10,7 @@ const getAICurveTurn = async (
 ): Promise<CurveTurn> => {
   // Step 1: Render current game state to image
   const base64Image = await renderLinesToBase64(
-    history.map(turn => turn.line),
+    history.map(turn => turn.path),
     dimensions.width,
     dimensions.height
   );
@@ -33,15 +32,8 @@ const getAICurveTurn = async (
   const geminiService = getGeminiService();
   const aiResponse = await geminiService.generateCurveTurn(gameContext);
 
-  // Step 5: Convert AI Bezier curves to our line format
-  const convertedLine = processAIBezierCurves(aiResponse.curves);
-
   // Return the turn data (without metadata fields that will be added by reducer)
-  return {
-    line: convertedLine,
-    interpretation: aiResponse.interpretation,
-    reasoning: aiResponse.reasoning
-  } as CurveTurn;
+  return aiResponse as CurveTurn;
 }
 
 export const CurveGame = ({ dimensions }: Pick<GameProps<CurveTurn>, 'dimensions'>) => {

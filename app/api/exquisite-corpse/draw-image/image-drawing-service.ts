@@ -1,23 +1,8 @@
 import { AIImageResponseGeminiFlashPreview, GameContext, BaseTurn } from "@/app/types/exquisiteCorpse";
 import { getBase64FileSizeMb } from "@/app/utils/base64";
+import { GeminiResponseSchema } from "@/app/utils/gemini";
 import { GoogleGenAI, Modality, GenerateContentResponse } from "@google/genai";
 import { z } from "zod";
-
-const ResponsePartSchema = z.object({
-  text: z.string().optional(),
-  inlineData: z.object({
-    data: z.string(),
-    mimeType: z.literal('image/png')
-  }).optional()
-});
-
-const GeminiResponseSchema = z.object({
-  candidates: z.array(z.object({
-    content: z.object({
-      parts: z.array(ResponsePartSchema)
-    }).optional()
-  })).optional()
-});
 
 const AIImageResponseSchema = z.object({
   interpretation: z.string().min(1, "Interpretation cannot be empty"),
@@ -44,16 +29,16 @@ DRAWING RULES:
 
 GAME HISTORY:
 ${context.history.map((turn, index) => {
-  const interpretation = 'interpretation' in turn ? turn.interpretation : undefined;
-  return `On turn ${index + 1}, you thought "${interpretation || 'something interesting'}"`;
-}).join('\n')}
+      const interpretation = 'interpretation' in turn ? turn.interpretation : undefined;
+      return `On turn ${index + 1}, you thought "${interpretation || 'something interesting'}"`;
+    }).join('\n')}
 `.trim();
   }
 
   private parseAndValidateResponse(response: GenerateContentResponse): AIImageResponseGeminiFlashPreview {
-    const validatedResponse = GeminiResponseSchema.parse(response);
-    
-    const parts = validatedResponse.candidates?.[0]?.content?.parts;
+    const geminiResponse = GeminiResponseSchema.parse(response);
+
+    const parts = geminiResponse.candidates?.[0]?.content?.parts;
 
     if (!parts || !Array.isArray(parts)) {
       throw new Error('Invalid AI response format');

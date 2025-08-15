@@ -1,4 +1,7 @@
-import { Line, PathCommand, isMoveToCommand, isMoveToRelativeCommand, isLineToCommand, isLineToRelativeCommand, isCubicBezierCommand, isCubicBezierRelativeCommand, isQuadraticBezierCommand, isQuadraticBezierRelativeCommand, isClosePathCommand } from "@/app/types/exquisiteCorpse";
+import { PathCommand } from "parse-svg-path";
+
+import { Line } from "@/app/types/exquisiteCorpse";
+import { isClosePathCommand, isCubicBezierCommand, isCubicBezierRelativeCommand, isLineToCommand, isLineToRelativeCommand, isMoveToCommand, isMoveToRelativeCommand, isQuadraticBezierCommand, isQuadraticBezierRelativeCommand } from "@/app/utils/svg";
 import { ensureStartsWith } from "@/app/utils/string";
 
 // New function to draw parsed path commands

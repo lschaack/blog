@@ -26,7 +26,7 @@ export const CurveTurnRenderer = ({
   // Combined display lines: completed turns + current turn line
   const allDisplayLines = useMemo(() => {
     return displayTurns
-      .map(turn => turn.line)
+      .map(turn => turn.path)
       .concat(currentTurn.currentLine);
   }, [displayTurns, currentTurn.currentLine]);
 
@@ -42,7 +42,7 @@ export const CurveTurnRenderer = ({
     // For curve turns, the turn data includes the line
     // For other turn types, this would be different
     const turnData = {
-      line: currentTurn.currentLine[0]
+      path: currentTurn.currentLine[0]
     } as Omit<CurveTurn, keyof BaseTurn>;
 
     handleEndTurn(turnData);

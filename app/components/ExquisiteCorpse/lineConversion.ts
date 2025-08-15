@@ -1,4 +1,5 @@
-import { BezierCurve, CanvasDimensions, Line, Point, ParsedPath, PathCommand } from '@/app/types/exquisiteCorpse';
+import { BezierCurve, CanvasDimensions, Line, Point } from '@/app/types/exquisiteCorpse';
+import { ParsedPath, PathCommand } from 'parse-svg-path';
 
 // Utility functions for converting between formats
 
