@@ -1,4 +1,4 @@
-import { AICurveResponse, BezierCurve, CanvasDimensions, GameContext, Point } from "@/app/types/exquisiteCorpse";
+import { AICurveResponse, BezierCurve, CanvasDimensions, GameContext, Point, BaseTurn } from "@/app/types/exquisiteCorpse";
 import { getBase64FileSizeMb } from "@/app/utils/base64";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import fs from 'fs';
@@ -32,15 +32,17 @@ export class CurveDrawingService {
     this.client = new GoogleGenerativeAI(apiKey);
   }
 
-  private buildPrompt(context: GameContext): string {
+  private buildPrompt<Turn extends BaseTurn>(context: GameContext<Turn>): string {
     const historyText = context.history
-      .map(turn => {
+      .map((turn, index) => {
         if (turn.author === "user") {
           // FIXME: Should include the user's line at each turn as well as the full set of paths in the current state
           // ^ and also I guess the image?
-          return `Turn ${turn.turn}: User drew a line`;
+          return `Turn ${index + 1}: User drew a line`;
         } else {
-          return `Turn ${turn.turn}: AI saw "${turn.interpretation}" and ${turn.reasoning}`;
+          const interpretation = 'interpretation' in turn ? turn.interpretation : undefined;
+          const reasoning = 'reasoning' in turn ? turn.reasoning : undefined;
+          return `Turn ${index + 1}: AI saw "${interpretation || 'the drawing'}" and ${reasoning || 'added their contribution'}`;
         }
       })
       .join("\n");
@@ -90,14 +92,14 @@ Respond with a JSON object in this exact format:
     });
   }
 
-  async generateTurn(context: GameContext): Promise<AICurveResponse> {
+  async generateTurn<Turn extends BaseTurn>(context: GameContext<Turn>): Promise<AICurveResponse> {
     try {
       const model = this.client.getGenerativeModel({
         model: "gemini-2.5-flash",
         systemInstruction: CurveDrawingService.getSystemPrompt(),
       });
 
-      const prompt = this.buildPrompt(context);
+      const prompt = this.buildPrompt<Turn>(context);
 
       // Convert base64 image to proper format for Gemini
       const imageData = context.image.replace('data:image/png;base64,', '');

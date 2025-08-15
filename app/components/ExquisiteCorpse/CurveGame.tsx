@@ -1,6 +1,6 @@
 import { CanvasDimensions, CurveTurn, GameContext } from '@/app/types/exquisiteCorpse';
 import { CurveTurnRenderer } from './CurveTurnRenderer';
-import { renderLinesToBase64, createGameContextSummary, checkImageSizeLimit } from "./imageContext";
+import { renderLinesToBase64, checkImageSizeLimit } from "./imageContext";
 import { getGeminiService } from "./geminiAI";
 import { processAIBezierCurves } from "./lineConversion";
 import { Game, GameProps } from "./Game";
@@ -22,11 +22,11 @@ const getAICurveTurn = async (
   }
 
   // Step 3: Create game context
-  const gameContext: GameContext = {
+  const gameContext: GameContext<CurveTurn> = {
     image: base64Image,
     canvasDimensions: dimensions,
     currentTurn: history.length + 1,
-    history: createGameContextSummary(history)
+    history: history
   };
 
   // Step 4: Call AI service

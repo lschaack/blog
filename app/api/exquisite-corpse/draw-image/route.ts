@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ImageDrawingService } from './image-drawing-service';
-import { GameContext } from '@/app/types/exquisiteCorpse';
+import { GameContext, BaseTurn } from '@/app/types/exquisiteCorpse';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const context: GameContext = await request.json();
+    const context: GameContext<BaseTurn> = await request.json();
 
     // Validate request body
     if (!context || !context.image || !context.canvasDimensions) {
@@ -22,8 +22,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // For draw-image route, create a context with only the latest image to avoid
+    // sending an increasing number of images back and forth as turns are added
+    const imageOnlyContext: GameContext<BaseTurn> = {
+      ...context,
+      image: context.image, // Only pass the latest image
+    };
+
     const imageService = new ImageDrawingService(apiKey);
-    const response = await imageService.generateTurn(context);
+    const response = await imageService.generateTurn<BaseTurn>(imageOnlyContext);
 
     return NextResponse.json(response);
   } catch (error) {

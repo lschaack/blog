@@ -5,7 +5,7 @@ import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { useUndoRedo } from './useUndoRedo';
 import { renderLinesToBase64 } from './imageContext';
-import { BezierCurve, Line, PathCommand } from "@/app/types/exquisiteCorpse";
+import { BezierCurve, Line } from "@/app/types/exquisiteCorpse";
 import { parsedPathToBezierCurves, bezierCurvesToParsedPath } from './lineConversion';
 
 export const TrainingInterface = () => {

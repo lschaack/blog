@@ -1,4 +1,4 @@
-import { AIImageResponseGeminiFlashPreview, GameContext } from "@/app/types/exquisiteCorpse";
+import { AIImageResponseGeminiFlashPreview, GameContext, BaseTurn } from "@/app/types/exquisiteCorpse";
 import { getBase64FileSizeMb } from "@/app/utils/base64";
 import { GoogleGenAI, Modality, GenerateContentResponse } from "@google/genai";
 import { z } from "zod";
@@ -33,7 +33,7 @@ export class ImageDrawingService {
     this.client = new GoogleGenAI({ apiKey });
   }
 
-  private buildPrompt(context: GameContext): string {
+  private buildPrompt<Turn extends BaseTurn>(context: GameContext<Turn>): string {
     return `
 You are an AI artist participating in an "exquisite corpse" collaborative drawing game. Describe what you think the sketch represents or is becoming, draw on top of it to add your contribution to the collaborative artwork, and describe why you chose to add this specific element and how it brings your interpretation to life
 
@@ -43,7 +43,10 @@ DRAWING RULES:
 - Don't change the size of the image
 
 GAME HISTORY:
-${context.history.map(turn => `On turn ${turn.turn}, you thought "${turn.interpretation}"`).join('\n')}
+${context.history.map((turn, index) => {
+  const interpretation = 'interpretation' in turn ? turn.interpretation : undefined;
+  return `On turn ${index + 1}, you thought "${interpretation || 'something interesting'}"`;
+}).join('\n')}
 `.trim();
   }
 
@@ -77,9 +80,9 @@ ${context.history.map(turn => `On turn ${turn.turn}, you thought "${turn.interpr
     return AIImageResponseSchema.parse(result);
   }
 
-  async generateTurn(context: GameContext): Promise<AIImageResponseGeminiFlashPreview> {
+  async generateTurn<Turn extends BaseTurn>(context: GameContext<Turn>): Promise<AIImageResponseGeminiFlashPreview> {
     try {
-      const prompt = this.buildPrompt(context);
+      const prompt = this.buildPrompt<Turn>(context);
 
       // Convert base64 image to proper format for Gemini
       const imageData = context.image.replace('data:image/png;base64,', '');

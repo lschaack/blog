@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { CurveDrawingService } from './curve-drawing-service';
-import { GameContext } from '@/app/types/exquisiteCorpse';
+import { GameContext, BaseTurn } from '@/app/types/exquisiteCorpse';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const context: GameContext = await request.json();
+    const context: GameContext<BaseTurn> = await request.json();
 
     // Validate request body
     if (!context || !context.image || !context.canvasDimensions) {
@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     const curveService = new CurveDrawingService(apiKey);
-    const response = await curveService.generateTurn(context);
+    const response = await curveService.generateTurn<BaseTurn>(context);
 
     return NextResponse.json(response);
   } catch (error) {

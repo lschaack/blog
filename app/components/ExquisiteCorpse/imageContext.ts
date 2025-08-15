@@ -96,19 +96,6 @@ export const renderLinesToBase64 = async (
   return canvas.toDataURL('image/png', 0.9);
 };
 
-/**
- * Creates a lightweight game context summary for AI
- * @param turns Array of completed turns
- * @returns Simplified history for AI context
- */
-export const createGameContextSummary = (turns: { author: "user" | "ai"; interpretation?: string; reasoning?: string }[]) => {
-  return turns.map((turn, index) => ({
-    turn: index + 1,
-    author: turn.author as "user" | "ai",
-    interpretation: turn.interpretation,
-    reasoning: turn.reasoning,
-  }));
-};
 
 /**
  * Validates that an image string is a valid base64 PNG

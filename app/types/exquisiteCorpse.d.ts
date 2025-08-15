@@ -130,16 +130,11 @@ export type TurnRendererProps<Turn extends BaseTurn> = {
 
 export type TurnRenderer<Turn extends BaseTurn> = ComponentType<TurnRendererProps<Turn>>;
 
-export type GameContext = {
+export type GameContext<Turn extends BaseTurn> = {
   image: string; // base64 encoded PNG
   canvasDimensions: CanvasDimensions;
   currentTurn: number;
-  history: {
-    turn: number;
-    author: "user" | "ai";
-    interpretation?: string;
-    reasoning?: string;
-  }[];
+  history: Turn[];
 };
 
 export type AIImageResponseGeminiFlashPreview = {

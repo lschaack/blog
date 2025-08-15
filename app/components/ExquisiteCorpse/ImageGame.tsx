@@ -33,15 +33,11 @@ const getAIImageTurn = async (
   }
 
   // Create game context with just the image context
-  const gameContext: GameContext = {
+  const gameContext: GameContext<ImageGeminiFlashPreviewTurn> = {
     image: baseImage,
     canvasDimensions: dimensions,
     currentTurn: history.length + 1,
-    history: history.map(turn => ({
-      turn: turn.number,
-      author: turn.author,
-      interpretation: turn.interpretation,
-    }))
+    history: history
   };
 
   // Call AI service for image-based turn
