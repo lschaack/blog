@@ -4,6 +4,7 @@ import { renderPathCommandsToSvg } from "@/app/utils/svg";
 import { GoogleGenAI, Modality } from "@google/genai";
 import { z } from "zod";
 import parseSvgPath from "parse-svg-path";
+import { jsonrepair } from 'jsonrepair';
 
 const AICurveResponseSchema = z.object({
   interpretation: z.string().min(1, "Interpretation cannot be empty"),
@@ -121,16 +122,17 @@ Respond with a JSON object in this exact format:
       if (data) console.log('got data', data);
 
       // Parse JSON response
+      let json;
       let parsedResponse;
       try {
-        // Extract JSON from response text (in case there's extra text)
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          throw new Error('No JSON found in response');
-        }
-        parsedResponse = JSON.parse(jsonMatch[0]);
+        json = jsonrepair(text);
+      } catch (repairError) {
+        throw new Error(`Received unrepairable JSON from AI response: ${text}\nError: ${repairError}`);
+      }
+      try {
+        parsedResponse = JSON.parse(json);
       } catch (parseError) {
-        throw new Error(`Failed to parse AI response as JSON: ${parseError}`);
+        throw new Error(`Somehow failed to parse repaired json: ${parseError}\nError:${parseError}`);
       }
 
       // Validate the response structure

@@ -1,6 +1,5 @@
 import { AIImageResponseGeminiFlashPreview, GameContext, BaseTurn } from "@/app/types/exquisiteCorpse";
 import { getBase64FileSizeMb } from "@/app/utils/base64";
-import { GeminiResponseSchema } from "@/app/utils/gemini";
 import { GoogleGenAI, Modality, GenerateContentResponse } from "@google/genai";
 import { z } from "zod";
 
@@ -36,9 +35,7 @@ ${context.history.map((turn, index) => {
   }
 
   private parseAndValidateResponse(response: GenerateContentResponse): AIImageResponseGeminiFlashPreview {
-    const geminiResponse = GeminiResponseSchema.parse(response);
-
-    const parts = geminiResponse.candidates?.[0]?.content?.parts;
+    const parts = response.candidates?.[0]?.content?.parts;
 
     if (!parts || !Array.isArray(parts)) {
       throw new Error('Invalid AI response format');
