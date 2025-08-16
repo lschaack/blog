@@ -19,7 +19,7 @@ class GeminiAIService {
   }
 
   async generateCurveTurn(context: GameContext<CurveTurn>): Promise<AICurveResponse> {
-    return this.extractJson(fetch('/api/exquisite-corpse/draw-curve', {
+    return this.extractJson(fetch('/api/exquisite-corpse/draw-curve-gpt5', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
