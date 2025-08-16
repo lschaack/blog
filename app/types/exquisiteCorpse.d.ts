@@ -23,6 +23,7 @@ export type CurveTurn = BaseTurn & {
   interpretation?: string; // AI's interpretation of what the drawing represents
   reasoning?: string; // AI's reasoning for adding their line
   image?: string;
+  title?: string;
 };
 
 // Turn variant with base64 image
@@ -38,6 +39,12 @@ export type Turn = CurveTurn | ImageGeminiFlashPreviewTurn;
 export type SerializableGameState<T extends BaseTurn = Turn> = {
   turns: T[];
 };
+
+export type ExportedGameState<T extends BaseTurn = Turn> = {
+  version: 1,
+  timestamp: number,
+  gameState: SerializableGameState<T>,
+}
 
 // Full game state including UI state
 export type GameState<T extends BaseTurn = Turn> = SerializableGameState<T> & {
@@ -82,5 +89,6 @@ export type AICurveResponse = {
   path: ParsedPath;
   reasoning: string;
   image?: string;
+  title: string;
 };
 

@@ -13,13 +13,6 @@ export const useCurrentTurn = () => {
     canRedo,
   } = useUndoRedo<Line[]>([]);
 
-  // Line editing - only allow one line per turn
-  const setLine = useCallback((newLines: Line[]) => {
-    // Take only the last line (one line per turn)
-    const singleLine = newLines.slice(-1);
-    setCurrentLine(singleLine);
-  }, [setCurrentLine]);
-
   // Restore current line from JSON
   const restoreCurrentLine = useCallback((newCurrentLine: Line[]) => {
     resetCurrentTurn();
@@ -43,7 +36,7 @@ export const useCurrentTurn = () => {
     redo,
 
     // Line editing
-    setLine,
+    setLine: setCurrentLine,
 
     // Turn lifecycle
     resetCurrentTurn,

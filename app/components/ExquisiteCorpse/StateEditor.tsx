@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { BaseTurn, SerializableGameState } from "@/app/types/exquisiteCorpse";
+import { BaseTurn, ExportedGameState, SerializableGameState } from "@/app/types/exquisiteCorpse";
 import { Button } from '@/app/components/Button';
 
 export const StateEditor = <T extends BaseTurn>() => {
@@ -27,41 +27,14 @@ export const StateEditor = <T extends BaseTurn>() => {
 
   const handleSyncFromJSON = useCallback(() => {
     try {
-      const parsedState = JSON.parse(jsonText) as SerializableGameState<T>;
+      const parsedState = JSON.parse(jsonText) as SerializableGameState<T> | ExportedGameState<T>;
 
-      // Validate structure
-      if (!parsedState.turns || !Array.isArray(parsedState.turns)) {
-        throw new Error("Invalid game state: 'turns' must be an array");
-      }
-
-      // Validate turn structure
-      parsedState.turns.forEach((turn, index) => {
-        if (!turn.author || !['user', 'ai'].includes(turn.author)) {
-          throw new Error(`Turn ${index + 1}: 'author' must be 'user' or 'ai'`);
-        }
-        if (typeof turn.number !== 'number') {
-          throw new Error(`Turn ${index + 1}: 'number' must be a number`);
-        }
-        if (!turn.timestamp || typeof turn.timestamp !== 'string') {
-          throw new Error(`Turn ${index + 1}: 'timestamp' must be a string`);
-        }
-        
-        // Validate specific turn types
-        if ('line' in turn) {
-          if (!turn.line || !Array.isArray(turn.line)) {
-            throw new Error(`Turn ${index + 1}: 'line' must be an array`);
-          }
-        } else if ('image' in turn) {
-          if (!turn.image || typeof turn.image !== 'string') {
-            throw new Error(`Turn ${index + 1}: 'image' must be a string`);
-          }
-        } else {
-          throw new Error(`Turn ${index + 1}: must have either 'line' or 'image' property`);
-        }
-      });
+      const restoredState = 'gameState' in parsedState
+        ? parsedState.gameState
+        : parsedState;
 
       // Dispatch restore action
-      gameState.dispatch({ type: "restore", payload: parsedState });
+      gameState.dispatch({ type: "restore", payload: restoredState });
       setJsonError(null);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Invalid JSON format";
@@ -80,9 +53,8 @@ export const StateEditor = <T extends BaseTurn>() => {
       <textarea
         value={jsonText}
         onChange={(e) => setJsonText(e.target.value)}
-        className={`w-full h-64 p-2 font-mono text-sm border rounded resize-y ${
-          jsonError ? 'border-red-500 bg-red-50' : 'border-gray-300'
-        }`}
+        className={`w-full h-64 p-2 font-mono text-sm border rounded resize-y ${jsonError ? 'border-red-500 bg-red-50' : 'border-gray-300'
+          }`}
         placeholder="Game state will appear here..."
       />
       {jsonError && (

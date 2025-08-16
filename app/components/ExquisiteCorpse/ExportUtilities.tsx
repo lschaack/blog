@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useGameContext } from "./GameContext";
-import { BaseTurn, RenderPNG } from "@/app/types/exquisiteCorpse";
+import { BaseTurn, ExportedGameState, RenderPNG } from "@/app/types/exquisiteCorpse";
 import { Button } from '@/app/components/Button';
 import { ensureStartsWith } from "@/app/utils/string";
 
@@ -14,7 +14,7 @@ const exportToPNG = (base64: string): void => {
 
 // JSON export utility
 const exportToJSON = <T extends BaseTurn>(gameState: { turns: T[] }): void => {
-  const exportData = {
+  const exportData: ExportedGameState<T> = {
     version: 1,
     timestamp: Date.now(),
     gameState: {

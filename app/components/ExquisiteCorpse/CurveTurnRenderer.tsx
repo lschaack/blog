@@ -44,7 +44,7 @@ export const CurveTurnRenderer = ({
     // For curve turns, the turn data includes the line
     // For other turn types, this would be different
     const turnData = {
-      path: currentTurn.currentLine[0]
+      path: currentTurn.currentLine.flat()
     } as Omit<CurveTurn, keyof BaseTurn>;
 
     handleEndTurn(turnData);
@@ -97,6 +97,9 @@ export const CurveTurnRenderer = ({
           <div className="font-light">
             Turn {prevTurn.number} - {prevTurn.author === "user" ? "You" : "AI"}
           </div>
+          {prevTurn.author === "ai" && (
+            <h2 className="font-semibold font-geist-mono text-xl [font-variant:all-small-caps]">{prevTurn.title}</h2>
+          )}
           {prevTurn.interpretation && (
             <div className="text-gray-600 font-geist-mono">
               &ldquo;{prevTurn.interpretation}&rdquo;
@@ -108,6 +111,7 @@ export const CurveTurnRenderer = ({
             </div>
           )}
           {prevTurn.image && (
+            // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
             <img src={ensureStartsWith(prevTurn.image, 'data:image/png;base64,')} />
           )}
         </div>

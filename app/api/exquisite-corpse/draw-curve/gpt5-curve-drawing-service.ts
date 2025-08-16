@@ -30,6 +30,7 @@ const AICurveResponseSchema = z.object({
       return parseSvgPath(path);
     }),
   reasoning: z.string().min(1, "Reasoning cannot be empty"),
+  title: z.string().min(1, "Title cannot be empty"),
 });
 
 export class GPT5CurveDrawingService {
@@ -59,6 +60,7 @@ Respond with a JSON object in this exact format:
   "interpretation": "One to two sentences describing what you think this drawing represents or is becoming",
   "path": "Your addition as a line of path commands",
   "reasoning": "One to two sentences describing why you chose to add this specific substantial element and how it brings your interpretation to life",
+  "title": "An appellation befitting a masterpiece",
 }
 `.trim();
   }
@@ -70,6 +72,7 @@ Respond with a JSON object in this exact format:
       interpretation: validatedResponse.interpretation.trim(),
       path: validatedResponse.path,
       reasoning: validatedResponse.reasoning.trim(),
+      title: validatedResponse.title.trim(),
     };
   }
 
