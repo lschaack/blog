@@ -57,6 +57,7 @@ export const TrainingInterface = () => {
             interpretation: interpretation.trim(),
             reasoning: reasoning.trim(),
             path: lastLine.map(command => command.join(' ')).join(' '),
+            title: exampleName.trim(),
           }
         }
       };

@@ -9,6 +9,7 @@ export const StateEditor = <T extends BaseTurn>() => {
   const gameState = useGameContext<T>();
   const [jsonText, setJsonText] = useState<string>("");
   const [jsonError, setJsonError] = useState<string | null>(null);
+  const [isDragOver, setIsDragOver] = useState<boolean>(false);
 
   // Create serializable game state for JSON editor
   const serializableGameState: SerializableGameState<T> = useMemo(() => ({
@@ -47,15 +48,58 @@ export const StateEditor = <T extends BaseTurn>() => {
     setJsonError(null);
   }, [gameStateJSON]);
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const jsonFile = files.find(file => file.type === 'application/json' || file.name.endsWith('.json'));
+
+    if (!jsonFile) {
+      setJsonError('Please drop a JSON file');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string;
+        setJsonText(content);
+        setJsonError(null);
+      } catch (error) {
+        setJsonError('Failed to read file');
+      }
+    };
+    reader.readAsText(jsonFile);
+  }, []);
+
   return (
     <div className="mt-6 p-4 bg-gray-50 rounded">
       <h3 className="font-semibold mb-2">Game State (JSON)</h3>
       <textarea
         value={jsonText}
         onChange={(e) => setJsonText(e.target.value)}
-        className={`w-full h-64 p-2 font-mono text-sm border rounded resize-y ${jsonError ? 'border-red-500 bg-red-50' : 'border-gray-300'
-          }`}
-        placeholder="Game state will appear here..."
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`w-full h-64 p-2 font-mono text-sm border rounded resize-y transition-colors ${
+          jsonError 
+            ? 'border-red-500 bg-red-50' 
+            : isDragOver 
+              ? 'border-blue-500 bg-blue-50' 
+              : 'border-gray-300'
+        }`}
+        placeholder="Game state will appear here... (or drag and drop a JSON file)"
       />
       {jsonError && (
         <div className="mt-2 text-sm text-red-600 bg-red-100 p-2 rounded">
