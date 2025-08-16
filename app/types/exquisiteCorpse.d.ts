@@ -22,6 +22,7 @@ export type CurveTurn = BaseTurn & {
   path: Line;
   interpretation?: string; // AI's interpretation of what the drawing represents
   reasoning?: string; // AI's reasoning for adding their line
+  image?: string;
 };
 
 // Turn variant with base64 image
@@ -80,5 +81,6 @@ export type AICurveResponse = {
   interpretation: string;
   path: ParsedPath;
   reasoning: string;
+  image?: string;
 };
 

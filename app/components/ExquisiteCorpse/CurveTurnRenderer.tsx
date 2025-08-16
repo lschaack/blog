@@ -5,6 +5,7 @@ import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn } fr
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
+import { ensureStartsWith } from "@/app/utils/string";
 
 type CurveTurnRendererProps = {
   handleEndTurn: (turnData: Omit<CurveTurn, keyof BaseTurn>) => void;
@@ -93,7 +94,7 @@ export const CurveTurnRenderer = ({
 
       {prevTurn && (
         <div className="space-y-2 bg-deep-50 rounded-xl p-4">
-          <div className="font-medium">
+          <div className="font-light">
             Turn {prevTurn.number} - {prevTurn.author === "user" ? "You" : "AI"}
           </div>
           {prevTurn.interpretation && (
@@ -105,6 +106,9 @@ export const CurveTurnRenderer = ({
             <div className="text-gray-500 font-geist-mono text-sm italic">
               &ldquo;{prevTurn.reasoning}&rdquo;
             </div>
+          )}
+          {prevTurn.image && (
+            <img src={ensureStartsWith(prevTurn.image, 'data:image/png;base64,')} />
           )}
         </div>
       )}

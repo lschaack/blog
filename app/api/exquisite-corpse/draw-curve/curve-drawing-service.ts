@@ -1,9 +1,7 @@
-import { AICurveResponse, BezierCurve, CanvasDimensions, GameContext, Point, CurveTurn } from "@/app/types/exquisiteCorpse";
+import { AICurveResponse, GameContext, CurveTurn } from "@/app/types/exquisiteCorpse";
 import { getBase64FileSizeMb } from "@/app/utils/base64";
 import { renderPathCommandsToSvg } from "@/app/utils/svg";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import fs from 'fs';
-import path from 'path';
+import { GoogleGenAI, Modality } from "@google/genai";
 import { z } from "zod";
 import parseSvgPath from "parse-svg-path";
 
@@ -30,27 +28,18 @@ const AICurveResponseSchema = z.object({
 
       return parseSvgPath(path);
     }),
-  reasoning: z.string().min(1, "Reasoning cannot be empty")
+  reasoning: z.string().min(1, "Reasoning cannot be empty"),
 });
 
 // FIXME:
 // - validate input as curve turn
 // - validate output against schema
 export class CurveDrawingService {
-  private client: GoogleGenerativeAI;
-  private static systemPrompt: string | null = null;
+  private client: GoogleGenAI;
   private static MAX_IMG_SIZE_MB = 3;
 
-  private static getSystemPrompt(): string {
-    if (CurveDrawingService.systemPrompt === null) {
-      const promptPath = path.join(process.cwd(), 'app', 'api', 'exquisite-corpse', 'draw-curve', 'systemPrompt.txt');
-      CurveDrawingService.systemPrompt = fs.readFileSync(promptPath, 'utf8');
-    }
-    return CurveDrawingService.systemPrompt;
-  }
-
   constructor(apiKey: string) {
-    this.client = new GoogleGenerativeAI(apiKey);
+    this.client = new GoogleGenAI({ apiKey });
   }
 
   // FIXME: history should include:
@@ -64,6 +53,13 @@ DRAWING RULES:
 - Define your addition as a single line of path commands as used in the \`d\` parameter of a \`<path>\` element
 - Only use absolute commands
 
+PLANNING:
+- Before writing any path commands, plan your addition by modifying the rasterized image with these rules, but don't send it back:
+    - Only use 2px black strokes against the white background
+    - Draw with a single line, think "don't lift the pen"
+    - Don't change the size of the image
+- After planning, use as many curves as necessary to approximate your changes
+
 GAME STATE:
 ${renderPathCommandsToSvg(context.history.map(turn => turn.path), context.canvasDimensions)}
 
@@ -72,9 +68,9 @@ Describe what you think the sketch represents or is becoming, draw on top of it 
 
 Respond with a JSON object in this exact format:
 {
-  "interpretation": "What you think this drawing represents or is becoming",
+  "interpretation": "One to two sentences describing what you think this drawing represents or is becoming",
   "path": "Your addition as a line of path commands",
-  "reasoning": "Why you chose to add this specific substantial element and how it brings your interpretation to life"
+  "reasoning": "One to two sentences describing why you chose to add this specific substantial element and how it brings your interpretation to life",
 }
 `.trim();
   }
@@ -89,24 +85,8 @@ Respond with a JSON object in this exact format:
     };
   }
 
-  private validateCurveBounds(
-    curves: BezierCurve[],
-    bounds: CanvasDimensions
-  ): BezierCurve[] {
-    return curves.map(curve => {
-      return curve.map(([x, y]) => [
-        Math.max(0, Math.min(bounds.width, Math.round(x))),
-        Math.max(0, Math.min(bounds.height, Math.round(y)))
-      ] as Point) as BezierCurve;
-    });
-  }
-
   async generateTurn(context: GameContext<CurveTurn>): Promise<AICurveResponse> {
     try {
-      const model = this.client.getGenerativeModel({
-        model: "gemini-2.5-flash",
-      });
-
       const prompt = this.buildPrompt(context);
 
       // Convert base64 image to proper format for Gemini
@@ -124,11 +104,21 @@ Respond with a JSON object in this exact format:
         }
       };
 
-      const result = await model.generateContent([prompt, imagePart]);
-      //const result = await model.generateContent(prompt);
-      const response = result.response;
-      const text = response.text();
-      console.log('text', text)
+      const result = await this.client.models.generateContent({
+        //model: "gemini-2.5-flash",
+        model: "gemini-2.0-flash-preview-image-generation",
+        contents: [prompt, imagePart],
+        config: {
+          responseModalities: [Modality.TEXT, Modality.IMAGE],
+        }
+      });
+
+      const text = result.text;
+      if (!text) throw new Error('No text part of model response');
+      else console.log('got response text:', text)
+
+      const data = result.data;
+      if (data) console.log('got data', data);
 
       // Parse JSON response
       let parsedResponse;
@@ -145,6 +135,7 @@ Respond with a JSON object in this exact format:
 
       // Validate the response structure
       const validatedResponse = this.validateResponse(parsedResponse);
+      if (data) validatedResponse.image = data.trim();
 
       return validatedResponse;
 
