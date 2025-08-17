@@ -31,6 +31,7 @@
     "fit-curve": "^0.2.0",
     "graphql-tag": "^2.12.6",
     "highlight.js": "^11.11.1",
+    "ioredis": "^5.7.0",
     "jsonrepair": "^3.13.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.513.0",
@@ -41,7 +42,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "simplex-noise": "^4.0.3",
-    "zod": "^4.0.17"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@0no-co/graphqlsp": "^1.12.16",
