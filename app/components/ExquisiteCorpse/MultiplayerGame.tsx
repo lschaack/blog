@@ -136,43 +136,52 @@ export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
   return (
     <div className="flex flex-col gap-4 max-w-[512px] mx-auto">
       {/* Game Info Header */}
-      <div className="p-4 bg-gray-50 rounded-xl">
-        <div className="flex justify-between items-center mb-2">
+      <div className="p-4 bg-gray-50 rounded-xl flex justify-between">
+        {/* Info */}
+        <div className="flex-1">
           <div className="font-semibold">Game {sessionId}</div>
-          <Button
-            label="Leave"
-            onClick={handleLeaveGame}
-            className="text-sm"
-          />
-        </div>
 
-        <div className="text-sm space-y-1">
-          <div>Type: {gameState.type === 'ai' ? 'AI Game' : 'Multiplayer'}</div>
-          <div>Players: {gameState.players.filter(p => p.id !== 'ai').length}</div>
-          <div>Your status: {isActivePlayer ? 'Active Player' : 'Viewer'}</div>
-          {!isConnected && <div className="text-red-600">Disconnected</div>}
-        </div>
+          <div className="text-sm space-y-1">
+            <div>Type: {gameState.type === 'ai' ? 'AI Game' : 'Multiplayer'}</div>
+            <div>Players: {gameState.players.filter(p => p.id !== 'ai').length}</div>
+            <div>Your status: {isActivePlayer ? 'Active Player' : 'Viewer'}</div>
+            {!isConnected && <div className="text-red-600">Disconnected</div>}
+          </div>
 
-        {/* Players List */}
-        <div className="mt-3">
-          <div className="text-xs font-medium text-gray-600 mb-1">Players:</div>
-          <div className="flex flex-wrap gap-2">
-            {gameState.players.filter(p => p.id !== 'ai').map(player => (
-              <span
-                key={player.id}
-                className={`px-2 py-1 rounded text-xs ${player.id === gameState.currentPlayer
+          {/* Players List */}
+          <div className="mt-3">
+            <div className="text-xs font-medium text-gray-600 mb-1">Players:</div>
+            <div className="flex flex-wrap gap-2">
+              {gameState.players.filter(p => p.id !== 'ai').map(player => (
+                <span
+                  key={player.id}
+                  className={`px-2 py-1 rounded text-xs ${player.id === gameState.currentPlayer
                     ? 'bg-blue-100 text-blue-800'
                     : player.isActive
                       ? 'bg-green-100 text-green-800'
                       : 'bg-gray-100 text-gray-600'
-                  }`}
-              >
-                {player.name}
-                {player.id === playerId && ' (you)'}
-                {player.id === gameState.currentPlayer && ' ⭐'}
-              </span>
-            ))}
+                    }`}
+                >
+                  {player.name}
+                  {player.id === playerId && ' (you)'}
+                  {player.id === gameState.currentPlayer && ' ⭐'}
+                </span>
+              ))}
+            </div>
           </div>
+        </div>
+        <div className="flex-1 flex flex-col justify-around">
+          <Button
+            label="Download Game JSON"
+            onClick={handleDownloadJSON}
+            disabled={!gameState || gameState.turns.length === 0}
+            friendly
+          />
+          <Button
+            label="Leave"
+            onClick={handleLeaveGame}
+            danger
+          />
         </div>
       </div>
 
@@ -203,14 +212,6 @@ export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
         canvasDimensions={dimensions}
         turns={gameState.turns}
         currentTurnIndex={gameState.turns.length}
-      />
-
-      {/* Download JSON Button */}
-      <Button
-        label="Download Game JSON"
-        onClick={handleDownloadJSON}
-        className="w-full"
-        disabled={!gameState || gameState.turns.length === 0}
       />
     </div>
   );
