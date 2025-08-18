@@ -28,8 +28,6 @@ export const generateAICurveTurn = async (
     history: history
   };
 
-  console.log('sending game context', gameContext)
-
   // Step 4: Call AI service directly
   const apiKey = process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) {

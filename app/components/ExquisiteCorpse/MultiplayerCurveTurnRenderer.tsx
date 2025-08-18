@@ -42,16 +42,7 @@ export const MultiplayerCurveTurnRenderer = ({
 
   // Handle adding lines from Sketchpad
   const handleAddLine = useCallback((newLines: Line[]) => {
-    currentTurn.setLine(
-      // round every number to minimize characters in redis and prompt
-      newLines.map(line => (
-        line.map(cmd => (
-          cmd.map(val => (
-            typeof val === 'number' ? Math.round(val) : val
-          )) as PathCommand
-        ))
-      ))
-    );
+    currentTurn.setLine(newLines);
   }, [currentTurn]);
 
   // Handle ending turn

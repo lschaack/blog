@@ -3,6 +3,7 @@ import { useGameContext } from "./GameContext";
 import { BaseTurn, ExportedGameState, RenderPNG } from "@/app/types/exquisiteCorpse";
 import { Button } from '@/app/components/Button';
 import { ensureStartsWith } from "@/app/utils/string";
+import { downloadBlob } from "@/app/utils/blob";
 
 // PNG export utility
 const exportToPNG = (base64: string): void => {
@@ -25,14 +26,7 @@ const exportToJSON = <T extends BaseTurn>(gameState: { turns: T[] }): void => {
   const jsonString = JSON.stringify(exportData, null, 2);
   const blob = new Blob([jsonString], { type: 'application/json' });
 
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `exquisite-corpse-${Date.now()}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  downloadBlob(blob, `exquisite-corpse-${Date.now()}.json`);
 };
 
 type ExportUtilitiesProps<Turn extends BaseTurn> = {

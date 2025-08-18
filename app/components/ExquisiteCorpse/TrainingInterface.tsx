@@ -6,6 +6,7 @@ import { Button } from '@/app/components/Button';
 import { useUndoRedo } from './useUndoRedo';
 import { Line } from "@/app/types/exquisiteCorpse";
 import { renderPathCommandsToSvg } from '@/app/utils/svg';
+import { downloadBlob } from "@/app/utils/blob";
 
 export const TrainingInterface = () => {
   // Form state
@@ -65,14 +66,8 @@ export const TrainingInterface = () => {
       // Create and download file
       const jsonContent = JSON.stringify(jsonData, null, 2);
       const blob = new Blob([jsonContent], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `training-example-${exampleName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+
+      downloadBlob(blob, `training-example-${exampleName.replace(/[^a-zA-Z0-9]/g, '-')}-${Date.now()}.json`);
     } catch (error) {
       console.error('Failed to generate training example:', error);
       alert('Failed to generate training example. Please try again.');

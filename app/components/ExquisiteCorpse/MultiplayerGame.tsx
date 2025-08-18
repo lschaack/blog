@@ -6,6 +6,7 @@ import { useSSEConnection } from './useSSEConnection';
 import { MultiplayerCurveTurnRenderer } from './MultiplayerCurveTurnRenderer';
 import { Button } from '@/app/components/Button';
 import type { CurveTurn, BaseTurn } from '@/app/types/exquisiteCorpse';
+import { downloadBlob } from '@/app/utils/blob';
 
 type MultiplayerGameProps = {
   dimensions: { width: number; height: number };
@@ -69,7 +70,7 @@ export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
 
     try {
       const response = await fetch(`/api/exquisite-corpse/games/${sessionId}/retry-ai`);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to retry AI turn');
@@ -81,6 +82,15 @@ export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
     }
   }, [sessionId]);
 
+  // Download game state as JSON
+  const handleDownloadJSON = useCallback(() => {
+    if (!gameState) return;
+
+    const jsonString = JSON.stringify(gameState, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+
+    downloadBlob(blob, `multiplayer-game-${sessionId}-${Date.now()}.json`);
+  }, [gameState, sessionId]);
 
   // Determine if user can take actions
   const canTakeAction = useMemo(() => {
@@ -105,7 +115,7 @@ export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
             <div className="text-red-600 text-sm mt-2">{connectionError}</div>
           )}
         </div>
-        
+
         {connectionError && (
           <Button
             label="Reconnect"
@@ -113,7 +123,7 @@ export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
             className="w-full"
           />
         )}
-        
+
         <Button
           label="Leave Game"
           onClick={handleLeaveGame}
@@ -135,7 +145,7 @@ export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
             className="text-sm"
           />
         </div>
-        
+
         <div className="text-sm space-y-1">
           <div>Type: {gameState.type === 'ai' ? 'AI Game' : 'Multiplayer'}</div>
           <div>Players: {gameState.players.filter(p => p.id !== 'ai').length}</div>
@@ -150,13 +160,12 @@ export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
             {gameState.players.filter(p => p.id !== 'ai').map(player => (
               <span
                 key={player.id}
-                className={`px-2 py-1 rounded text-xs ${
-                  player.id === gameState.currentPlayer
+                className={`px-2 py-1 rounded text-xs ${player.id === gameState.currentPlayer
                     ? 'bg-blue-100 text-blue-800'
                     : player.isActive
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-gray-100 text-gray-600'
-                }`}
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-600'
+                  }`}
               >
                 {player.name}
                 {player.id === playerId && ' (you)'}
@@ -181,7 +190,7 @@ export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
           </div>
         )}
         {gameState.status === 'turn_ended' && gameState.currentPlayer === playerId && canTakeAction && 'Your turn!'}
-        {gameState.status === 'turn_ended' && gameState.currentPlayer !== playerId && 
+        {gameState.status === 'turn_ended' && gameState.currentPlayer !== playerId &&
           `Waiting for ${gameState.players.find(p => p.id === gameState.currentPlayer)?.name || 'player'}`}
         {gameState.status === 'game_started' && gameState.currentPlayer === playerId && canTakeAction && 'Start drawing!'}
         {!isActivePlayer && 'Watching game'}
@@ -194,6 +203,14 @@ export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
         canvasDimensions={dimensions}
         turns={gameState.turns}
         currentTurnIndex={gameState.turns.length}
+      />
+
+      {/* Download JSON Button */}
+      <Button
+        label="Download Game JSON"
+        onClick={handleDownloadJSON}
+        className="w-full"
+        disabled={!gameState || gameState.turns.length === 0}
       />
     </div>
   );
