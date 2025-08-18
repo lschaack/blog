@@ -30,6 +30,11 @@ class RedisClient {
     await this.redis.setex(key, 24 * 60 * 60, JSON.stringify(gameState)); // 24h TTL
   }
 
+  async setGameStateWithTTL(sessionId: string, gameState: MultiplayerGameState, ttlSeconds: number): Promise<void> {
+    const key = `exquisite_corpse:${sessionId}:state`;
+    await this.redis.setex(key, ttlSeconds, JSON.stringify(gameState));
+  }
+
   async getGameState(sessionId: string): Promise<MultiplayerGameState | null> {
     const key = `exquisite_corpse:${sessionId}:state`;
     const data = await this.redis.get(key);
@@ -106,6 +111,22 @@ class RedisClient {
   async resetAIRetryCount(sessionId: string): Promise<void> {
     const key = `exquisite_corpse:${sessionId}:ai_retries`;
     await this.redis.del(key);
+  }
+
+  // Get all active game session IDs
+  async getAllGameSessions(): Promise<string[]> {
+    const pattern = 'exquisite_corpse:*:state';
+    const keys = await this.redis.keys(pattern);
+    return keys.map(key => {
+      const match = key.match(/exquisite_corpse:([^:]+):state/);
+      return match ? match[1] : null;
+    }).filter(Boolean) as string[];
+  }
+
+  // Get TTL for a game state
+  async getGameStateTTL(sessionId: string): Promise<number> {
+    const key = `exquisite_corpse:${sessionId}:state`;
+    return await this.redis.ttl(key);
   }
 
   // Cleanup

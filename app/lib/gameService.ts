@@ -14,20 +14,26 @@ import type { CurveTurn } from '@/app/types/exquisiteCorpse';
 export class GameService {
   private redis = getRedisClient();
   private static MAX_AI_RETRIES = 3;
+  private static DISCONNECTED_GAME_TTL = 60 * 60; // 1 hour in seconds
 
   async createGame(request: CreateGameRequest): Promise<{ sessionId: string; playerId: string }> {
+    // Perform lazy cleanup before creating new game
+    await this.cleanupAbandonedGames();
     const sessionId = this.redis.generateSessionId();
     const gameId = randomUUID();
     const playerId = randomUUID();
     const connectionId = randomUUID();
 
     // Create initial player
+    const now = new Date().toISOString();
     const player: Player = {
       id: playerId,
       name: request.playerName,
       connectionId,
-      joinedAt: new Date().toISOString(),
-      isActive: true
+      joinedAt: now,
+      isActive: true,
+      connectionStatus: 'connected',
+      lastSeenAt: now
     };
 
     // Add AI player for AI games
@@ -37,8 +43,10 @@ export class GameService {
         id: 'ai',
         name: 'AI',
         connectionId: 'ai',
-        joinedAt: new Date().toISOString(),
-        isActive: true
+        joinedAt: now,
+        isActive: true,
+        connectionStatus: 'connected',
+        lastSeenAt: now
       });
     }
 
@@ -65,29 +73,67 @@ export class GameService {
   }
 
   async joinGame(sessionId: string, request: JoinGameRequest): Promise<{ playerId: string; isActive: boolean }> {
+    // Perform lazy cleanup before joining game
+    await this.cleanupAbandonedGames();
     const gameState = await this.redis.getGameState(sessionId);
     if (!gameState) {
       throw new Error('Game not found');
     }
 
+    const now = new Date().toISOString();
+
+    // Check if this is a reconnection attempt - look for disconnected player with same name
+    const existingPlayer = gameState.players.find(p => 
+      p.name === request.playerName && 
+      p.connectionStatus === 'disconnected' && 
+      p.id !== 'ai'
+    );
+
+    if (existingPlayer) {
+      // Reconnection - reactivate existing player
+      const newConnectionId = randomUUID();
+      existingPlayer.connectionStatus = 'connected';
+      existingPlayer.connectionId = newConnectionId;
+      existingPlayer.lastSeenAt = now;
+      existingPlayer.disconnectedAt = undefined;
+
+      await this.redis.setPlayerConnection(sessionId, existingPlayer.id, newConnectionId);
+      
+      // Publish reconnection event
+      await this.publishEvent(sessionId, 'player_joined', { 
+        player: existingPlayer, 
+        isActive: existingPlayer.isActive 
+      });
+
+      gameState.updatedAt = now;
+      await this.redis.setGameState(sessionId, gameState);
+
+      return { playerId: existingPlayer.id, isActive: existingPlayer.isActive };
+    }
+
+    // Not a reconnection - create new player
     const playerId = randomUUID();
     const connectionId = randomUUID();
 
     // Determine if this player should be active
-    const activePlayerCount = gameState.players.filter(p => p.isActive && p.id !== 'ai').length;
+    const connectedActivePlayerCount = gameState.players.filter(p => 
+      p.isActive && p.id !== 'ai' && p.connectionStatus === 'connected'
+    ).length;
     const maxActivePlayers = gameState.type === 'ai' ? 1 : 2;
-    const isActive = activePlayerCount < maxActivePlayers;
+    const isActive = connectedActivePlayerCount < maxActivePlayers;
 
     const newPlayer: Player = {
       id: playerId,
       name: request.playerName,
       connectionId,
-      joinedAt: new Date().toISOString(),
-      isActive
+      joinedAt: now,
+      isActive,
+      connectionStatus: 'connected',
+      lastSeenAt: now
     };
 
     gameState.players.push(newPlayer);
-    gameState.updatedAt = new Date().toISOString();
+    gameState.updatedAt = now;
 
     await this.redis.setGameState(sessionId, gameState);
     await this.redis.setPlayerConnection(sessionId, playerId, connectionId);
@@ -154,40 +200,72 @@ export class GameService {
       return;
     }
 
-    // Remove player
-    gameState.players = gameState.players.filter(p => p.id !== playerId);
-
+    // Mark player as disconnected instead of removing
+    const now = new Date().toISOString();
+    player.connectionStatus = 'disconnected';
+    player.disconnectedAt = now;
+    player.lastSeenAt = now;
+    
     // Clean up connection
     await this.redis.removePlayerConnection(sessionId, playerId);
 
-    // Publish player left event
+    // Publish player disconnected event
     await this.publishEvent(sessionId, 'player_left', {
       playerId,
       playerName: player.name
     });
 
-    // Check if we need to promote a new active player
+    // Check if we need to promote a new active player from connected players
     if (player.isActive && gameState.currentPlayer === playerId) {
-      const nextActivePlayer = this.promoteNextPlayer(gameState);
-      if (nextActivePlayer) {
+      const connectedActivePlayers = gameState.players.filter(p => 
+        p.isActive && p.id !== 'ai' && p.connectionStatus === 'connected'
+      );
+      
+      if (connectedActivePlayers.length > 0) {
+        // Promote first connected active player
+        const nextActivePlayer = connectedActivePlayers[0];
         gameState.currentPlayer = nextActivePlayer.id;
         await this.publishEvent(sessionId, 'player_promoted', {
           playerId: nextActivePlayer.id,
           playerName: nextActivePlayer.name
         });
+      } else {
+        // No connected players available, but don't end game yet - allow reconnection
+        // Set current player to AI if available, otherwise keep current player for reconnection
+        const aiPlayer = gameState.players.find(p => p.id === 'ai');
+        if (aiPlayer) {
+          gameState.currentPlayer = 'ai';
+        }
+        // Note: If no AI and no connected players, we keep the current player
+        // so when they reconnect, they can continue their turn
       }
     }
 
-    // Check if game should end
-    const activeHumanPlayers = gameState.players.filter(p => p.isActive && p.id !== 'ai');
-    if (activeHumanPlayers.length === 0) {
-      gameState.status = 'game_ended';
-      await this.publishEvent(sessionId, 'game_ended', {});
-      await this.redis.deleteGameState(sessionId);
-      return;
+    // Check if ALL human players have been disconnected for more than 1 hour
+    const humanPlayers = gameState.players.filter(p => p.id !== 'ai');
+    const connectedHumanPlayers = humanPlayers.filter(p => p.connectionStatus === 'connected');
+    
+    if (connectedHumanPlayers.length === 0) {
+      // All humans are disconnected, check if grace period has expired
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const playersDisconnectedTooLong = humanPlayers.filter(p => 
+        p.disconnectedAt && p.disconnectedAt < oneHourAgo
+      );
+      
+      if (playersDisconnectedTooLong.length === humanPlayers.length && humanPlayers.length > 0) {
+        // All players have been disconnected for over 1 hour, end game
+        gameState.status = 'game_ended';
+        await this.publishEvent(sessionId, 'game_ended', {});
+        await this.redis.deleteGameState(sessionId);
+        return;
+      }
+      
+      // All players are disconnected but still within grace period
+      // Set shorter TTL so game gets cleaned up automatically after 1 hour
+      await this.redis.setGameStateWithTTL(sessionId, gameState, GameService.DISCONNECTED_GAME_TTL);
     }
 
-    gameState.updatedAt = new Date().toISOString();
+    gameState.updatedAt = now;
     await this.redis.setGameState(sessionId, gameState);
   }
 
@@ -221,6 +299,48 @@ export class GameService {
 
     const eventType = isDrawing ? 'player_started_drawing' : 'player_stopped_drawing';
     await this.publishEvent(sessionId, eventType, { playerId, isDrawing });
+  }
+
+  async cleanupAbandonedGames(): Promise<number> {
+    try {
+      const allSessions = await this.redis.getAllGameSessions();
+      let cleanedCount = 0;
+
+      for (const sessionId of allSessions) {
+        const gameState = await this.redis.getGameState(sessionId);
+        if (!gameState) {
+          continue; // Game already cleaned up
+        }
+
+        const humanPlayers = gameState.players.filter(p => p.id !== 'ai');
+        const connectedHumanPlayers = humanPlayers.filter(p => p.connectionStatus === 'connected');
+
+        // If all human players are disconnected, check if they've been disconnected too long
+        if (connectedHumanPlayers.length === 0 && humanPlayers.length > 0) {
+          const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+          const playersDisconnectedTooLong = humanPlayers.filter(p => 
+            p.disconnectedAt && p.disconnectedAt < oneHourAgo
+          );
+
+          if (playersDisconnectedTooLong.length === humanPlayers.length) {
+            // All players have been disconnected for over 1 hour, clean up
+            await this.publishEvent(sessionId, 'game_ended', {});
+            await this.redis.deleteGameState(sessionId);
+            cleanedCount++;
+            console.log(`Cleaned up abandoned game: ${sessionId}`);
+          }
+        }
+      }
+
+      if (cleanedCount > 0) {
+        console.log(`Background cleanup completed: removed ${cleanedCount} abandoned games`);
+      }
+
+      return cleanedCount;
+    } catch (error) {
+      console.error('Error during background cleanup:', error);
+      return 0;
+    }
   }
 
   private async startAITurn(sessionId: string): Promise<void> {

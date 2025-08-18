@@ -94,22 +94,6 @@ export async function GET(
       // Handle connection close
       request.signal.addEventListener('abort', cleanup);
     },
-
-    cancel() {
-      isConnectionActive = false;
-      clearInterval(heartbeatInterval);
-      
-      // Remove player when connection closes
-      const gameService = getGameService();
-      gameService.removePlayer(sessionId, playerId).catch(error => {
-        console.error('Failed to remove player on cancel:', error);
-      });
-
-      // Unsubscribe from Redis
-      redis.unsubscribeFromGame(sessionId).catch(error => {
-        console.error('Failed to unsubscribe from game:', error);
-      });
-    }
   });
 
   return new Response(stream, {

@@ -8,6 +8,9 @@ export type Player = {
   connectionId: string;
   joinedAt: string;
   isActive: boolean;
+  connectionStatus: 'connected' | 'disconnected';
+  lastSeenAt: string;
+  disconnectedAt?: string;
 };
 
 export type GameStatus = 
