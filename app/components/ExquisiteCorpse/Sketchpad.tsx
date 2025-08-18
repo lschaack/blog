@@ -5,6 +5,7 @@ import { useAnimationFrames } from '@/app/hooks/useAnimationFrames';
 import { BezierCurve, Line, Point } from "@/app/types/exquisiteCorpse";
 import { bezierCurvesToParsedPath } from './lineConversion';
 import { drawParsedPath } from "./imageContext";
+import { PathCommand } from "parse-svg-path";
 
 type SketchpadProps = {
   width: number;
@@ -175,7 +176,14 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
       const fittedLine = fitCurvesToPoints(currentPoints.current);
       if (fittedLine.length > 0) {
         const newLines = [...lines, fittedLine];
-        handleAddLine(newLines);
+        // round every number to minimize characters in redis and prompt
+        handleAddLine(newLines.map(line => (
+          line.map(cmd => (
+            cmd.map(val => (
+              typeof val === 'number' ? Math.round(val) : val
+            )) as PathCommand
+          ))
+        )));
       }
     }
 

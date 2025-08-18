@@ -4,7 +4,7 @@ import { GameContext, CurveTurn } from '@/app/types/exquisiteCorpse';
 
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = process.env.OPEN_AI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: 'OpenAI API key not configured' },

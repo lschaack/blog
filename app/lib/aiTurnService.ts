@@ -1,7 +1,6 @@
 import type { CurveTurn, GameContext, CanvasDimensions } from '@/app/types/exquisiteCorpse';
-import { getGeminiService } from '@/app/components/ExquisiteCorpse/geminiAI';
 
-// Server-side AI turn generation (extracted from CurveGame.tsx)
+// Server-side AI turn generation using direct service calls
 export const generateAICurveTurn = async (
   history: CurveTurn[],
   dimensions: CanvasDimensions,
@@ -29,10 +28,24 @@ export const generateAICurveTurn = async (
     history: history
   };
 
-  // Step 4: Call AI service
-  const geminiService = getGeminiService();
-  const aiResponse = await geminiService.generateCurveTurn(gameContext);
+  console.log('sending game context', gameContext)
 
-  // Return the turn data (without metadata fields that will be added by reducer)
-  return aiResponse;
+  // Step 4: Call AI service directly
+  const apiKey = process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('No AI API key configured');
+  }
+
+  // Try GPT-5 first if OpenAI key is available, otherwise fall back to Gemini
+  if (process.env.OPENAI_API_KEY) {
+    const { GPT5CurveDrawingService } = await import('@/app/api/exquisite-corpse/draw-curve/gpt5-curve-drawing-service');
+    const gpt5Service = new GPT5CurveDrawingService(process.env.OPENAI_API_KEY);
+    return await gpt5Service.generateTurn(gameContext);
+  } else if (process.env.GEMINI_API_KEY) {
+    const { CurveDrawingService } = await import('@/app/api/exquisite-corpse/draw-curve/curve-drawing-service');
+    const geminiService = new CurveDrawingService(process.env.GEMINI_API_KEY);
+    return await geminiService.generateTurn(gameContext);
+  } else {
+    throw new Error('No AI service available');
+  }
 };

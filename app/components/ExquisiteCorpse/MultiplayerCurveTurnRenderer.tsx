@@ -4,6 +4,7 @@ import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { ensureStartsWith } from "@/app/utils/string";
+import { PathCommand } from "parse-svg-path";
 
 type MultiplayerCurveTurnRendererProps = {
   handleEndTurn: (turnData: Omit<CurveTurn, keyof BaseTurn>) => void;
@@ -41,7 +42,16 @@ export const MultiplayerCurveTurnRenderer = ({
 
   // Handle adding lines from Sketchpad
   const handleAddLine = useCallback((newLines: Line[]) => {
-    currentTurn.setLine(newLines);
+    currentTurn.setLine(
+      // round every number to minimize characters in redis and prompt
+      newLines.map(line => (
+        line.map(cmd => (
+          cmd.map(val => (
+            typeof val === 'number' ? Math.round(val) : val
+          )) as PathCommand
+        ))
+      ))
+    );
   }, [currentTurn]);
 
   // Handle ending turn

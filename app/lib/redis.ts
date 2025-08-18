@@ -110,9 +110,9 @@ class RedisClient {
 
   // Cleanup
   async disconnect(): Promise<void> {
-    await this.redis.disconnect();
-    await this.subscriber.disconnect();
-    await this.publisher.disconnect();
+    this.redis.disconnect();
+    this.subscriber.disconnect();
+    this.publisher.disconnect();
   }
 }
 

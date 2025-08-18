@@ -8,6 +8,7 @@ import type {
   JoinGameRequest,
   SubmitTurnRequest
 } from '@/app/types/multiplayer';
+import { generateAICurveTurn } from '@/app/lib/aiTurnService';
 import type { CurveTurn } from '@/app/types/exquisiteCorpse';
 
 export class GameService {
@@ -155,14 +156,14 @@ export class GameService {
 
     // Remove player
     gameState.players = gameState.players.filter(p => p.id !== playerId);
-    
+
     // Clean up connection
     await this.redis.removePlayerConnection(sessionId, playerId);
 
     // Publish player left event
-    await this.publishEvent(sessionId, 'player_left', { 
-      playerId, 
-      playerName: player.name 
+    await this.publishEvent(sessionId, 'player_left', {
+      playerId,
+      playerName: player.name
     });
 
     // Check if we need to promote a new active player
@@ -243,9 +244,6 @@ export class GameService {
 
   private async processAITurnBackground(sessionId: string): Promise<void> {
     try {
-      // Import server-side AI service
-      const { generateAICurveTurn } = await import('./aiTurnService');
-
       const gameState = await this.redis.getGameState(sessionId);
       if (!gameState) {
         throw new Error('Game state not found during AI processing');
@@ -273,9 +271,9 @@ export class GameService {
       await this.redis.resetAIRetryCount(sessionId);
 
       // Publish success event
-      await this.publishEvent(sessionId, 'turn_ended', { 
-        turn: aiTurn, 
-        nextPlayer: gameState.currentPlayer 
+      await this.publishEvent(sessionId, 'turn_ended', {
+        turn: aiTurn,
+        nextPlayer: gameState.currentPlayer
       });
 
     } catch (error) {
