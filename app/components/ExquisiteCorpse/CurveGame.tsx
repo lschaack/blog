@@ -5,7 +5,7 @@ import { getGeminiService } from "./geminiAI";
 import { Game, GameProps } from "./Game";
 import { useCallback } from 'react';
 
-const getAICurveTurn = async (
+export const getAICurveTurn = async (
   history: CurveTurn[],
   dimensions: CanvasDimensions,
 ) => {

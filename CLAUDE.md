@@ -26,6 +26,7 @@ No dedicated typecheck script exists. Run `npx tsc --noEmit` to check TypeScript
 - **Styling**: Tailwind CSS v4
 - **Animation**: Custom animation system with batched updates
 - **Typography**: Lato (body) and Geist Mono (code) fonts
+- **Multiplayer**: Redis-based real-time multiplayer with Server-Sent Events (SSE)
 
 ### Project Structure
 
@@ -57,6 +58,10 @@ No dedicated typecheck script exists. Run `npx tsc --noEmit` to check TypeScript
   - Animation components (PostBubble, HoverBubble, etc.)
   - Debug utilities (DebugMenu, DebugToggle)
   - Content rendering (CodeBlock, CaptionedImage)
+  - **ExquisiteCorpse/** - Collaborative drawing game components
+    - Single-player and multiplayer modes
+    - Real-time multiplayer using Redis pub/sub and SSE
+    - AI integration with Gemini and GPT-5
 
 #### Animation System
 
@@ -88,6 +93,9 @@ Required environment variables (defined in `.env`):
 - `CONTENTFUL_ENVIRONMENT_ID` - Contentful environment (typically "master")
 - `CONTENTFUL_PREVIEW_TOKEN` - Preview API token (development)
 - `CONTENTFUL_DELIVERY_TOKEN` - Delivery API token (production)
+- `REDIS_URL` - Redis connection URL for multiplayer games (defaults to redis://localhost:6379)
+- `GEMINI_API_KEY` - Google Gemini API key for AI turns
+- `OPENAI_API_KEY` - OpenAI API key for GPT-5 AI turns (optional)
 
 ### Development Features
 

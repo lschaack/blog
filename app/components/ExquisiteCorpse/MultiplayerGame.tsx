@@ -1,0 +1,200 @@
+"use client";
+
+import { useState, useCallback, useMemo } from 'react';
+import { GameLobby } from './GameLobby';
+import { useSSEConnection } from './useSSEConnection';
+import { MultiplayerCurveTurnRenderer } from './MultiplayerCurveTurnRenderer';
+import { Button } from '@/app/components/Button';
+import type { CurveTurn, BaseTurn } from '@/app/types/exquisiteCorpse';
+
+type MultiplayerGameProps = {
+  dimensions: { width: number; height: number };
+};
+
+export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [isActivePlayer, setIsActivePlayer] = useState(false);
+  const [gameStarted, setGameStarted] = useState(false);
+
+  const { connectionState, isConnected, error: connectionError, gameState, reconnect } = useSSEConnection(
+    sessionId,
+    playerId
+  );
+
+  // Handle game joining from lobby
+  const handleGameJoined = useCallback((newSessionId: string, newPlayerId: string, isActive: boolean) => {
+    setSessionId(newSessionId);
+    setPlayerId(newPlayerId);
+    setIsActivePlayer(isActive);
+    setGameStarted(true);
+  }, []);
+
+  // Handle leaving game
+  const handleLeaveGame = useCallback(() => {
+    setSessionId(null);
+    setPlayerId(null);
+    setIsActivePlayer(false);
+    setGameStarted(false);
+  }, []);
+
+  // Submit turn to server
+  const handleSubmitTurn = useCallback(async (turnData: Omit<CurveTurn, keyof BaseTurn>) => {
+    if (!sessionId || !playerId) return;
+
+    try {
+      const response = await fetch(`/api/exquisite-corpse/games/${sessionId}/turns`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-player-id': playerId,
+        },
+        body: JSON.stringify({ turnData, playerId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit turn');
+      }
+
+    } catch (error) {
+      console.error('Failed to submit turn:', error);
+      throw error;
+    }
+  }, [sessionId, playerId]);
+
+  // Retry AI turn
+  const handleRetryAI = useCallback(async () => {
+    if (!sessionId) return;
+
+    try {
+      const response = await fetch(`/api/exquisite-corpse/games/${sessionId}/retry-ai`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to retry AI turn');
+      }
+
+    } catch (error) {
+      console.error('Failed to retry AI turn:', error);
+      throw error;
+    }
+  }, [sessionId]);
+
+
+  // Determine if user can take actions
+  const canTakeAction = useMemo(() => {
+    if (!gameState || !playerId || !isActivePlayer) return false;
+    return gameState.currentPlayer === playerId && gameState.status !== 'ai_turn_started';
+  }, [gameState, playerId, isActivePlayer]);
+
+  // Show lobby if game hasn't started
+  if (!gameStarted) {
+    return <GameLobby onGameJoined={handleGameJoined} />;
+  }
+
+  // Show loading/connecting state
+  if (!isConnected || !gameState) {
+    return (
+      <div className="flex flex-col gap-4 max-w-[512px] mx-auto p-6">
+        <div className="text-center p-4 bg-gray-50 rounded-xl">
+          <div className="font-semibold">
+            {connectionState === 'connecting' ? 'Connecting...' : 'Loading game...'}
+          </div>
+          {connectionError && (
+            <div className="text-red-600 text-sm mt-2">{connectionError}</div>
+          )}
+        </div>
+        
+        {connectionError && (
+          <Button
+            label="Reconnect"
+            onClick={reconnect}
+            className="w-full"
+          />
+        )}
+        
+        <Button
+          label="Leave Game"
+          onClick={handleLeaveGame}
+          className="w-full"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4 max-w-[512px] mx-auto">
+      {/* Game Info Header */}
+      <div className="p-4 bg-gray-50 rounded-xl">
+        <div className="flex justify-between items-center mb-2">
+          <div className="font-semibold">Game {sessionId}</div>
+          <Button
+            label="Leave"
+            onClick={handleLeaveGame}
+            className="text-sm"
+          />
+        </div>
+        
+        <div className="text-sm space-y-1">
+          <div>Type: {gameState.type === 'ai' ? 'AI Game' : 'Multiplayer'}</div>
+          <div>Players: {gameState.players.filter(p => p.id !== 'ai').length}</div>
+          <div>Your status: {isActivePlayer ? 'Active Player' : 'Viewer'}</div>
+          {!isConnected && <div className="text-red-600">Disconnected</div>}
+        </div>
+
+        {/* Players List */}
+        <div className="mt-3">
+          <div className="text-xs font-medium text-gray-600 mb-1">Players:</div>
+          <div className="flex flex-wrap gap-2">
+            {gameState.players.filter(p => p.id !== 'ai').map(player => (
+              <span
+                key={player.id}
+                className={`px-2 py-1 rounded text-xs ${
+                  player.id === gameState.currentPlayer
+                    ? 'bg-blue-100 text-blue-800'
+                    : player.isActive
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                {player.name}
+                {player.id === playerId && ' (you)'}
+                {player.id === gameState.currentPlayer && ' ⭐'}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Game Status */}
+      <div className="text-center p-2 bg-deep-50 rounded-xl font-semibold text-deep-600">
+        {gameState.status === 'ai_turn_started' && 'AI is drawing...'}
+        {gameState.status === 'ai_turn_failed' && (
+          <div className="space-y-2">
+            <div className="text-red-600">AI turn failed</div>
+            <Button
+              label="Retry AI Turn"
+              onClick={handleRetryAI}
+              className="text-sm"
+            />
+          </div>
+        )}
+        {gameState.status === 'turn_ended' && gameState.currentPlayer === playerId && canTakeAction && 'Your turn!'}
+        {gameState.status === 'turn_ended' && gameState.currentPlayer !== playerId && 
+          `Waiting for ${gameState.players.find(p => p.id === gameState.currentPlayer)?.name || 'player'}`}
+        {gameState.status === 'game_started' && gameState.currentPlayer === playerId && canTakeAction && 'Start drawing!'}
+        {!isActivePlayer && 'Watching game'}
+      </div>
+
+      {/* Game Canvas */}
+      <MultiplayerCurveTurnRenderer
+        handleEndTurn={handleSubmitTurn}
+        readOnly={!canTakeAction}
+        canvasDimensions={dimensions}
+        turns={gameState.turns}
+        currentTurnIndex={gameState.turns.length}
+      />
+    </div>
+  );
+};

@@ -19,7 +19,6 @@ const AICurveResponseSchema = z.object({
         ctx.addIssue({
           code: "custom",
           message: "Path must be a single line of only absolute (uppercase) commands",
-          input: string,
         });
 
         return z.NEVER;

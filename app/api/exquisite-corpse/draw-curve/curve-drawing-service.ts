@@ -19,7 +19,6 @@ const AICurveResponseSchema = z.object({
         ctx.addIssue({
           code: "custom",
           message: "Path must be a single line of only absolute (uppercase) commands",
-          input: string,
         });
 
         return z.NEVER;
@@ -83,6 +82,7 @@ Respond with a JSON object in this exact format:
       interpretation: validatedResponse.interpretation.trim(),
       path: validatedResponse.path,
       reasoning: validatedResponse.reasoning.trim(),
+      title: validatedResponse.interpretation.trim().split('.')[0], // Use first sentence as title
     };
   }
 

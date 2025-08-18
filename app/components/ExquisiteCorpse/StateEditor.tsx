@@ -76,7 +76,7 @@ export const StateEditor = <T extends BaseTurn>() => {
         const content = event.target?.result as string;
         setJsonText(content);
         setJsonError(null);
-      } catch (error) {
+      } catch {
         setJsonError('Failed to read file');
       }
     };
