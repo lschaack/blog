@@ -99,6 +99,9 @@ export class GameService {
 
       await this.redis.setPlayerConnection(sessionId, existingPlayer.id, newConnectionId);
       
+      // Check for player promotions after reconnection
+      await this.handlePlayerPromotions(sessionId, gameState);
+      
       // Publish reconnection event
       await this.publishEvent(sessionId, 'player_joined', { 
         player: existingPlayer, 
@@ -133,6 +136,10 @@ export class GameService {
     };
 
     gameState.players.push(newPlayer);
+    
+    // Check for player promotions after new player joins
+    await this.handlePlayerPromotions(sessionId, gameState);
+    
     gameState.updatedAt = now;
 
     await this.redis.setGameState(sessionId, gameState);
@@ -215,31 +222,8 @@ export class GameService {
       playerName: player.name
     });
 
-    // Check if we need to promote a new active player from connected players
-    if (player.isActive && gameState.currentPlayer === playerId) {
-      const connectedActivePlayers = gameState.players.filter(p => 
-        p.isActive && p.id !== 'ai' && p.connectionStatus === 'connected'
-      );
-      
-      if (connectedActivePlayers.length > 0) {
-        // Promote first connected active player
-        const nextActivePlayer = connectedActivePlayers[0];
-        gameState.currentPlayer = nextActivePlayer.id;
-        await this.publishEvent(sessionId, 'player_promoted', {
-          playerId: nextActivePlayer.id,
-          playerName: nextActivePlayer.name
-        });
-      } else {
-        // No connected players available, but don't end game yet - allow reconnection
-        // Set current player to AI if available, otherwise keep current player for reconnection
-        const aiPlayer = gameState.players.find(p => p.id === 'ai');
-        if (aiPlayer) {
-          gameState.currentPlayer = 'ai';
-        }
-        // Note: If no AI and no connected players, we keep the current player
-        // so when they reconnect, they can continue their turn
-      }
-    }
+    // Check for player promotions after disconnect
+    await this.handlePlayerPromotions(sessionId, gameState);
 
     // Check if ALL human players have been disconnected for more than 1 hour
     const humanPlayers = gameState.players.filter(p => p.id !== 'ai');
@@ -432,6 +416,29 @@ export class GameService {
     const currentIndex = activePlayers.findIndex(p => p.id === currentPlayerId);
     const nextIndex = (currentIndex + 1) % activePlayers.length;
     return activePlayers[nextIndex].id;
+  }
+
+  private async handlePlayerPromotions(sessionId: string, gameState: MultiplayerGameState): Promise<void> {
+    // Check if current player is disconnected and needs to be replaced
+    const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayer);
+    
+    if (!currentPlayer || currentPlayer.connectionStatus === 'disconnected') {
+      // Find connected active players, ordered by least recently joined (oldest first)
+      const connectedActivePlayers = gameState.players
+        .filter(p => p.isActive && p.connectionStatus === 'connected' && p.id !== 'ai')
+        .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
+      
+      if (connectedActivePlayers.length > 0) {
+        // Promote the least recently joined (oldest) connected active player
+        const newCurrentPlayer = connectedActivePlayers[0];
+        gameState.currentPlayer = newCurrentPlayer.id;
+        
+        await this.publishEvent(sessionId, 'player_promoted', {
+          playerId: newCurrentPlayer.id,
+          playerName: newCurrentPlayer.name
+        });
+      }
+    }
   }
 
   private promoteNextPlayer(gameState: MultiplayerGameState): Player | null {

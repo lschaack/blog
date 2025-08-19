@@ -32,12 +32,27 @@ export const MultiplayerGame = ({ dimensions }: MultiplayerGameProps) => {
   }, []);
 
   // Handle leaving game
-  const handleLeaveGame = useCallback(() => {
+  const handleLeaveGame = useCallback(async () => {
+    if (sessionId && playerId) {
+      try {
+        // Notify backend that player is leaving
+        await fetch(`/api/exquisite-corpse/games/${sessionId}/leave`, {
+          method: 'POST',
+          headers: {
+            'x-player-id': playerId,
+          },
+        });
+      } catch (error) {
+        console.error('Failed to notify backend of player leaving:', error);
+      }
+    }
+
+    // Clear local state (SSE connection will close automatically)
     setSessionId(null);
     setPlayerId(null);
     setIsActivePlayer(false);
     setGameStarted(false);
-  }, []);
+  }, [sessionId, playerId]);
 
   // Submit turn to server
   const handleSubmitTurn = useCallback(async (turnData: Omit<CurveTurn, keyof BaseTurn>) => {

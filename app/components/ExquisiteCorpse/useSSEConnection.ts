@@ -141,10 +141,23 @@ export const useSSEConnection = (
     return cleanup;
   }, [sessionId, playerId, connect, cleanup]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount and handle beforeunload
   useEffect(() => {
-    return cleanup;
-  }, [cleanup]);
+    const handleBeforeUnload = () => {
+      // Try to notify server of disconnect when page is unloading
+      if (sessionId && playerId) {
+        navigator.sendBeacon(`/api/exquisite-corpse/games/${sessionId}/leave`, 
+          JSON.stringify({ playerId }));
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanup();
+    };
+  }, [cleanup, sessionId, playerId]);
 
   const reconnect = useCallback(() => {
     cleanup();
