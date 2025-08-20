@@ -13,7 +13,7 @@ export type Player = {
   disconnectedAt?: string;
 };
 
-export type GameStatus = 
+export type GameStatus =
   | 'game_started'
   | 'turn_ended'
   | 'ai_turn_started'

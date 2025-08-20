@@ -92,24 +92,31 @@ export class GameService {
     if (existingPlayer) {
       // Reconnection - reactivate existing player
       const newConnectionId = randomUUID();
-      existingPlayer.connectionStatus = 'connected';
-      existingPlayer.connectionId = newConnectionId;
-      existingPlayer.lastSeenAt = now;
-      existingPlayer.disconnectedAt = undefined;
+
+      await this.redis.updatePlayerStatus(sessionId, existingPlayer.id, {
+        connectionStatus: 'connected',
+        connectionId: newConnectionId,
+        lastSeenAt: now,
+        disconnectedAt: undefined
+      });
 
       await this.redis.setPlayerConnection(sessionId, existingPlayer.id, newConnectionId);
 
-      // Check for player promotions after reconnection
-      await this.handlePlayerPromotions(sessionId, gameState);
+      // Check for player promotions after reconnection - get fresh state
+      await this.handlePlayerPromotionsAfterReconnect(sessionId);
 
-      // Publish reconnection event
-      await this.publishEvent(sessionId, 'player_joined', {
-        player: existingPlayer,
-        isActive: existingPlayer.isActive
-      });
+      // Get updated player info for event
+      const updatedGameState = await this.redis.getGameState(sessionId);
+      const updatedPlayer = updatedGameState?.players.find(p => p.id === existingPlayer.id);
 
-      gameState.updatedAt = now;
-      await this.redis.setGameState(sessionId, gameState);
+      if (updatedPlayer) {
+        await this.publishEvent(sessionId, 'player_joined', {
+          player: updatedPlayer,
+          isActive: updatedPlayer.isActive
+        });
+
+        return { playerId: existingPlayer.id, isActive: updatedPlayer.isActive };
+      }
 
       return { playerId: existingPlayer.id, isActive: existingPlayer.isActive };
     }
@@ -135,15 +142,12 @@ export class GameService {
       lastSeenAt: now
     };
 
-    gameState.players.push(newPlayer);
-
-    // Check for player promotions after new player joins
-    await this.handlePlayerPromotions(sessionId, gameState);
-
-    gameState.updatedAt = now;
-
-    await this.redis.setGameState(sessionId, gameState);
+    // Add new player using fresh state operations
+    await this.addNewPlayerToGame(sessionId, newPlayer);
     await this.redis.setPlayerConnection(sessionId, playerId, connectionId);
+
+    // Check for player promotions after new player joins - get fresh state
+    await this.handlePlayerPromotionsAfterJoin(sessionId);
 
     // Publish player joined event
     await this.publishEvent(sessionId, 'player_joined', { player: newPlayer, isActive });
@@ -225,35 +229,11 @@ export class GameService {
       playerName: player.name
     });
 
-    // Check for player promotions after disconnect
-    await this.handlePlayerPromotions(sessionId, gameState);
+    // Get fresh state for promotion checks
+    await this.handlePlayerPromotionsAfterDisconnect(sessionId);
 
-    // Check if ALL human players have been disconnected for more than 1 hour
-    const humanPlayers = gameState.players.filter(p => p.id !== 'ai');
-    const connectedHumanPlayers = humanPlayers.filter(p => p.connectionStatus === 'connected');
-
-    if (connectedHumanPlayers.length === 0) {
-      // All humans are disconnected, check if grace period has expired
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const playersDisconnectedTooLong = humanPlayers.filter(p =>
-        p.disconnectedAt && p.disconnectedAt < oneHourAgo
-      );
-
-      if (playersDisconnectedTooLong.length === humanPlayers.length && humanPlayers.length > 0) {
-        // All players have been disconnected for over 1 hour, end game
-        await this.redis.updateGameStatus(sessionId, 'game_ended');
-        await this.publishEvent(sessionId, 'game_ended', {});
-        await this.redis.deleteGameState(sessionId);
-        return;
-      }
-
-      // All players are disconnected but still within grace period
-      // Set shorter TTL so game gets cleaned up automatically after 1 hour
-      await this.redis.setGameStateWithTTL(sessionId, gameState, GameService.DISCONNECTED_GAME_TTL);
-    }
-
-    gameState.updatedAt = now;
-    await this.redis.setGameState(sessionId, gameState);
+    // Get fresh state for cleanup logic
+    await this.checkForGameCleanup(sessionId);
   }
 
   async retryAITurn(sessionId: string): Promise<void> {
@@ -416,7 +396,7 @@ export class GameService {
   private async getNextPlayer(sessionId: string, currentPlayerId: string) {
     const gameState = await this.redis.getGameState(sessionId);
     if (!gameState) {
-      throw new Error('Game state not found during AI processing');
+      throw new Error('Game state not found when getting next player');
     }
     const activePlayers = gameState.players.filter(p => p.isActive);
     const currentIndex = activePlayers.findIndex(p => p.id === currentPlayerId);
@@ -426,23 +406,30 @@ export class GameService {
     return nextPlayer;
   }
 
-  private async handlePlayerPromotions(sessionId: string, gameState: MultiplayerGameState): Promise<void> {
-    // Check if current player is disconnected and needs to be replaced
-    const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayer);
 
+  // Helper methods that use fresh state instead of stale state
+  private async addNewPlayerToGame(sessionId: string, newPlayer: Player): Promise<void> {
+    const gameState = await this.redis.getGameState(sessionId);
+    if (!gameState) throw new Error('Game not found');
+
+    gameState.players.push(newPlayer);
+    gameState.updatedAt = new Date().toISOString();
+    await this.redis.setGameState(sessionId, gameState);
+  }
+
+  private async handlePlayerPromotionsAfterDisconnect(sessionId: string): Promise<void> {
+    const gameState = await this.redis.getGameState(sessionId);
+    if (!gameState) return;
+
+    const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayer);
     if (!currentPlayer || currentPlayer.connectionStatus === 'disconnected') {
-      // Find connected active players, ordered by least recently joined (oldest first)
       const connectedActivePlayers = gameState.players
         .filter(p => p.isActive && p.connectionStatus === 'connected' && p.id !== 'ai')
         .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
 
       if (connectedActivePlayers.length > 0) {
-        // Promote the least recently joined (oldest) connected active player
         const newCurrentPlayer = connectedActivePlayers[0];
-
-        // Use optimized current player update
         await this.redis.updateCurrentPlayer(sessionId, newCurrentPlayer.id);
-        gameState.currentPlayer = newCurrentPlayer.id;
 
         await this.publishEvent(sessionId, 'player_promoted', {
           playerId: newCurrentPlayer.id,
@@ -452,18 +439,37 @@ export class GameService {
     }
   }
 
-  private promoteNextPlayer(gameState: MultiplayerGameState): Player | null {
-    const inactivePlayers = gameState.players
-      .filter(p => !p.isActive && p.id !== 'ai')
-      .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
+  private async handlePlayerPromotionsAfterReconnect(sessionId: string): Promise<void> {
+    await this.handlePlayerPromotionsAfterDisconnect(sessionId);
+  }
 
-    if (inactivePlayers.length > 0) {
-      const playerToPromote = inactivePlayers[0];
-      playerToPromote.isActive = true;
-      return playerToPromote;
+  private async handlePlayerPromotionsAfterJoin(sessionId: string): Promise<void> {
+    await this.handlePlayerPromotionsAfterDisconnect(sessionId);
+  }
+
+  private async checkForGameCleanup(sessionId: string): Promise<void> {
+    const gameState = await this.redis.getGameState(sessionId);
+    if (!gameState) return;
+
+    const humanPlayers = gameState.players.filter(p => p.id !== 'ai');
+    const connectedHumanPlayers = humanPlayers.filter(p => p.connectionStatus === 'connected');
+
+    if (connectedHumanPlayers.length === 0) {
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      const playersDisconnectedTooLong = humanPlayers.filter(p =>
+        p.disconnectedAt && p.disconnectedAt < oneHourAgo
+      );
+
+      if (playersDisconnectedTooLong.length === humanPlayers.length && humanPlayers.length > 0) {
+        await this.redis.updateGameStatus(sessionId, 'game_ended');
+        await this.publishEvent(sessionId, 'game_ended', {});
+        await this.redis.deleteGameState(sessionId);
+        return;
+      }
+
+      // All players are disconnected but still within grace period
+      await this.redis.setGameStateWithTTL(sessionId, gameState, GameService.DISCONNECTED_GAME_TTL);
     }
-
-    return null;
   }
 
   private async publishEvent<T>(sessionId: string, type: string, data: T): Promise<void> {

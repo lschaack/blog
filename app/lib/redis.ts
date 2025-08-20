@@ -9,7 +9,7 @@ class RedisClient {
 
   constructor() {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
-    
+
     this.redis = new Redis(redisUrl);
     this.subscriber = new Redis(redisUrl);
     this.publisher = new Redis(redisUrl);
@@ -32,7 +32,7 @@ class RedisClient {
 
   async setGameStateWithTTL(sessionId: string, gameState: MultiplayerGameState, ttlSeconds: number): Promise<void> {
     const pipeline = this.redis.pipeline();
-    
+
     // Set main game data using hash
     pipeline.hset(`exquisite_corpse:${sessionId}:state`, {
       sessionId: gameState.sessionId,
@@ -51,7 +51,7 @@ class RedisClient {
     const activePlayers = gameState.players
       .filter(p => p.isActive)
       .map(p => p.id);
-    
+
     if (activePlayers.length > 0) {
       pipeline.sadd(`exquisite_corpse:${sessionId}:active_players`, ...activePlayers);
     }
@@ -70,7 +70,7 @@ class RedisClient {
 
   async getGameState(sessionId: string): Promise<MultiplayerGameState | null> {
     const data = await this.redis.hgetall(`exquisite_corpse:${sessionId}:state`);
-    
+
     if (!data.sessionId) {
       return null;
     }
@@ -106,7 +106,7 @@ class RedisClient {
   // Add a new turn (append-only operation)
   async addTurn(sessionId: string, turn: CurveTurn): Promise<void> {
     const pipeline = this.redis.pipeline();
-    
+
     // Get current turns, add new one, and update
     const currentTurns = await this.redis.hget(`exquisite_corpse:${sessionId}:state`, 'turns');
     const turns = currentTurns ? JSON.parse(currentTurns) : [];
@@ -122,8 +122,8 @@ class RedisClient {
 
   // Update player status
   async updatePlayerStatus(
-    sessionId: string, 
-    playerId: string, 
+    sessionId: string,
+    playerId: string,
     updates: Partial<Player>
   ): Promise<void> {
     const gameState = await this.getGameState(sessionId);
@@ -140,7 +140,7 @@ class RedisClient {
     gameState.updatedAt = new Date().toISOString();
 
     const pipeline = this.redis.pipeline();
-    
+
     // Update players data
     pipeline.hset(`exquisite_corpse:${sessionId}:state`, {
       players: JSON.stringify(gameState.players),
@@ -166,7 +166,7 @@ class RedisClient {
 
   async deleteGameState(sessionId: string): Promise<void> {
     const pipeline = this.redis.pipeline();
-    
+
     // Get players to clean up connections
     const gameState = await this.getGameState(sessionId);
     if (gameState) {
@@ -211,7 +211,7 @@ class RedisClient {
   // Event subscription
   async subscribeToGame(sessionId: string, callback: (event: GameEvent) => void): Promise<void> {
     const channel = `exquisite_corpse:${sessionId}:events`;
-    
+
     this.subscriber.on('message', (receivedChannel, message) => {
       if (receivedChannel === channel) {
         try {
@@ -240,7 +240,7 @@ class RedisClient {
     // Get game state to find player's connection ID
     const gameState = await this.getGameState(sessionId);
     if (!gameState) return null;
-    
+
     const player = gameState.players.find(p => p.id === playerId);
     return player?.connectionId || null;
   }
@@ -259,7 +259,7 @@ class RedisClient {
     if (sessionId) {
       // Remove from connection mapping
       await this.redis.hdel(`exquisite_corpse:player_connections`, connectionId);
-      
+
       // Update player status in game
       const gameState = await this.getGameState(sessionId);
       if (gameState) {
@@ -301,7 +301,7 @@ class RedisClient {
     });
 
     const sessionIds: string[] = [];
-    
+
     for await (const keys of cursor) {
       for (const key of keys) {
         const match = key.match(/exquisite_corpse:([^:]+):state/);
@@ -322,7 +322,7 @@ class RedisClient {
     });
 
     const sessionIds: string[] = [];
-    
+
     for await (const keys of cursor) {
       for (const key of keys) {
         const gameStatus = await this.redis.hget(key, 'status');
