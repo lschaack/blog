@@ -177,15 +177,13 @@ export class GameService {
       number: expectedTurnNumber
     };
 
-    gameState.turns.push(turn);
-    gameState.status = 'turn_ended';
-    gameState.updatedAt = new Date().toISOString();
+    // Use optimized Redis operations
+    await this.redis.addTurn(sessionId, turn);
+    await this.redis.updateGameStatus(sessionId, 'turn_ended');
 
     // Determine next player
-    const nextPlayer = this.getNextPlayer(gameState, playerId);
-    gameState.currentPlayer = nextPlayer;
-
-    await this.redis.setGameState(sessionId, gameState);
+    const nextPlayer = await this.getNextPlayer(sessionId, playerId);
+    await this.redis.updateCurrentPlayer(sessionId, nextPlayer);
 
     // Publish turn ended event
     await this.publishEvent(sessionId, 'turn_ended', { turn, nextPlayer });
@@ -209,10 +207,14 @@ export class GameService {
 
     // Mark player as disconnected instead of removing
     const now = new Date().toISOString();
-    player.connectionStatus = 'disconnected';
-    player.disconnectedAt = now;
-    player.lastSeenAt = now;
-    player.isActive = false;
+
+    // Use optimized player status update
+    await this.redis.updatePlayerStatus(sessionId, playerId, {
+      connectionStatus: 'disconnected',
+      disconnectedAt: now,
+      lastSeenAt: now,
+      isActive: false
+    });
 
     // Clean up connection
     await this.redis.removePlayerConnection(sessionId, playerId);
@@ -239,7 +241,7 @@ export class GameService {
 
       if (playersDisconnectedTooLong.length === humanPlayers.length && humanPlayers.length > 0) {
         // All players have been disconnected for over 1 hour, end game
-        gameState.status = 'game_ended';
+        await this.redis.updateGameStatus(sessionId, 'game_ended');
         await this.publishEvent(sessionId, 'game_ended', {});
         await this.redis.deleteGameState(sessionId);
         return;
@@ -309,6 +311,7 @@ export class GameService {
 
           if (playersDisconnectedTooLong.length === humanPlayers.length) {
             // All players have been disconnected for over 1 hour, clean up
+            await this.redis.updateGameStatus(sessionId, 'game_ended');
             await this.publishEvent(sessionId, 'game_ended', {});
             await this.redis.deleteGameState(sessionId);
             cleanedCount++;
@@ -334,9 +337,8 @@ export class GameService {
       return;
     }
 
-    gameState.status = 'ai_turn_started';
-    gameState.updatedAt = new Date().toISOString();
-    await this.redis.setGameState(sessionId, gameState);
+    // Use optimized status update
+    await this.redis.updateGameStatus(sessionId, 'ai_turn_started');
 
     const turnNumber = gameState.turns.length + 1;
     await this.publishEvent(sessionId, 'ai_turn_started', { turnNumber });
@@ -347,38 +349,42 @@ export class GameService {
     });
   }
 
+  private async getAITurn(sessionId: string) {
+    const gameState = await this.redis.getGameState(sessionId);
+    if (!gameState) {
+      throw new Error('Game state not found during AI processing');
+    }
+
+    // Generate AI turn using server-side logic
+    const dimensions = { width: 512, height: 512 };
+    const aiResponse = await generateAICurveTurn(gameState.turns, dimensions);
+
+    const aiTurn: CurveTurn = {
+      ...aiResponse,
+      author: 'ai',
+      timestamp: new Date().toISOString(),
+      number: gameState.turns.length + 1
+    };
+
+    return aiTurn;
+  }
+
   private async processAITurnBackground(sessionId: string): Promise<void> {
     try {
-      const gameState = await this.redis.getGameState(sessionId);
-      if (!gameState) {
-        throw new Error('Game state not found during AI processing');
-      }
+      const turn = await this.getAITurn(sessionId);
 
-      // Generate AI turn using server-side logic
-      const dimensions = { width: 512, height: 512 };
-      const aiResponse = await generateAICurveTurn(gameState.turns, dimensions);
+      // Use optimized Redis operations
+      await this.redis.addTurn(sessionId, turn);
+      await this.redis.updateGameStatus(sessionId, 'turn_ended');
 
-      // Create AI turn
-      const aiTurn: CurveTurn = {
-        ...aiResponse,
-        author: 'ai',
-        timestamp: new Date().toISOString(),
-        number: gameState.turns.length + 1
-      };
-
-      // Update game state
-      gameState.turns.push(aiTurn);
-      gameState.status = 'turn_ended';
-      gameState.currentPlayer = this.getNextPlayer(gameState, 'ai');
-      gameState.updatedAt = new Date().toISOString();
-
-      await this.redis.setGameState(sessionId, gameState);
+      const nextPlayer = await this.getNextPlayer(sessionId, 'ai');
+      await this.redis.updateCurrentPlayer(sessionId, nextPlayer);
       await this.redis.resetAIRetryCount(sessionId);
 
       // Publish success event
       await this.publishEvent(sessionId, 'turn_ended', {
-        turn: aiTurn,
-        nextPlayer: gameState.currentPlayer
+        turn,
+        nextPlayer,
       });
 
     } catch (error) {
@@ -398,12 +404,7 @@ export class GameService {
       }, 2000 * newRetryCount); // Exponential backoff
     } else {
       // Max retries reached, mark as failed
-      const gameState = await this.redis.getGameState(sessionId);
-      if (gameState) {
-        gameState.status = 'ai_turn_failed';
-        gameState.updatedAt = new Date().toISOString();
-        await this.redis.setGameState(sessionId, gameState);
-      }
+      await this.redis.updateGameStatus(sessionId, 'ai_turn_failed');
 
       await this.publishEvent(sessionId, 'ai_turn_failed', {
         error: error.message,
@@ -412,11 +413,17 @@ export class GameService {
     }
   }
 
-  private getNextPlayer(gameState: MultiplayerGameState, currentPlayerId: string): string {
+  private async getNextPlayer(sessionId: string, currentPlayerId: string) {
+    const gameState = await this.redis.getGameState(sessionId);
+    if (!gameState) {
+      throw new Error('Game state not found during AI processing');
+    }
     const activePlayers = gameState.players.filter(p => p.isActive);
     const currentIndex = activePlayers.findIndex(p => p.id === currentPlayerId);
     const nextIndex = (currentIndex + 1) % activePlayers.length;
-    return activePlayers[nextIndex].id;
+    const nextPlayer = activePlayers[nextIndex].id;
+
+    return nextPlayer;
   }
 
   private async handlePlayerPromotions(sessionId: string, gameState: MultiplayerGameState): Promise<void> {
@@ -432,6 +439,9 @@ export class GameService {
       if (connectedActivePlayers.length > 0) {
         // Promote the least recently joined (oldest) connected active player
         const newCurrentPlayer = connectedActivePlayers[0];
+
+        // Use optimized current player update
+        await this.redis.updateCurrentPlayer(sessionId, newCurrentPlayer.id);
         gameState.currentPlayer = newCurrentPlayer.id;
 
         await this.publishEvent(sessionId, 'player_promoted', {
