@@ -85,7 +85,7 @@ ${context.history.map((turn, index) => {
         model: "gemini-2.0-flash-preview-image-generation",
         contents: [prompt, imagePart],
         config: {
-          responseModalities: [Modality.TEXT],
+          responseModalities: [Modality.TEXT, Modality.IMAGE],
         }
       });
 

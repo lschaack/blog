@@ -96,6 +96,7 @@ export const renderLinesToBase64 = async (
   lines.forEach(line => drawLine(ctx, line));
 
   // Convert to base64
+  // FIXME: toBlob and then createObjectURL
   return canvas.toDataURL('image/png', 0.9);
 };
 
