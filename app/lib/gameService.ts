@@ -74,6 +74,7 @@ export class GameService {
 
   async joinGame(sessionId: string, request: JoinGameRequest): Promise<{ playerId: string; isActive: boolean }> {
     // Perform lazy cleanup before joining game
+    // FIXME: TTL should already do this
     await this.cleanupAbandonedGames();
     const gameState = await this.redis.getGameState(sessionId);
     if (!gameState) {

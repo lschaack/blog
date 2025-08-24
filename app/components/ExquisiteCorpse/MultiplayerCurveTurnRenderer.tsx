@@ -36,13 +36,13 @@ export const MultiplayerCurveTurnRenderer = ({
   const allDisplayLines = useMemo(() => {
     return displayTurns
       .map(turn => turn.path)
-      .concat(currentTurn.currentLine);
-  }, [displayTurns, currentTurn.currentLine]);
+      .concat(currentTurn.lines);
+  }, [displayTurns, currentTurn.lines]);
 
   // Handle adding lines from Sketchpad
-  const handleAddLine = useCallback((newLines: Line[]) => {
-    currentTurn.setLine(newLines);
-  }, [currentTurn]);
+  const handleAddLine = useCallback((newLine: Line) => {
+    currentTurn.setLines([...allDisplayLines, newLine]);
+  }, [allDisplayLines, currentTurn]);
 
   // Handle ending turn
   const handleEndTurnClick = useCallback(() => {
@@ -50,7 +50,7 @@ export const MultiplayerCurveTurnRenderer = ({
 
     // For curve turns, the turn data includes the line
     const turnData = {
-      path: currentTurn.currentLine.flat()
+      path: currentTurn.lines.flat()
     } as Omit<CurveTurn, keyof BaseTurn>;
 
     handleEndTurn(turnData);

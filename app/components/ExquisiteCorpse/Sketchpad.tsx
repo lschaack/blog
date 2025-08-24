@@ -11,7 +11,7 @@ type SketchpadProps = {
   width: number;
   height: number;
   lines: Line[];
-  handleAddLine: (lines: Line[]) => void;
+  handleAddLine: (line: Line) => void;
 }
 
 // Canvas drawing utilities
@@ -175,20 +175,19 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
     if (currentPoints.current.length > 1) {
       const fittedLine = fitCurvesToPoints(currentPoints.current);
       if (fittedLine.length > 0) {
-        const newLines = [...lines, fittedLine];
         // round every number to minimize characters in redis and prompt
-        handleAddLine(newLines.map(line => (
-          line.map(cmd => (
+        handleAddLine(
+          fittedLine.map(cmd => (
             cmd.map(val => (
               typeof val === 'number' ? Math.round(val) : val
             )) as PathCommand
           ))
-        )));
+        );
       }
     }
 
     currentPoints.current = [];
-  }, [isDrawing, lines, handleAddLine]);
+  }, [isDrawing, handleAddLine]);
 
   // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent) => startDrawing(e.nativeEvent);

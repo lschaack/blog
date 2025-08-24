@@ -1,11 +1,12 @@
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { BaseTurn, CanvasDimensions, CurveTurn, Line } from "@/app/types/exquisiteCorpse";
+import { BaseTurn, CanvasDimensions, CurveTurn } from "@/app/types/exquisiteCorpse";
 import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { ensureStartsWith } from "@/app/utils/string";
+import { SelfDrawingSketch } from "./SelfDrawingPath";
 
 type CurveTurnRendererProps = {
   handleEndTurn: (turnData: Omit<CurveTurn, keyof BaseTurn>) => void;
@@ -25,18 +26,6 @@ export const CurveTurnRenderer = ({
   // Get display lines from completed turns
   const displayTurns = useMemo(() => getDisplayTurns(gameState), [gameState]);
 
-  // Combined display lines: completed turns + current turn line
-  const allDisplayLines = useMemo(() => {
-    return displayTurns
-      .map(turn => turn.path)
-      .concat(currentTurn.currentLine);
-  }, [displayTurns, currentTurn.currentLine]);
-
-  // Handle adding lines from Sketchpad
-  const handleAddLine = useCallback((newLines: Line[]) => {
-    currentTurn.setLine(newLines);
-  }, [currentTurn]);
-
   // Handle ending turn
   const handleEndTurnClick = useCallback(() => {
     if (!currentTurn.hasLine) return;
@@ -44,7 +33,7 @@ export const CurveTurnRenderer = ({
     // For curve turns, the turn data includes the line
     // For other turn types, this would be different
     const turnData = {
-      path: currentTurn.currentLine.flat()
+      path: currentTurn.lines.flat()
     } as Omit<CurveTurn, keyof BaseTurn>;
 
     handleEndTurn(turnData);
@@ -72,17 +61,23 @@ export const CurveTurnRenderer = ({
         />
       </div>
 
-      {/* Sketchpad */}
-      <Sketchpad
-        width={canvasDimensions.width}
-        height={canvasDimensions.height}
-        lines={allDisplayLines}
-        handleAddLine={line => {
-          if (canDraw) {
-            handleAddLine(line);
-          }
-        }}
-      />
+      <div className="relative">
+        <SelfDrawingSketch
+          paths={displayTurns.map(({ path }) => path)}
+          dimensions={canvasDimensions}
+          className="absolute inset-0 fill-none pointer-events-none"
+        />
+        <Sketchpad
+          width={canvasDimensions.width}
+          height={canvasDimensions.height}
+          lines={currentTurn.lines}
+          handleAddLine={line => {
+            if (canDraw) {
+              currentTurn.addLine(line);
+            }
+          }}
+        />
+      </div>
 
       {/* End turn button */}
       <Button

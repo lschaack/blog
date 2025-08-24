@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
-import { useUndoRedo } from './useUndoRedo';
+import { useHistory } from './useUndoRedo';
 import { Line } from "@/app/types/exquisiteCorpse";
 import { renderPathCommandsToSvg } from '@/app/utils/svg';
 import { downloadBlob } from "@/app/utils/blob";
@@ -23,16 +23,16 @@ export const TrainingInterface = () => {
     canUndo,
     canRedo,
     clear: clearLines
-  } = useUndoRedo<Line[]>([]);
+  } = useHistory<Line[]>([]);
 
   // Canvas dimensions (consistent with Game component)
   const canvasDimensions = useMemo(() => ({ width: 512, height: 512 }), []);
 
 
   // Handler for adding lines from Sketchpad
-  const handleAddLine = useCallback((newLines: Line[]) => {
-    setCurrentLine(newLines);
-  }, [setCurrentLine]);
+  const handleAddLine = useCallback((newLine: Line) => {
+    setCurrentLine([...currentLine, newLine]);
+  }, [currentLine, setCurrentLine]);
 
   // Generate and download JSON file
   const handleDownloadExample = useCallback(async () => {

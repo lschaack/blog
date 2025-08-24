@@ -1,32 +1,36 @@
 import { useCallback } from "react";
 import { Line } from "@/app/types/exquisiteCorpse";
-import { useUndoRedo } from "./useUndoRedo";
+import { useHistory } from "./useUndoRedo";
 
 export const useCurrentTurn = () => {
   const {
-    current: currentLine,
-    setCurrent: setCurrentLine,
+    current: lines,
+    setCurrent: setLines,
     undo,
     redo,
     clear: resetCurrentTurn,
     canUndo,
     canRedo,
-  } = useUndoRedo<Line[]>([]);
+  } = useHistory<Line[]>([]);
 
   // Restore current line from JSON
   const restoreCurrentLine = useCallback((newCurrentLine: Line[]) => {
     resetCurrentTurn();
     if (newCurrentLine.length > 0) {
-      setCurrentLine(newCurrentLine);
+      setLines(newCurrentLine);
     }
-  }, [resetCurrentTurn, setCurrentLine]);
+  }, [resetCurrentTurn, setLines]);
+
+  const addLine = (newLine: Line) => {
+    setLines([...lines, newLine])
+  }
 
   // State queries
-  const hasLine = currentLine.length > 0;
+  const hasLine = lines.length > 0;
 
   return {
     // Current state
-    currentLine,
+    lines,
     hasLine,
 
     // History controls
@@ -36,7 +40,8 @@ export const useCurrentTurn = () => {
     redo,
 
     // Line editing
-    setLine: setCurrentLine,
+    setLines,
+    addLine,
 
     // Turn lifecycle
     resetCurrentTurn,

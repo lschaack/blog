@@ -132,10 +132,18 @@ export const getLastTurn = <T extends BaseTurn>(state: GameState<T>): T | undefi
 
 export const isUserTurn = <T extends BaseTurn>(state: GameState<T>): boolean => {
   const lastTurn = getLastTurn(state);
+
   return !lastTurn || lastTurn.author === "ai";
 };
 
 export const isAITurn = <T extends BaseTurn>(state: GameState<T>): boolean => {
   const lastTurn = getLastTurn(state);
+
   return Boolean(lastTurn && lastTurn.author === "user");
 };
+
+export const isLastTurnAI = <T extends BaseTurn>(state: GameState<T>): boolean => {
+  const prevTurn = getPreviousTurn(state);
+
+  return Boolean(prevTurn && prevTurn.author === "ai");
+}

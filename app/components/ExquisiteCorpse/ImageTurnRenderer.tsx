@@ -38,13 +38,13 @@ export const ImageTurnRenderer = ({
 
   // Combined display lines: just the current turn line (since background is an image)
   const allDisplayLines = useMemo(() => {
-    return currentTurn.currentLine;
-  }, [currentTurn.currentLine]);
+    return currentTurn.lines;
+  }, [currentTurn.lines]);
 
   // Handle adding lines from Sketchpad
-  const handleAddLine = useCallback((newLines: Line[]) => {
-    currentTurn.setLine(newLines);
-  }, [currentTurn]);
+  const handleAddLine = useCallback((newLine: Line) => {
+    currentTurn.setLines([...allDisplayLines, newLine]);
+  }, [allDisplayLines, currentTurn]);
 
   // Handle ending turn
   const handleEndTurnClick = useCallback(async () => {
@@ -57,7 +57,7 @@ export const ImageTurnRenderer = ({
       // If there's a background image, we need to include it in the rendering
       // For now, we'll just render the current line on top of a white background
       // In a full implementation, you'd want to composite the background image + new line
-      allLines.push(...currentTurn.currentLine);
+      allLines.push(...currentTurn.lines);
 
       const imageData = await renderLinesToBase64(
         allLines,
