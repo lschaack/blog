@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGameService } from '@/app/lib/gameService';
-import type { JoinGameRequest } from '@/app/types/multiplayer';
+import { PlayerNameSchema } from '../../../schemas';
+import z from 'zod';
 
 type Params = {
   id: string;
 };
+
+const JoinRequestSchema = z.object({
+  playerName: PlayerNameSchema,
+})
 
 export async function POST(
   request: NextRequest,
@@ -13,25 +18,11 @@ export async function POST(
   try {
     const params = await props.params;
     const sessionId = params.id;
-    const body: JoinGameRequest = await request.json();
-
-    // Validate request
-    if (!body.playerName) {
-      return NextResponse.json(
-        { error: 'Missing required field: playerName' },
-        { status: 400 }
-      );
-    }
-
-    if (body.playerName.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'playerName cannot be empty' },
-        { status: 400 }
-      );
-    }
+    const body = await request.json();
+    const joinRequest = JoinRequestSchema.parse(body);
 
     const gameService = getGameService();
-    const result = await gameService.joinGame(sessionId, body);
+    const result = await gameService.joinGame(sessionId, joinRequest);
 
     return NextResponse.json({
       playerId: result.playerId,
@@ -40,10 +31,17 @@ export async function POST(
 
   } catch (error) {
     console.error('Join game error:', error);
-    
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: error.errors[0].message },
+        { status: 400 }
+      );
+    }
+
     if (error instanceof Error && error.message === 'Game not found') {
       return NextResponse.json(
-        { error: 'Game not found' },
+        { error: error.message },
         { status: 404 }
       );
     }

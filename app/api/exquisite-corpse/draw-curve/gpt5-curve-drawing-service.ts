@@ -2,32 +2,13 @@ import { AICurveResponse, GameContext, CurveTurn } from "@/app/types/exquisiteCo
 import { getBase64FileSizeMb } from "@/app/utils/base64";
 import { renderPathCommandsToSvg } from "@/app/utils/svg";
 import { z } from "zod";
-import parseSvgPath from "parse-svg-path";
 import { jsonrepair } from 'jsonrepair';
 import OpenAI from 'openai';
+import { LineSchema } from "../schemas";
 
 const AICurveResponseSchema = z.object({
   interpretation: z.string().min(1, "Interpretation cannot be empty"),
-  path: z
-    .string()
-    .min(1, "Path cannot be empty")
-    .transform((string, ctx) => {
-      // extract the `d` property
-      const match = string.match(/^([MLHVCSQTAZ0-9\s,.\-+]+)$/);
-
-      if (!match) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Path must be a single line of only absolute (uppercase) commands",
-        });
-
-        return z.NEVER;
-      }
-
-      const path = match[1];
-
-      return parseSvgPath(path);
-    }),
+  path: LineSchema,
   reasoning: z.string().min(1, "Reasoning cannot be empty"),
   title: z.string().min(1, "Title cannot be empty"),
 });
@@ -42,7 +23,7 @@ export class GPT5CurveDrawingService {
 
   private buildPrompt(context: GameContext<CurveTurn>): string {
     return `
-You are an expert graphic designer specializing in SVG art using the pen tool. You're playing a collaborative drawing game called "Exquisite Corpse."
+You are an expert graphic designer specializing in vector art using the pen tool. You're playing a collaborative drawing game called "Exquisite Corpse."
 
 DRAWING RULES:
 - Define your addition as a single line of path commands as used in the \`d\` parameter of a \`<path>\` element

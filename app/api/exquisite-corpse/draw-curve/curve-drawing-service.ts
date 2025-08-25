@@ -3,31 +3,12 @@ import { getBase64FileSizeMb } from "@/app/utils/base64";
 import { renderPathCommandsToSvg } from "@/app/utils/svg";
 import { GoogleGenAI, Modality } from "@google/genai";
 import { z } from "zod";
-import parseSvgPath from "parse-svg-path";
 import { jsonrepair } from 'jsonrepair';
+import { LineSchema } from "../schemas";
 
 const AICurveResponseSchema = z.object({
   interpretation: z.string().min(1, "Interpretation cannot be empty"),
-  path: z
-    .string()
-    .min(1, "Path cannot be empty")
-    .transform((string, ctx) => {
-      // extract the `d` property
-      const match = string.match(/^([MLHVCSQTAZ0-9\s,.\-+]+)$/);
-
-      if (!match) {
-        ctx.addIssue({
-          code: "custom",
-          message: "Path must be a single line of only absolute (uppercase) commands",
-        });
-
-        return z.NEVER;
-      }
-
-      const path = match[1];
-
-      return parseSvgPath(path);
-    }),
+  path: LineSchema,
   reasoning: z.string().min(1, "Reasoning cannot be empty"),
 });
 
