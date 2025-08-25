@@ -39,7 +39,7 @@ function createGameContextSchema<TurnSchema extends typeof BaseTurnSchema>(turnS
   })
 }
 
-export const LineSchema = z.string()
+export const RawPathSchema = z.string()
   .min(1, 'Path cannot be empty')
   .transform((string, ctx) => {
     // extract the `d` property
@@ -59,8 +59,32 @@ export const LineSchema = z.string()
     return parseSvgPath(path);
   });
 
+const MoveToSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
+const LineToSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
+const HorizontalLineToSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
+const VerticalLineToSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
+const CubicBezierSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
+const SmoothCubicBezierSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
+const QuadraticBezierSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
+const SmoothQuadraticBezierSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
+const ArcSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
+const ClosePathSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
+const PathCommandSchema = z.union([
+  MoveToSchema,
+  LineToSchema,
+  HorizontalLineToSchema,
+  VerticalLineToSchema,
+  CubicBezierSchema,
+  SmoothCubicBezierSchema,
+  QuadraticBezierSchema,
+  SmoothQuadraticBezierSchema,
+  ArcSchema,
+  ClosePathSchema,
+]);
+export const ParsedPathSchema = z.array(PathCommandSchema);
+
 const CurveTurnSchema = BaseTurnSchema.extend({
-  path: LineSchema,
+  path: ParsedPathSchema,
 });
 
 const ImageTurnSchema = BaseTurnSchema.extend({

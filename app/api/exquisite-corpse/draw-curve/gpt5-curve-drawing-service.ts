@@ -4,11 +4,11 @@ import { renderPathCommandsToSvg } from "@/app/utils/svg";
 import { z } from "zod";
 import { jsonrepair } from 'jsonrepair';
 import OpenAI from 'openai';
-import { LineSchema } from "../schemas";
+import { RawPathSchema } from "../schemas";
 
 const AICurveResponseSchema = z.object({
   interpretation: z.string().min(1, "Interpretation cannot be empty"),
-  path: LineSchema,
+  path: RawPathSchema,
   reasoning: z.string().min(1, "Reasoning cannot be empty"),
   title: z.string().min(1, "Title cannot be empty"),
 });
