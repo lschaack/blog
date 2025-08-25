@@ -60,15 +60,15 @@ export const RawPathSchema = z.string()
   });
 
 const MoveToSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
-const LineToSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
-const HorizontalLineToSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
-const VerticalLineToSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
-const CubicBezierSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
-const SmoothCubicBezierSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
-const QuadraticBezierSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
-const SmoothQuadraticBezierSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
-const ArcSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
-const ClosePathSchema = z.tuple([z.enum(['M', 'm']), z.number(), z.number()]);
+const LineToSchema = z.tuple([z.enum(['L', 'l']), z.number(), z.number()]);
+const HorizontalLineToSchema = z.tuple([z.enum(['H', 'h']), z.number()]);
+const VerticalLineToSchema = z.tuple([z.enum(['V', 'v']), z.number()]);
+const CubicBezierSchema = z.tuple([z.enum(['C', 'c']), z.number(), z.number(), z.number(), z.number(), z.number(), z.number()]);
+const SmoothCubicBezierSchema = z.tuple([z.enum(['S', 's']), z.number(), z.number(), z.number(), z.number()]);
+const QuadraticBezierSchema = z.tuple([z.enum(['Q', 'q']), z.number(), z.number(), z.number(), z.number()]);
+const SmoothQuadraticBezierSchema = z.tuple([z.enum(['T', 't']), z.number(), z.number()]);
+const ArcSchema = z.tuple([z.enum(['A', 'a']), z.number(), z.number(), z.number(), z.number(), z.number(), z.number(), z.number()]);
+const ClosePathSchema = z.tuple([z.enum(['Z', 'z'])]);
 const PathCommandSchema = z.union([
   MoveToSchema,
   LineToSchema,
