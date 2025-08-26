@@ -8,7 +8,6 @@ import { downloadBlob } from '@/app/utils/blob';
 type MultiplayerGameSessionProps = {
   sessionId: string;
   playerId: string;
-  isActivePlayer: boolean;
   dimensions: { width: number; height: number };
   onLeaveGame: () => void;
 };
@@ -16,7 +15,6 @@ type MultiplayerGameSessionProps = {
 export const MultiplayerGameSession = ({
   sessionId,
   playerId,
-  isActivePlayer,
   dimensions,
   onLeaveGame
 }: MultiplayerGameSessionProps) => {
@@ -24,6 +22,8 @@ export const MultiplayerGameSession = ({
     sessionId,
     playerId
   );
+
+  const isActivePlayer = gameState?.players.find(player => player.id === playerId)?.isActive ?? false;
 
   // Handle leaving game
   const handleLeaveGame = useCallback(async () => {

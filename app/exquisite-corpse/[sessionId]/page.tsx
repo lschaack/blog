@@ -12,7 +12,6 @@ export default function GameSessionPage() {
 
   const sessionId = params.sessionId as string;
   const playerId = searchParams.get('playerId');
-  const isActive = searchParams.get('isActive') === 'true';
 
   const [gameStarted, setGameStarted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +62,6 @@ export default function GameSessionPage() {
     <MultiplayerGameSession
       sessionId={sessionId}
       playerId={playerId!} // Already validated in useEffect
-      isActivePlayer={isActive}
       dimensions={dimensions}
       onLeaveGame={handleLeaveGame}
     />
