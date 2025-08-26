@@ -10,6 +10,7 @@ import type {
 } from '@/app/types/multiplayer';
 import { generateAICurveTurn } from '@/app/lib/aiTurnService';
 import type { CurveTurn } from '@/app/types/exquisiteCorpse';
+import { getCurrentPlayer, isCurrentPlayer } from './gameUtils';
 
 export class GameService {
   private redis = getRedisClient();
@@ -43,7 +44,7 @@ export class GameService {
         id: 'ai',
         name: 'AI',
         connectionId: 'ai',
-        joinedAt: now,
+        joinedAt: now + 1, // ensure first player always starts
         isActive: true,
         connectionStatus: 'connected',
         lastSeenAt: now
@@ -56,7 +57,6 @@ export class GameService {
       gameId,
       type: request.gameType,
       players,
-      currentPlayer: playerId, // First player always starts
       status: 'game_started',
       turns: [],
       createdAt: new Date().toISOString(),
@@ -163,7 +163,7 @@ export class GameService {
     }
 
     // Validate it's the player's turn
-    if (gameState.currentPlayer !== playerId) {
+    if (!isCurrentPlayer(gameState, playerId)) {
       throw new Error('Not your turn');
     }
 
@@ -239,6 +239,7 @@ export class GameService {
 
   async retryAITurn(sessionId: string): Promise<void> {
     const gameState = await this.redis.getGameState(sessionId);
+
     if (!gameState) {
       throw new Error('Game not found');
     }
@@ -247,7 +248,7 @@ export class GameService {
       throw new Error('Not an AI game');
     }
 
-    if (gameState.currentPlayer !== 'ai') {
+    if (getCurrentPlayer(gameState).id !== 'ai') {
       throw new Error('Not AI\'s turn');
     }
 
@@ -261,7 +262,7 @@ export class GameService {
 
   async updateDrawingStatus(sessionId: string, playerId: string, isDrawing: boolean): Promise<void> {
     const gameState = await this.redis.getGameState(sessionId);
-    if (!gameState || gameState.currentPlayer !== playerId) {
+    if (!gameState || !isCurrentPlayer(gameState, playerId)) {
       return;
     }
 
@@ -422,7 +423,7 @@ export class GameService {
     const gameState = await this.redis.getGameState(sessionId);
     if (!gameState) return;
 
-    const currentPlayer = gameState.players.find(p => p.id === gameState.currentPlayer);
+    const currentPlayer = getCurrentPlayer(gameState);
     if (!currentPlayer || currentPlayer.connectionStatus === 'disconnected') {
       const connectedActivePlayers = gameState.players
         .filter(p => p.isActive && p.connectionStatus === 'connected' && p.id !== 'ai')

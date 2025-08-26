@@ -1,9 +1,10 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback } from 'react';
 import { useSSEConnection } from './useSSEConnection';
 import { MultiplayerCurveTurnRenderer } from './MultiplayerCurveTurnRenderer';
 import { Button } from '@/app/components/Button';
 import type { CurveTurn, BaseTurn } from '@/app/types/exquisiteCorpse';
 import { downloadBlob } from '@/app/utils/blob';
+import { getCurrentPlayer } from '../lib/gameUtils';
 
 type MultiplayerGameSessionProps = {
   sessionId: string;
@@ -22,8 +23,6 @@ export const MultiplayerGameSession = ({
     sessionId,
     playerId
   );
-
-  const isActivePlayer = gameState?.players.find(player => player.id === playerId)?.isActive ?? false;
 
   // Handle leaving game
   const handleLeaveGame = useCallback(async () => {
@@ -98,12 +97,6 @@ export const MultiplayerGameSession = ({
     downloadBlob(blob, `multiplayer-game-${sessionId}-${Date.now()}.json`);
   }, [gameState, sessionId]);
 
-  // Determine if user can take actions
-  const canTakeAction = useMemo(() => {
-    if (!gameState || !playerId || !isActivePlayer) return false;
-    return gameState.currentPlayer === playerId && gameState.status !== 'ai_turn_started';
-  }, [gameState, playerId, isActivePlayer]);
-
   // Show loading/connecting state
   if (!isConnected || !gameState) {
     return (
@@ -134,6 +127,15 @@ export const MultiplayerGameSession = ({
     );
   }
 
+  const isActivePlayer = gameState?.players.find(player => player.id === playerId)?.isActive ?? false;
+  const currentPlayer = getCurrentPlayer(gameState);
+
+  if (!currentPlayer) {
+    throw new Error('No current player, check active player logic');
+  }
+
+  const isCurrentPlayer = currentPlayer.id === playerId;
+
   return (
     <div className="flex flex-col gap-4 max-w-[512px] mx-auto">
       {/* Game Info Header */}
@@ -156,7 +158,7 @@ export const MultiplayerGameSession = ({
               {gameState.players.filter(p => p.id !== 'ai').map(player => (
                 <span
                   key={player.id}
-                  className={`px-2 py-1 rounded text-xs ${player.id === gameState.currentPlayer
+                  className={`px-2 py-1 rounded text-xs ${player.id === currentPlayer.id
                     ? 'bg-blue-100 text-blue-800'
                     : player.isActive
                       ? 'bg-green-100 text-green-800'
@@ -165,7 +167,7 @@ export const MultiplayerGameSession = ({
                 >
                   {player.name}
                   {player.id === playerId && ' (you)'}
-                  {player.id === gameState.currentPlayer && ' ⭐'}
+                  {isCurrentPlayer && ' ⭐'}
                 </span>
               ))}
             </div>
@@ -199,17 +201,17 @@ export const MultiplayerGameSession = ({
             />
           </div>
         )}
-        {gameState.status === 'turn_ended' && gameState.currentPlayer === playerId && canTakeAction && 'Your turn!'}
-        {gameState.status === 'turn_ended' && gameState.currentPlayer !== playerId &&
-          `Waiting for ${gameState.players.find(p => p.id === gameState.currentPlayer)?.name || 'player'}`}
-        {gameState.status === 'game_started' && gameState.currentPlayer === playerId && canTakeAction && 'Start drawing!'}
+        {gameState.status === 'turn_ended' && isCurrentPlayer && 'Your turn!'}
+        {gameState.status === 'turn_ended' && !isCurrentPlayer &&
+          `Waiting for ${currentPlayer.name}`}
+        {gameState.status === 'game_started' && isCurrentPlayer && 'Start drawing!'}
         {!isActivePlayer && 'Watching game'}
       </div>
 
       {/* Game Canvas */}
       <MultiplayerCurveTurnRenderer
         handleEndTurn={handleSubmitTurn}
-        readOnly={!canTakeAction}
+        readOnly={isCurrentPlayer}
         canvasDimensions={dimensions}
         turns={gameState.turns}
         currentTurnIndex={gameState.turns.length}

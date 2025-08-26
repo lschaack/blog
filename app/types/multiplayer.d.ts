@@ -30,7 +30,6 @@ export type MultiplayerGameState = {
   gameId: string;
   type: GameType;
   players: Player[];
-  currentPlayer: string;
   status: GameStatus;
   turns: CurveTurn[];
   createdAt: string;

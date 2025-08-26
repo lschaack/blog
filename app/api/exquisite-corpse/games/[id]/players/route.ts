@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRedisClient } from '@/app/lib/redis';
+import { getCurrentPlayer } from '@/app/lib/gameUtils';
 
 type Params = {
   id: string;
@@ -13,7 +14,7 @@ export async function GET(
     const params = await props.params;
     const sessionId = params.id;
     const redis = getRedisClient();
-    
+
     const gameState = await redis.getGameState(sessionId);
     if (!gameState) {
       return NextResponse.json(
@@ -30,9 +31,11 @@ export async function GET(
       joinedAt: player.joinedAt
     }));
 
+    const currentPlayer = getCurrentPlayer(gameState);
+
     return NextResponse.json({
       players,
-      currentPlayer: gameState.currentPlayer
+      currentPlayer,
     });
 
   } catch (error) {
