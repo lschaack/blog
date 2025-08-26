@@ -43,7 +43,7 @@ export default async function Post({
             )}
           </div>
         </div>
-        <article className="max-w-2xl px-6 py-2 rounded-2xl bg-extralight overflow-hidden md:overflow-visible break-words">
+        <article className="self-start max-w-2xl px-6 py-2 rounded-2xl bg-extralight overflow-hidden md:overflow-visible break-words">
           {post.body && documentToReactComponents(
             post.body.json,
             getBlogPostOptions(post.body.links as BlogPostBodyLinks)

@@ -111,14 +111,16 @@ export const Navigator: FC<{ post: NonNullable<BlogPost>; className?: string }> 
         <h2 className="font-bold mb-2">{title}</h2>
         <p className="text-sm text-deep-600 font-medium">{subtitle}</p>
       </div>
-      <ul className="flex flex-col border-slate-800/70 border-l-2">
-        {headings.map((heading, i) => (
-          <NavigatorEntry
-            key={`heading-${i}`}
-            node={heading}
-          />
-        ))}
-      </ul>
+      {headings.length ? (
+        <ul className="flex flex-col border-slate-800/70 border-l-2">
+          {headings.map((heading, i) => (
+            <NavigatorEntry
+              key={`heading-${i}`}
+              node={heading}
+            />
+          ))}
+        </ul>
+      ) : null}
     </div>
   )
 }
