@@ -31,7 +31,7 @@ export default function GameSessionPage() {
   }, [sessionId, playerId]);
 
   const handleLeaveGame = () => {
-    router.push('/ExquisiteCorpse');
+    router.push('/exquisite-corpse');
   };
 
   if (error) {

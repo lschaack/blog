@@ -1,4 +1,4 @@
-import { TrainingInterface } from "@/app/ExquisiteCorpse/TrainingInterface";
+import { TrainingInterface } from "@/app/exquisite-corpse/TrainingInterface";
 
 export default function Demo() {
   return (

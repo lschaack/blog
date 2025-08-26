@@ -13,7 +13,7 @@ export default function ExquisiteCorpsePage() {
       isActive: isActive.toString()
     });
     
-    router.push(`/ExquisiteCorpse/${sessionId}?${searchParams.toString()}`);
+    router.push(`/exquisite-corpse/${sessionId}?${searchParams.toString()}`);
   };
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { ImageGame } from "@/app/ExquisiteCorpse/ImageGame";
+import { ImageGame } from "@/app/exquisite-corpse/ImageGame";
 
 export default function Demo() {
   return (
