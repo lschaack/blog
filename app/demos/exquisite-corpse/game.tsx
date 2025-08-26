@@ -1,8 +1,9 @@
 "use client";
 
-//import { ImageGame } from "@/app/components/ExquisiteCorpse/ImageGame";
-import { CurveGame } from "@/app/components/ExquisiteCorpse/CurveGame";
-//import { MultiplayerGame } from "@/app/components/ExquisiteCorpse/MultiplayerGame";
+//import { ImageGame } from "@/app/ExquisiteCorpse/ImageGame";
+//import { CurveGame } from "@/app/ExquisiteCorpse/CurveGame";
+import { ExquisiteCorpseGame } from "@/app/ExquisiteCorpse/ExquisiteCorpseGame";
+//import { MultiplayerGame } from "@/app/ExquisiteCorpse/MultiplayerGame";
 import { useMemo } from "react";
 
 export default function Demo() {
@@ -13,6 +14,7 @@ export default function Demo() {
 
   return (
     //<MultiplayerGame dimensions={dimensions} />
-    <CurveGame dimensions={dimensions} />
+    //<CurveGame dimensions={dimensions} />
+    <ExquisiteCorpseGame />
   );
 }
