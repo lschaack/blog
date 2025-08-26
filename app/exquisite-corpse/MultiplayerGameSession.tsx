@@ -213,6 +213,7 @@ export const MultiplayerGameSession = ({
         canvasDimensions={dimensions}
         turns={gameState.turns}
         currentTurnIndex={gameState.turns.length}
+        currentUserId={playerId}
       />
     </div>
   );

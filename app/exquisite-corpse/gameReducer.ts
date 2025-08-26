@@ -130,20 +130,34 @@ export const getLastTurn = <T extends BaseTurn>(state: GameState<T>): T | undefi
   return state.turns[state.turns.length - 1];
 };
 
+// Helper functions to determine turn author types
+export const isAuthorAI = (author: string): boolean => {
+  return author === "ai";
+};
+
+export const isAuthorUser = (author: string, currentUserId?: string): boolean => {
+  if (currentUserId) {
+    // In multiplayer, check if author matches current user ID
+    return author === currentUserId;
+  }
+  // In single-player, check if author is "user"
+  return author === "user";
+};
+
 export const isUserTurn = <T extends BaseTurn>(state: GameState<T>): boolean => {
   const lastTurn = getLastTurn(state);
 
-  return !lastTurn || lastTurn.author === "ai";
+  return !lastTurn || isAuthorAI(lastTurn.author);
 };
 
 export const isAITurn = <T extends BaseTurn>(state: GameState<T>): boolean => {
   const lastTurn = getLastTurn(state);
 
-  return Boolean(lastTurn && lastTurn.author === "user");
+  return Boolean(lastTurn && !isAuthorAI(lastTurn.author));
 };
 
 export const isLastTurnAI = <T extends BaseTurn>(state: GameState<T>): boolean => {
   const prevTurn = getPreviousTurn(state);
 
-  return Boolean(prevTurn && prevTurn.author === "ai");
+  return Boolean(prevTurn && isAuthorAI(prevTurn.author));
 }

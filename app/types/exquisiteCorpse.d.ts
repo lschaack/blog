@@ -12,7 +12,7 @@ export type CanvasDimensions = CanvasDimensions;
 
 // Base turn type with shared fields
 export type BaseTurn = {
-  author: "user" | "ai";
+  author: string;
   timestamp: string;
   number: number;
 };

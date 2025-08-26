@@ -4,6 +4,7 @@ import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { ensureStartsWith } from "@/app/utils/string";
+import { isAuthorAI, isAuthorUser } from "./gameReducer";
 
 type MultiplayerCurveTurnRendererProps = {
   handleEndTurn: (turnData: Omit<CurveTurn, keyof BaseTurn>) => void;
@@ -11,6 +12,7 @@ type MultiplayerCurveTurnRendererProps = {
   canvasDimensions: CanvasDimensions;
   turns: CurveTurn[];
   currentTurnIndex: number;
+  currentUserId?: string;
 };
 
 export const MultiplayerCurveTurnRenderer = ({
@@ -18,7 +20,8 @@ export const MultiplayerCurveTurnRenderer = ({
   readOnly = false,
   canvasDimensions,
   turns,
-  currentTurnIndex
+  currentTurnIndex,
+  currentUserId
 }: MultiplayerCurveTurnRendererProps) => {
   const currentTurn = useCurrentTurn();
 
@@ -102,9 +105,9 @@ export const MultiplayerCurveTurnRenderer = ({
       {prevTurn && (
         <div className="space-y-2 bg-deep-50 rounded-xl p-4">
           <div className="font-light">
-            Turn {prevTurn.number} - {prevTurn.author === "user" ? "Human" : "AI"}
+            Turn {prevTurn.number} - {isAuthorAI(prevTurn.author) ? "AI" : isAuthorUser(prevTurn.author, currentUserId) ? "You" : "Player"}
           </div>
-          {prevTurn.author === "ai" && prevTurn.title && (
+          {isAuthorAI(prevTurn.author) && prevTurn.title && (
             <h2 className="font-semibold font-geist-mono text-xl [font-variant:all-small-caps]">{prevTurn.title}</h2>
           )}
           {prevTurn.interpretation && (

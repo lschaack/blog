@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
 import { BaseTurn, CanvasDimensions, CurveTurn } from "@/app/types/exquisiteCorpse";
-import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn } from "./gameReducer";
+import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn, isAuthorAI, isAuthorUser } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
@@ -90,9 +90,9 @@ export const CurveTurnRenderer = ({
       {prevTurn && (
         <div className="space-y-2 bg-deep-50 rounded-xl p-4">
           <div className="font-light">
-            Turn {prevTurn.number} - {prevTurn.author === "user" ? "You" : "AI"}
+            Turn {prevTurn.number} - {isAuthorUser(prevTurn.author) ? "You" : "AI"}
           </div>
-          {prevTurn.author === "ai" && (
+          {isAuthorAI(prevTurn.author) && (
             <h2 className="font-semibold font-geist-mono text-xl [font-variant:all-small-caps]">{prevTurn.title}</h2>
           )}
           {prevTurn.interpretation && (
