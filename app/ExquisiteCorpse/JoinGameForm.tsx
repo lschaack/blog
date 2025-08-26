@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from 'react';
 import { Button } from '@/app/components/Button';
 import type { JoinGameRequest } from '@/app/types/multiplayer';

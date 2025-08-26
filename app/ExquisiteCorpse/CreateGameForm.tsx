@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from 'react';
 import { Button } from '@/app/components/Button';
 import type { GameType, CreateGameRequest } from '@/app/types/multiplayer';
@@ -61,7 +59,7 @@ export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFo
           Create {gameType === 'ai' ? 'AI' : 'Multiplayer'} Game
         </h1>
         <p className="text-gray-600">
-          {gameType === 'ai' 
+          {gameType === 'ai'
             ? 'Start a collaborative drawing session with AI'
             : 'Create a game for you and your friends'
           }

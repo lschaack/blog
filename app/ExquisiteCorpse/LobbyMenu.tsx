@@ -1,5 +1,3 @@
-"use client";
-
 import { Button } from '@/app/components/Button';
 import type { GameType } from '@/app/types/multiplayer';
 

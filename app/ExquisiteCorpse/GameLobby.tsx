@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from 'react';
 import type { GameType } from '@/app/types/multiplayer';
 import { LobbyMenu } from './LobbyMenu';
