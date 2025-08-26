@@ -12,13 +12,9 @@ export default function ExquisiteCorpsePage() {
       playerId,
       isActive: isActive.toString()
     });
-    
+
     router.push(`/exquisite-corpse/${sessionId}?${searchParams.toString()}`);
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <GameLobby onGameJoined={handleGameJoined} />
-    </div>
-  );
+  return <GameLobby onGameJoined={handleGameJoined} />;
 }
