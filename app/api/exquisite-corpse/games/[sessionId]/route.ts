@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRedisClient } from '@/app/lib/redis';
-
-type Params = {
-  id: string;
-};
+import { Params } from './params';
 
 export async function GET(
   request: NextRequest,
@@ -11,9 +8,9 @@ export async function GET(
 ) {
   try {
     const params = await props.params;
-    const sessionId = params.id;
+    const sessionId = params.sessionId;
     const redis = getRedisClient();
-    
+
     const gameState = await redis.getGameState(sessionId);
     if (!gameState) {
       return NextResponse.json(
@@ -39,9 +36,9 @@ export async function DELETE(
 ) {
   try {
     const params = await props.params;
-    const sessionId = params.id;
+    const sessionId = params.sessionId;
     const redis = getRedisClient();
-    
+
     const gameExists = await redis.gameExists(sessionId);
     if (!gameExists) {
       return NextResponse.json(

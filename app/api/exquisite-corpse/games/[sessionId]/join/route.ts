@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getGameService } from '@/app/lib/gameService';
 import { PlayerNameSchema } from '../../../schemas';
 import z from 'zod';
-
-type Params = {
-  id: string;
-};
+import { Params } from '../params';
 
 const JoinRequestSchema = z.object({
   playerName: PlayerNameSchema,
@@ -17,7 +14,7 @@ export async function POST(
 ) {
   try {
     const params = await props.params;
-    const sessionId = params.id;
+    const sessionId = params.sessionId;
     const body = await request.json();
     const joinRequest = JoinRequestSchema.parse(body);
 

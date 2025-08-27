@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGameService } from '@/app/lib/gameService';
-
-type Params = {
-  id: string;
-};
+import { Params } from '../params';
 
 export async function GET(
   request: NextRequest,
@@ -11,16 +8,16 @@ export async function GET(
 ) {
   try {
     const params = await props.params;
-    const sessionId = params.id;
+    const sessionId = params.sessionId;
     const gameService = getGameService();
-    
+
     await gameService.retryAITurn(sessionId);
 
     return NextResponse.json({ success: true });
 
   } catch (error) {
     console.error('Retry AI turn error:', error);
-    
+
     if (error instanceof Error) {
       if (error.message === 'Game not found') {
         return NextResponse.json(

@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGameService } from '@/app/lib/gameService';
 import type { SubmitTurnRequest } from '@/app/types/multiplayer';
-
-type Params = {
-  id: string;
-};
+import { Params } from '../params';
 
 export async function POST(
   request: NextRequest,
@@ -12,7 +9,7 @@ export async function POST(
 ) {
   try {
     const params = await props.params;
-    const sessionId = params.id;
+    const sessionId = params.sessionId;
     const body = await request.json();
 
     // Extract playerId from headers or body
@@ -43,7 +40,7 @@ export async function POST(
 
   } catch (error) {
     console.error('Submit turn error:', error);
-    
+
     if (error instanceof Error) {
       if (error.message === 'Game not found') {
         return NextResponse.json(

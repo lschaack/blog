@@ -2,17 +2,14 @@ import { NextRequest } from 'next/server';
 import { getRedisClient } from '@/app/lib/redis';
 import { getGameService } from '@/app/lib/gameService';
 import type { GameEvent } from '@/app/types/multiplayer';
-
-type Params = {
-  id: string;
-};
+import { Params } from '../params';
 
 export async function GET(
   request: NextRequest,
   props: { params: Promise<Params> }
 ) {
   const params = await props.params;
-  const sessionId = params.id;
+  const sessionId = params.sessionId;
   const url = new URL(request.url);
   const playerId = url.searchParams.get('playerId') || request.headers.get('x-player-id');
 

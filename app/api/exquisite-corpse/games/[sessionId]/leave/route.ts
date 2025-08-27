@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGameService } from '@/app/lib/gameService';
-
-type Params = {
-  id: string;
-};
+import { Params } from '../params';
 
 export async function POST(
   request: NextRequest,
@@ -11,7 +8,7 @@ export async function POST(
 ) {
   try {
     const params = await props.params;
-    const sessionId = params.id;
+    const sessionId = params.sessionId;
 
     // Try to get player ID from header first, then from request body
     let playerId = request.headers.get('x-player-id');
