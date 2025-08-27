@@ -99,7 +99,7 @@ export class GameService {
       await this.redis.setPlayerConnection(sessionId, existingPlayer.id, newConnectionId);
 
       // Check for player promotions after reconnection - get fresh state
-      await this.handlePlayerPromotionsAfterReconnect(sessionId);
+      await this.doPromotion(sessionId);
 
       // Get updated player info for event
       const updatedGameState = await this.redis.getGameState(sessionId);
@@ -115,40 +115,40 @@ export class GameService {
       }
 
       return { playerId: existingPlayer.id, isActive: existingPlayer.isActive };
+    } else {
+      // Not a reconnection - create new player
+      const playerId = randomUUID();
+      const connectionId = randomUUID();
+
+      // Determine if this player should be active
+      const connectedActivePlayerCount = gameState.players.filter(p =>
+        p.isActive && p.id !== 'ai' && p.connectionStatus === 'connected'
+      ).length;
+      const maxActivePlayers = gameState.type === 'ai' ? 1 : 2;
+      const isActive = connectedActivePlayerCount < maxActivePlayers;
+
+      const newPlayer: Player = {
+        id: playerId,
+        name: request.playerName,
+        connectionId,
+        joinedAt: now,
+        isActive,
+        connectionStatus: 'connected',
+        lastSeenAt: now
+      };
+
+      // Add new player using fresh state operations
+      await this.addNewPlayerToGame(sessionId, newPlayer);
+      await this.redis.setPlayerConnection(sessionId, playerId, connectionId);
+
+      // Check for player promotions after new player joins - get fresh state
+      await this.doPromotion(sessionId);
+
+      // Publish player joined event
+      await this.publishEvent(sessionId, 'player_joined', { player: newPlayer, isActive });
+
+      return { playerId, isActive };
     }
-
-    // Not a reconnection - create new player
-    const playerId = randomUUID();
-    const connectionId = randomUUID();
-
-    // Determine if this player should be active
-    const connectedActivePlayerCount = gameState.players.filter(p =>
-      p.isActive && p.id !== 'ai' && p.connectionStatus === 'connected'
-    ).length;
-    const maxActivePlayers = gameState.type === 'ai' ? 1 : 2;
-    const isActive = connectedActivePlayerCount < maxActivePlayers;
-
-    const newPlayer: Player = {
-      id: playerId,
-      name: request.playerName,
-      connectionId,
-      joinedAt: now,
-      isActive,
-      connectionStatus: 'connected',
-      lastSeenAt: now
-    };
-
-    // Add new player using fresh state operations
-    await this.addNewPlayerToGame(sessionId, newPlayer);
-    await this.redis.setPlayerConnection(sessionId, playerId, connectionId);
-
-    // Check for player promotions after new player joins - get fresh state
-    await this.handlePlayerPromotionsAfterJoin(sessionId);
-
-    // Publish player joined event
-    await this.publishEvent(sessionId, 'player_joined', { player: newPlayer, isActive });
-
-    return { playerId, isActive };
   }
 
   async submitTurn(sessionId: string, playerId: string, request: SubmitTurnRequest): Promise<void> {
@@ -201,12 +201,25 @@ export class GameService {
 
     const now = new Date().toISOString();
 
-    // Use optimized player status update
+    // Mark as disconnected but keep active (they can reconnect)
     await this.redis.updatePlayerStatus(sessionId, playerId, {
       connectionStatus: 'disconnected',
       disconnectedAt: now,
       lastSeenAt: now,
+      // Keep isActive: true - player remains active for reconnection
     });
+
+    // Clean up connection
+    await this.redis.removePlayerConnection(sessionId, playerId);
+
+    // Publish player disconnected event
+    await this.publishEvent(sessionId, 'player_disconnected', {
+      playerId,
+      playerName: player.name
+    });
+
+    // Check for player promotions after disconnect
+    await this.doPromotion(sessionId);
   }
 
   async removePlayer(sessionId: string, playerId: string): Promise<void> {
@@ -216,10 +229,9 @@ export class GameService {
     const player = gameState.players.find(p => p.id === playerId);
     if (!player) return;
 
-    // Mark player as disconnected instead of removing
     const now = new Date().toISOString();
 
-    // Use optimized player status update
+    // Mark player as disconnected AND inactive (explicit leave)
     await this.redis.updatePlayerStatus(sessionId, playerId, {
       connectionStatus: 'disconnected',
       disconnectedAt: now,
@@ -230,14 +242,62 @@ export class GameService {
     // Clean up connection
     await this.redis.removePlayerConnection(sessionId, playerId);
 
-    // Publish player disconnected event
+    // Publish player left event
     await this.publishEvent(sessionId, 'player_left', {
       playerId,
       playerName: player.name
     });
 
-    // Get fresh state for promotion checks
-    await this.handlePlayerPromotionsAfterDisconnect(sessionId);
+    // Check for player promotions after explicit leave
+    await this.doPromotion(sessionId);
+  }
+
+  async reconnectPlayer(sessionId: string, playerId: string): Promise<{ success: boolean; isActive: boolean }> {
+    const gameState = await this.redis.getGameState(sessionId);
+    if (!gameState) {
+      return { success: false, isActive: false };
+    }
+
+    const player = gameState.players.find(p => p.id === playerId);
+    if (!player) {
+      return { success: false, isActive: false };
+    }
+
+    const now = new Date().toISOString();
+    const newConnectionId = randomUUID();
+
+    // Mark player as connected
+    await this.redis.updatePlayerStatus(sessionId, playerId, {
+      connectionStatus: 'connected',
+      connectionId: newConnectionId,
+      lastSeenAt: now,
+      disconnectedAt: undefined
+    });
+
+    await this.redis.setPlayerConnection(sessionId, playerId, newConnectionId);
+
+    // If player was active and there are fewer than 2 active players, promote them
+    const activePlayers = gameState.players.filter(p => p.isActive && p.id !== 'ai');
+    if (player.isActive && activePlayers.length < 2) {
+      await this.redis.promotePlayer(sessionId, playerId);
+
+      await this.publishEvent(sessionId, 'player_promoted', {
+        playerId,
+        playerName: player.name
+      });
+    }
+
+    // Publish reconnection event
+    await this.publishEvent(sessionId, 'player_reconnected', {
+      playerId,
+      playerName: player.name,
+      isActive: player.isActive
+    });
+
+    // Check for general promotions
+    await this.handlePlayerPromotionsAfterReconnect(sessionId);
+
+    return { success: true, isActive: player.isActive };
   }
 
   async retryAITurn(sessionId: string): Promise<void> {
@@ -396,7 +456,9 @@ export class GameService {
     await this.redis.addPlayer(sessionId, newPlayer);
   }
 
-  private async handlePlayerPromotionsAfterDisconnect(sessionId: string): Promise<void> {
+  // there should always be two active players if possible
+  // if not, the game should expire after a short grace period
+  private async doPromotion(sessionId: string): Promise<void> {
     const gameState = await this.redis.getGameState(sessionId);
     if (!gameState) return;
 
@@ -409,26 +471,18 @@ export class GameService {
 
     if (activePlayers.length < 2) {
       if (inactivePlayers.length > 0) {
-        const firstChoice = inactivePlayers.find(player => player.connectionStatus === 'connected');
-        const promotedPlayer = firstChoice ?? inactivePlayers[0];
+        const firstConnectedPlayer = inactivePlayers.find(player => player.connectionStatus === 'connected');
+        const playerToPromote = firstConnectedPlayer ?? inactivePlayers[0];
 
-        await this.redis.promotePlayer(sessionId, promotedPlayer.id);
+        await this.redis.promotePlayer(sessionId, playerToPromote.id);
         await this.publishEvent(sessionId, 'player_promoted', {
-          playerId: promotedPlayer.id,
-          playerName: promotedPlayer.name
+          playerId: playerToPromote.id,
+          playerName: playerToPromote.name
         });
       } else {
         // TODO: set ten minute TTL
       }
     }
-  }
-
-  private async handlePlayerPromotionsAfterReconnect(sessionId: string): Promise<void> {
-    await this.handlePlayerPromotionsAfterDisconnect(sessionId);
-  }
-
-  private async handlePlayerPromotionsAfterJoin(sessionId: string): Promise<void> {
-    await this.handlePlayerPromotionsAfterDisconnect(sessionId);
   }
 
   private async publishEvent<T>(sessionId: string, type: string, data: T): Promise<void> {
