@@ -84,6 +84,10 @@ redis.call(
 return updated_turns_json
 `.trim();
 
+  private static getSessionKey(sessionId: string) {
+    return `exquisite_corpse:${sessionId}:state`;
+  }
+
   constructor() {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
@@ -102,16 +106,11 @@ return updated_turns_json
     return result;
   }
 
-  // Game state management
-  async initializeGame(sessionId: string, gameState: MultiplayerGameState): Promise<void> {
-    await this.initializeGameWithTTL(sessionId, gameState, RedisClient.TWO_HOURS);
-  }
-
-  async initializeGameWithTTL(sessionId: string, gameState: MultiplayerGameState, ttlSeconds: number): Promise<void> {
+  async initializeGame(sessionId: string, gameState: MultiplayerGameState): Promise<MultiplayerGameState> {
+    const key = RedisClient.getSessionKey(sessionId);
     const pipeline = this.redis.pipeline();
 
-    // Set main game data using hash
-    pipeline.hset(`exquisite_corpse:${sessionId}:state`, {
+    pipeline.call('JSON.SET', key, JSON.stringify({
       sessionId: gameState.sessionId,
       gameId: gameState.gameId,
       type: gameState.type,
@@ -120,28 +119,26 @@ return updated_turns_json
       updatedAt: gameState.updatedAt,
       players: JSON.stringify(gameState.players),
       turns: JSON.stringify(gameState.turns)
-    });
+    }));
 
-    // Update active players set
-    pipeline.del(`exquisite_corpse:${sessionId}:active_players`);
-    const activePlayers = gameState.players
-      .filter(p => p.isActive)
-      .map(p => p.id);
+    pipeline.expire(key, RedisClient.TWO_HOURS);
 
-    if (activePlayers.length > 0) {
-      pipeline.sadd(`exquisite_corpse:${sessionId}:active_players`, ...activePlayers);
+    pipeline.call('JSON.GET', key)
+
+    const result = await pipeline.exec();
+
+    if (!result) {
+      // TODO: Make this fail more gracefully
+      throw new Error('No result from game initialization pipeline');
+    } else {
+      for (let i = 0; i < result.length; i++) {
+        const error = result[i][0];
+        // TODO: Make this fail more gracefully
+        if (error) throw new Error('Failed to initialize game:', error);
+      }
+
+      return result[2][1] as MultiplayerGameState;
     }
-
-    // Update player connections
-    gameState.players.forEach(player => {
-      pipeline.hset(`exquisite_corpse:player_connections`, player.connectionId, sessionId);
-    });
-
-    // Set TTL for cleanup
-    pipeline.expire(`exquisite_corpse:${sessionId}:state`, ttlSeconds);
-    pipeline.expire(`exquisite_corpse:${sessionId}:active_players`, ttlSeconds);
-
-    await pipeline.exec();
   }
 
   async getGameState(sessionId: string): Promise<MultiplayerGameState | null> {

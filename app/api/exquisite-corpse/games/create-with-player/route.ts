@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { z } from "zod";
 
 import { getGameService } from '@/app/lib/gameService';
-import { PlayerNameSchema } from '../schemas';
+import { PlayerNameSchema } from '../../schemas';
 
 const CreateGameRequestSchema = z.object({
-  gameType: z.union([z.literal("multiplayer"), z.literal("ai")], {
+  gameType: z.union([z.literal("multiplayer"), z.literal("singleplayer")], {
     message: "Invalid gameType. Must be \"multiplayer\" or \"ai\""
   }),
   playerName: PlayerNameSchema,
@@ -16,6 +17,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const parsed = CreateGameRequestSchema.parse(body);
     const result = await getGameService().createGame(parsed);
+
+    const cookieStore = await cookies();
+    cookieStore.set('exquisite_corpse_player_id', result.playerId);
 
     return NextResponse.json({
       sessionId: result.sessionId,
@@ -35,3 +39,5 @@ export async function POST(request: NextRequest) {
     }
   }
 }
+
+

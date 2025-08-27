@@ -1,11 +1,12 @@
 import type { CurveTurn } from './exquisiteCorpse';
 
-export type GameType = 'multiplayer' | 'ai';
+export type GameType = 'singleplayer' | 'multiplayer';
 
 export type Player = {
   id: string;
   name: string;
-  connectionId: string;
+  // FIXME: Delete if not necessary at end of rewrite
+  connectionId?: string;
   joinedAt: string;
   isActive: boolean;
   connectionStatus: 'connected' | 'disconnected';

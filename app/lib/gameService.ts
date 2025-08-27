@@ -20,23 +20,19 @@ export class GameService {
     const sessionId = this.redis.generateSessionId();
     const gameId = randomUUID();
     const playerId = randomUUID();
-    const connectionId = randomUUID();
 
-    // Create initial player
     const now = new Date().toISOString();
     const player: Player = {
       id: playerId,
       name: request.playerName,
-      connectionId,
       joinedAt: now,
       isActive: true,
-      connectionStatus: 'connected',
-      lastSeenAt: now
+      connectionStatus: 'disconnected',
+      lastSeenAt: now,
     };
 
-    // Add AI player for AI games
     const players: Player[] = [player];
-    if (request.gameType === 'ai') {
+    if (request.gameType === 'singleplayer') {
       players.push({
         id: 'ai',
         name: 'AI',
@@ -48,7 +44,6 @@ export class GameService {
       });
     }
 
-    // Create initial game state
     const gameState: MultiplayerGameState = {
       sessionId,
       gameId,
@@ -60,17 +55,14 @@ export class GameService {
       updatedAt: new Date().toISOString()
     };
 
-    await this.redis.initializeGame(sessionId, gameState);
-    await this.redis.setPlayerConnection(sessionId, playerId, connectionId);
+    const initialGameState = await this.redis.initializeGame(sessionId, gameState);
 
-    // Publish game started event
-    await this.publishEvent(sessionId, 'game_started', { game: gameState });
+    await this.publishEvent(sessionId, 'game_started', { gameState: initialGameState });
 
     return { sessionId, playerId };
   }
 
   async joinGame(sessionId: string, request: JoinGameRequest): Promise<{ playerId: string; isActive: boolean }> {
-    // Perform lazy cleanup before joining game
     const gameState = await this.redis.getGameState(sessionId);
     if (!gameState) {
       throw new Error('Game not found');
@@ -78,6 +70,7 @@ export class GameService {
 
     const now = new Date().toISOString();
 
+    // Perform lazy cleanup before joining game
     // Check if this is a reconnection attempt - look for disconnected player with same name
     const existingPlayer = gameState.players.find(p =>
       p.name === request.playerName &&

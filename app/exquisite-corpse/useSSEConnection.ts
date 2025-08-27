@@ -46,7 +46,7 @@ export const useSSEConnection = (
     setConnectionState('connecting');
     setError(null);
 
-    const fetchGameStateImmediate = async () => {
+    const fetchGameState = async () => {
       if (!sessionId) return;
       try {
         const response = await fetch(`/api/exquisite-corpse/games/${sessionId}`);
@@ -87,7 +87,7 @@ export const useSSEConnection = (
           console.log('Received game event:', gameEvent);
 
           // Update game state based on events or fetch fresh state
-          fetchGameStateImmediate();
+          fetchGameState();
 
         } catch (err) {
           console.error('Failed to parse SSE message:', err);
