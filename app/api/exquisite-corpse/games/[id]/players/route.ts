@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRedisClient } from '@/app/lib/redis';
-import { getCurrentPlayer } from '@/app/lib/gameUtils';
 
 type Params = {
   id: string;
@@ -31,12 +30,7 @@ export async function GET(
       joinedAt: player.joinedAt
     }));
 
-    const currentPlayer = getCurrentPlayer(gameState);
-
-    return NextResponse.json({
-      players,
-      currentPlayer,
-    });
+    return NextResponse.json({ players });
 
   } catch (error) {
     console.error('Get players error:', error);

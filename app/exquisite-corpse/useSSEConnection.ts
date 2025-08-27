@@ -18,7 +18,7 @@ export const useSSEConnection = (
   const [connectionState, setConnectionState] = useState<SSEConnectionState>('disconnected');
   const [error, setError] = useState<string | null>(null);
   const [gameState, setGameState] = useState<MultiplayerGameState | null>(null);
-  
+
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -63,7 +63,7 @@ export const useSSEConnection = (
       // Since EventSource doesn't support custom headers, we pass playerId via URL params
       const url = new URL(`/api/exquisite-corpse/games/${sessionId}/events`, window.location.origin);
       url.searchParams.set('playerId', playerId);
-      
+
       const customEventSource = new EventSource(url.toString());
       eventSourceRef.current = customEventSource;
 
@@ -76,7 +76,7 @@ export const useSSEConnection = (
       customEventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          
+
           if (data.type === 'heartbeat' || data.type === 'connected') {
             // Handle system messages
             return;
@@ -146,7 +146,7 @@ export const useSSEConnection = (
     const handleBeforeUnload = () => {
       // Try to notify server of disconnect when page is unloading
       if (sessionId && playerId) {
-        navigator.sendBeacon(`/api/exquisite-corpse/games/${sessionId}/leave`, 
+        navigator.sendBeacon(`/api/exquisite-corpse/games/${sessionId}/leave`,
           JSON.stringify({ playerId }));
       }
     };

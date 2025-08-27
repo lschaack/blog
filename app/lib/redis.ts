@@ -7,6 +7,57 @@ class RedisClient {
   private subscriber: Redis;
   private publisher: Redis;
 
+  private static TWO_HOURS = 60 * 60 * 2;
+  private static ADD_PLAYER_SCRIPT = `
+local new_player_json = ARGV[1]
+
+if not new_player_json then
+  return redis.error_reply("Missing player to add")
+end
+
+local new_player = cjson.decode(new_player_json)
+local players = redis.call('HGET', KEYS[1], KEYS[2])
+
+-- check if player is already in players array
+for _, player in players do
+  if player.id == newPlayer.id then
+    return redis.error_reply("Player already exists")
+  end
+end
+
+table.insert(players, new_player)
+
+local updated_players_json = cjson.encode(players)
+redis.call(
+  'HMSET', KEYS[1],
+  'updatedAt', redis.call('TIME'),
+  KEYS[2], updated_players_json
+)
+
+return updated_players_json
+`.trim();
+
+  private static ADD_TURN_SCRIPT = `
+local new_turn_json = ARGV[1]
+
+if not new_turn_json then
+  return redis.error_reply("Missing turn to add")
+end
+
+local new_turn = cjson.decode(new_turn_json)
+local turns = redis.call('HGET', KEYS[1], KEYS[2])
+table.insert(turns, new_turn)
+
+local updated_turns_json = cjson.encode(turns)
+redis.call(
+  'HMSET', KEYS[1],
+  'updatedAt', redis.call('TIME'),
+  KEYS[2], updated_turns_json
+)
+
+return updated_turns_json
+`.trim();
+
   constructor() {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
@@ -26,11 +77,11 @@ class RedisClient {
   }
 
   // Game state management
-  async setGameState(sessionId: string, gameState: MultiplayerGameState): Promise<void> {
-    await this.setGameStateWithTTL(sessionId, gameState, 24 * 60 * 60); // 24h TTL
+  async initializeGame(sessionId: string, gameState: MultiplayerGameState): Promise<void> {
+    await this.initializeGameWithTTL(sessionId, gameState, RedisClient.TWO_HOURS);
   }
 
-  async setGameStateWithTTL(sessionId: string, gameState: MultiplayerGameState, ttlSeconds: number): Promise<void> {
+  async initializeGameWithTTL(sessionId: string, gameState: MultiplayerGameState, ttlSeconds: number): Promise<void> {
     const pipeline = this.redis.pipeline();
 
     // Set main game data using hash
@@ -94,28 +145,25 @@ class RedisClient {
     });
   }
 
-  async updateCurrentPlayer(sessionId: string, playerId: string): Promise<void> {
-    await this.redis.hset(`exquisite_corpse:${sessionId}:state`, {
-      currentPlayer: playerId,
-      updatedAt: new Date().toISOString()
-    });
-  }
-
   // Add a new turn (append-only operation)
   async addTurn(sessionId: string, turn: CurveTurn): Promise<void> {
-    const pipeline = this.redis.pipeline();
+    this.redis.eval(
+      RedisClient.ADD_TURN_SCRIPT,
+      2,
+      `exquisite_corpse:${sessionId}:state`,
+      'turns',
+      JSON.stringify(turn),
+    );
+  }
 
-    // Get current turns, add new one, and update
-    const currentTurns = await this.redis.hget(`exquisite_corpse:${sessionId}:state`, 'turns');
-    const turns = currentTurns ? JSON.parse(currentTurns) : [];
-    turns.push(turn);
-
-    pipeline.hset(`exquisite_corpse:${sessionId}:state`, {
-      turns: JSON.stringify(turns),
-      updatedAt: new Date().toISOString()
-    });
-
-    await pipeline.exec();
+  async addPlayer(sessionId: string, newPlayer: Player) {
+    this.redis.eval(
+      RedisClient.ADD_PLAYER_SCRIPT,
+      2,
+      `exquisite_corpse:${sessionId}:state`,
+      'players',
+      JSON.stringify(newPlayer),
+    );
   }
 
   // Update player status
@@ -277,7 +325,7 @@ class RedisClient {
   // AI turn retry tracking
   async setAIRetryCount(sessionId: string, count: number): Promise<void> {
     const key = `exquisite_corpse:${sessionId}:ai_retries`;
-    await this.redis.setex(key, 24 * 60 * 60, count.toString());
+    await this.redis.setex(key, RedisClient.TWO_HOURS, count.toString());
   }
 
   async getAIRetryCount(sessionId: string): Promise<number> {

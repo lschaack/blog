@@ -4,7 +4,7 @@ import type { JoinGameRequest } from '@/app/types/multiplayer';
 
 type JoinGameFormProps = {
   onBack: () => void;
-  onGameJoined: (sessionId: string, playerId: string, isActive: boolean) => void;
+  onGameJoined: (sessionId: string, playerId: string) => void;
 };
 
 export const JoinGameForm = ({ onBack, onGameJoined }: JoinGameFormProps) => {
@@ -46,7 +46,7 @@ export const JoinGameForm = ({ onBack, onGameJoined }: JoinGameFormProps) => {
       }
 
       const data = await response.json();
-      onGameJoined(sessionId.trim().toUpperCase(), data.playerId, data.isActive);
+      onGameJoined(sessionId.trim().toUpperCase(), data.playerId);
 
     } catch (err) {
       console.error('Join game error:', err);

@@ -4,8 +4,8 @@ import { getGameService } from '@/app/lib/gameService';
 export async function POST() {
   try {
     const gameService = getGameService();
-    const cleanedCount = await gameService.cleanupAbandonedGames();
-    
+    const cleanedCount = gameService.cleanupAbandonedGames();
+
     return NextResponse.json({
       success: true,
       cleanedCount,

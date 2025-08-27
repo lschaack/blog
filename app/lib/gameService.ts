@@ -15,11 +15,8 @@ import { getCurrentPlayer, isCurrentPlayer } from './gameUtils';
 export class GameService {
   private redis = getRedisClient();
   private static MAX_AI_RETRIES = 3;
-  private static DISCONNECTED_GAME_TTL = 60 * 60; // 1 hour in seconds
 
   async createGame(request: CreateGameRequest): Promise<{ sessionId: string; playerId: string }> {
-    // Perform lazy cleanup before creating new game
-    await this.cleanupAbandonedGames();
     const sessionId = this.redis.generateSessionId();
     const gameId = randomUUID();
     const playerId = randomUUID();
@@ -63,7 +60,7 @@ export class GameService {
       updatedAt: new Date().toISOString()
     };
 
-    await this.redis.setGameState(sessionId, gameState);
+    await this.redis.initializeGame(sessionId, gameState);
     await this.redis.setPlayerConnection(sessionId, playerId, connectionId);
 
     // Publish game started event
@@ -74,8 +71,6 @@ export class GameService {
 
   async joinGame(sessionId: string, request: JoinGameRequest): Promise<{ playerId: string; isActive: boolean }> {
     // Perform lazy cleanup before joining game
-    // FIXME: TTL should already do this
-    await this.cleanupAbandonedGames();
     const gameState = await this.redis.getGameState(sessionId);
     if (!gameState) {
       throw new Error('Game not found');
@@ -182,19 +177,17 @@ export class GameService {
       number: expectedTurnNumber
     };
 
-    // Use optimized Redis operations
+    // FIXME: all of these operations should be pipelined
     await this.redis.addTurn(sessionId, turn);
     await this.redis.updateGameStatus(sessionId, 'turn_ended');
 
-    // Determine next player
-    const nextPlayer = await this.getNextPlayer(sessionId, playerId);
-    await this.redis.updateCurrentPlayer(sessionId, nextPlayer);
-
     // Publish turn ended event
-    await this.publishEvent(sessionId, 'turn_ended', { turn, nextPlayer });
+    await this.publishEvent(sessionId, 'turn_ended', { turn });
 
+    const nextGameState = await this.redis.getGameState(sessionId);
+    const nextPlayer = nextGameState && getCurrentPlayer(nextGameState);
     // If next player is AI, trigger AI turn
-    if (nextPlayer === 'ai') {
+    if (nextPlayer?.id === 'ai') {
       await this.startAITurn(sessionId);
     }
   }
@@ -232,9 +225,6 @@ export class GameService {
 
     // Get fresh state for promotion checks
     await this.handlePlayerPromotionsAfterDisconnect(sessionId);
-
-    // Get fresh state for cleanup logic
-    await this.checkForGameCleanup(sessionId);
   }
 
   async retryAITurn(sessionId: string): Promise<void> {
@@ -358,16 +348,10 @@ export class GameService {
       // Use optimized Redis operations
       await this.redis.addTurn(sessionId, turn);
       await this.redis.updateGameStatus(sessionId, 'turn_ended');
-
-      const nextPlayer = await this.getNextPlayer(sessionId, 'ai');
-      await this.redis.updateCurrentPlayer(sessionId, nextPlayer);
       await this.redis.resetAIRetryCount(sessionId);
 
       // Publish success event
-      await this.publishEvent(sessionId, 'turn_ended', {
-        turn,
-        nextPlayer,
-      });
+      await this.publishEvent(sessionId, 'turn_ended', { turn });
 
     } catch (error) {
       await this.handleAITurnFailure(sessionId, error as Error);
@@ -395,28 +379,8 @@ export class GameService {
     }
   }
 
-  private async getNextPlayer(sessionId: string, currentPlayerId: string) {
-    const gameState = await this.redis.getGameState(sessionId);
-    if (!gameState) {
-      throw new Error('Game state not found when getting next player');
-    }
-    const activePlayers = gameState.players.filter(p => p.isActive);
-    const currentIndex = activePlayers.findIndex(p => p.id === currentPlayerId);
-    const nextIndex = (currentIndex + 1) % activePlayers.length;
-    const nextPlayer = activePlayers[nextIndex].id;
-
-    return nextPlayer;
-  }
-
-
-  // Helper methods that use fresh state instead of stale state
   private async addNewPlayerToGame(sessionId: string, newPlayer: Player): Promise<void> {
-    const gameState = await this.redis.getGameState(sessionId);
-    if (!gameState) throw new Error('Game not found');
-
-    gameState.players.push(newPlayer);
-    gameState.updatedAt = new Date().toISOString();
-    await this.redis.setGameState(sessionId, gameState);
+    await this.redis.addPlayer(sessionId, newPlayer);
   }
 
   private async handlePlayerPromotionsAfterDisconnect(sessionId: string): Promise<void> {
@@ -431,7 +395,6 @@ export class GameService {
 
       if (connectedActivePlayers.length > 0) {
         const newCurrentPlayer = connectedActivePlayers[0];
-        await this.redis.updateCurrentPlayer(sessionId, newCurrentPlayer.id);
 
         await this.publishEvent(sessionId, 'player_promoted', {
           playerId: newCurrentPlayer.id,
@@ -447,31 +410,6 @@ export class GameService {
 
   private async handlePlayerPromotionsAfterJoin(sessionId: string): Promise<void> {
     await this.handlePlayerPromotionsAfterDisconnect(sessionId);
-  }
-
-  private async checkForGameCleanup(sessionId: string): Promise<void> {
-    const gameState = await this.redis.getGameState(sessionId);
-    if (!gameState) return;
-
-    const humanPlayers = gameState.players.filter(p => p.id !== 'ai');
-    const connectedHumanPlayers = humanPlayers.filter(p => p.connectionStatus === 'connected');
-
-    if (connectedHumanPlayers.length === 0) {
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      const playersDisconnectedTooLong = humanPlayers.filter(p =>
-        p.disconnectedAt && p.disconnectedAt < oneHourAgo
-      );
-
-      if (playersDisconnectedTooLong.length === humanPlayers.length && humanPlayers.length > 0) {
-        await this.redis.updateGameStatus(sessionId, 'game_ended');
-        await this.publishEvent(sessionId, 'game_ended', {});
-        await this.redis.deleteGameState(sessionId);
-        return;
-      }
-
-      // All players are disconnected but still within grace period
-      await this.redis.setGameStateWithTTL(sessionId, gameState, GameService.DISCONNECTED_GAME_TTL);
-    }
   }
 
   private async publishEvent<T>(sessionId: string, type: string, data: T): Promise<void> {
