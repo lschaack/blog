@@ -12,10 +12,10 @@ export async function POST(
   try {
     const params = await props.params;
     const sessionId = params.id;
-    
+
     // Try to get player ID from header first, then from request body
     let playerId = request.headers.get('x-player-id');
-    
+
     if (!playerId) {
       try {
         const body = await request.json();

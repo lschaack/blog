@@ -15,7 +15,7 @@ export async function GET(
   const sessionId = params.id;
   const url = new URL(request.url);
   const playerId = url.searchParams.get('playerId') || request.headers.get('x-player-id');
-  
+
   if (!playerId) {
     return new Response('Missing player ID', { status: 400 });
   }
@@ -72,11 +72,11 @@ export async function GET(
       const cleanup = () => {
         isConnectionActive = false;
         clearInterval(heartbeatInterval);
-        
+
         // Remove player when connection closes
         const gameService = getGameService();
-        gameService.removePlayer(sessionId, playerId).catch(error => {
-          console.error('Failed to remove player on disconnect:', error);
+        gameService.disconnectPlayer(sessionId, playerId).catch(error => {
+          console.error('Failed to disconnect player:', error);
         });
 
         // Unsubscribe from Redis

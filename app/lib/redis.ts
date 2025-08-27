@@ -16,10 +16,11 @@ if not new_player_json then
 end
 
 local new_player = cjson.decode(new_player_json)
-local players = redis.call('HGET', KEYS[1], KEYS[2])
+local players_json = redis.call('HGET', KEYS[1], KEYS[2])
+local players = cjson.decode(players_json)
 
 -- check if player is already in players array
-for _, player in players do
+for _, player in ipairs(players) do
   if player.id == newPlayer.id then
     return redis.error_reply("Player already exists")
   end
@@ -37,6 +38,30 @@ redis.call(
 return updated_players_json
 `.trim();
 
+  private static PROMOTE_PLAYER_SCRIPT = `
+local player_id = ARGV[1]
+local players_json = redis.call('HGET', KEYS[1], KEYS[2])
+local players = cjson.decode(players_json)
+
+for i, player in ipairs(players) do
+  if player.id == player_id then
+    players[i].isActive = true
+    local updated_players_json = cjson.encode(players)
+
+    redis.call(
+      'HMSET', KEYS[1],
+      'updatedAt', redis.call('TIME'),
+      KEYS[2], updated_players_json
+    )
+
+    return updated_players_json
+  end
+end
+
+return redis.error_reply("No player with given ID")
+`.trim();
+
+
   private static ADD_TURN_SCRIPT = `
 local new_turn_json = ARGV[1]
 
@@ -45,7 +70,8 @@ if not new_turn_json then
 end
 
 local new_turn = cjson.decode(new_turn_json)
-local turns = redis.call('HGET', KEYS[1], KEYS[2])
+local turns_json = redis.call('HGET', KEYS[1], KEYS[2])
+local turns = cjson.decode(turns_json)
 table.insert(turns, new_turn)
 
 local updated_turns_json = cjson.encode(turns)
@@ -163,6 +189,16 @@ return updated_turns_json
       `exquisite_corpse:${sessionId}:state`,
       'players',
       JSON.stringify(newPlayer),
+    );
+  }
+
+  async promotePlayer(sessionId: string, playerId: string) {
+    this.redis.eval(
+      RedisClient.PROMOTE_PLAYER_SCRIPT,
+      2,
+      `exquisite_corpse:${sessionId}:state`,
+      'players',
+      playerId,
     );
   }
 

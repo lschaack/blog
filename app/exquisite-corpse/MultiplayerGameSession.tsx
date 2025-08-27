@@ -135,6 +135,7 @@ export const MultiplayerGameSession = ({
   }
 
   const isCurrentPlayer = currentPlayer.id === playerId;
+  console.log('gameState', gameState)
 
   return (
     <div className="flex flex-col gap-4 max-w-[512px] mx-auto">

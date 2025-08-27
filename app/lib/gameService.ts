@@ -192,16 +192,29 @@ export class GameService {
     }
   }
 
-  async removePlayer(sessionId: string, playerId: string): Promise<void> {
+  async disconnectPlayer(sessionId: string, playerId: string) {
     const gameState = await this.redis.getGameState(sessionId);
-    if (!gameState) {
-      return;
-    }
+    if (!gameState) return;
 
     const player = gameState.players.find(p => p.id === playerId);
-    if (!player) {
-      return;
-    }
+    if (!player) return;
+
+    const now = new Date().toISOString();
+
+    // Use optimized player status update
+    await this.redis.updatePlayerStatus(sessionId, playerId, {
+      connectionStatus: 'disconnected',
+      disconnectedAt: now,
+      lastSeenAt: now,
+    });
+  }
+
+  async removePlayer(sessionId: string, playerId: string): Promise<void> {
+    const gameState = await this.redis.getGameState(sessionId);
+    if (!gameState) return;
+
+    const player = gameState.players.find(p => p.id === playerId);
+    if (!player) return;
 
     // Mark player as disconnected instead of removing
     const now = new Date().toISOString();
@@ -387,19 +400,25 @@ export class GameService {
     const gameState = await this.redis.getGameState(sessionId);
     if (!gameState) return;
 
-    const currentPlayer = getCurrentPlayer(gameState);
-    if (!currentPlayer || currentPlayer.connectionStatus === 'disconnected') {
-      const connectedActivePlayers = gameState.players
-        .filter(p => p.isActive && p.connectionStatus === 'connected' && p.id !== 'ai')
-        .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
+    const activePlayers: Player[] = [];
+    const inactivePlayers: Player[] = [];
 
-      if (connectedActivePlayers.length > 0) {
-        const newCurrentPlayer = connectedActivePlayers[0];
+    gameState.players
+      .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime())
+      .forEach(player => (player.isActive ? activePlayers : inactivePlayers).push(player));
 
+    if (activePlayers.length < 2) {
+      if (inactivePlayers.length > 0) {
+        const firstChoice = inactivePlayers.find(player => player.connectionStatus === 'connected');
+        const promotedPlayer = firstChoice ?? inactivePlayers[0];
+
+        await this.redis.promotePlayer(sessionId, promotedPlayer.id);
         await this.publishEvent(sessionId, 'player_promoted', {
-          playerId: newCurrentPlayer.id,
-          playerName: newCurrentPlayer.name
+          playerId: promotedPlayer.id,
+          playerName: promotedPlayer.name
         });
+      } else {
+        // TODO: set ten minute TTL
       }
     }
   }

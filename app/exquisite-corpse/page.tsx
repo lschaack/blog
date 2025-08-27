@@ -8,7 +8,7 @@ export default function ExquisiteCorpsePage() {
 
   const handleGameJoined = (sessionId: string, playerId: string) => {
     // Navigate to the game session with the player data in the URL
-    const searchParams = new URLSearchParams({ playerId, });
+    const searchParams = new URLSearchParams({ playerId });
 
     router.push(`/exquisite-corpse/${sessionId}?${searchParams.toString()}`);
   };
