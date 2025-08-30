@@ -1,10 +1,12 @@
 import type { MultiplayerGameState } from '@/app/types/multiplayer';
 
 export function getCurrentPlayer(gameState: MultiplayerGameState) {
-  const lastPlayerId = gameState.turns.at(-1)?.author;
-  const eligiblePlayers = gameState.players
-    .filter(player => player.isActive && player.id !== lastPlayerId)
+  const lastPlayerName = gameState.turns.at(-1)?.author;
+  const eligiblePlayers = Object.values(gameState.players)
+    .filter(player => player.isActive && player.name !== lastPlayerName)
     .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
+
+  console.log('found current player', eligiblePlayers[0])
 
   return eligiblePlayers[0];
 }
@@ -12,6 +14,6 @@ export function getCurrentPlayer(gameState: MultiplayerGameState) {
 /**
  * Check if a specific player is currently the active player
  */
-export function isCurrentPlayer(gameState: MultiplayerGameState, playerId: string): boolean {
-  return getCurrentPlayer(gameState)?.id === playerId;
+export function isCurrentPlayer(gameState: MultiplayerGameState, playerName: string): boolean {
+  return getCurrentPlayer(gameState)?.name === playerName;
 }

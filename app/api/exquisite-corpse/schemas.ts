@@ -83,11 +83,11 @@ const PathCommandSchema = z.union([
 ]);
 export const ParsedPathSchema = z.array(PathCommandSchema);
 
-const CurveTurnSchema = BaseTurnSchema.extend({
+export const CurveTurnSchema = BaseTurnSchema.extend({
   path: ParsedPathSchema,
 });
 
-const ImageTurnSchema = BaseTurnSchema.extend({
+export const ImageTurnSchema = BaseTurnSchema.extend({
   image: Base64ImageSchema,
 });
 

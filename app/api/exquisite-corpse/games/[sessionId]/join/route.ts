@@ -1,51 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import z from 'zod';
+
 import { getGameService } from '@/app/lib/gameService';
 import { PlayerNameSchema } from '../../../schemas';
-import z from 'zod';
 import { Params } from '../params';
+import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
+import { withRedisErrorHandler } from '@/app/api/middleware/redis';
+import { withZodRequestValidation } from '@/app/api/middleware/zod';
+import { compose } from '@/app/api/middleware/compose';
 
 const JoinRequestSchema = z.object({
   playerName: PlayerNameSchema,
 })
 
-export async function POST(
-  request: NextRequest,
-  props: { params: Promise<Params> }
-) {
-  try {
-    const params = await props.params;
-    const sessionId = params.sessionId;
-    const body = await request.json();
-    const joinRequest = JoinRequestSchema.parse(body);
-
-    const gameService = getGameService();
-    const result = await gameService.joinGame(sessionId, joinRequest);
-
-    return NextResponse.json({
-      playerId: result.playerId,
-      isActive: result.isActive
-    });
-
-  } catch (error) {
-    console.error('Join game error:', error);
-
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0].message },
-        { status: 400 }
-      );
+export const POST = compose(
+  withCatchallErrorHandler,
+  withRedisErrorHandler,
+  withZodRequestValidation(JoinRequestSchema),
+)(
+  async (
+    _,
+    ctx: {
+      params: Promise<Params>,
+      validatedBody: Promise<z.infer<typeof JoinRequestSchema>>
     }
+  ) => {
+    const { sessionId } = await ctx.params;
+    const validatedBody = await ctx.validatedBody;
 
-    if (error instanceof Error && error.message === 'Game not found') {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 404 }
-      );
-    }
+    // TODO: add 404 if game doesn't exist
+    const result = await getGameService().joinGame(sessionId, validatedBody);
 
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
+    const cookieStore = await cookies();
+    cookieStore.set('playerId', result.playerName);
+
+    return NextResponse.json(result);
   }
-}
+)

@@ -1,12 +1,10 @@
 import type { CurveTurn } from './exquisiteCorpse';
 
+// FIXME: Get these from zod schemas
 export type GameType = 'singleplayer' | 'multiplayer';
 
 export type Player = {
-  id: string;
   name: string;
-  // FIXME: Delete if not necessary at end of rewrite
-  connectionId?: string;
   joinedAt: string;
   isActive: boolean;
   connectionStatus: 'connected' | 'disconnected';
@@ -30,7 +28,7 @@ export type MultiplayerGameState = {
   sessionId: string;
   gameId: string;
   type: GameType;
-  players: Player[];
+  players: Record<string, Player>; // map from player name to Player
   status: GameStatus;
   turns: CurveTurn[];
   createdAt: string;
@@ -53,9 +51,7 @@ export type JoinGameRequest = {
   playerName: string;
 };
 
-export type SubmitTurnRequest = {
-  turnData: Omit<CurveTurn, 'author' | 'timestamp' | 'number'>;
-};
+export type SubmitTurnRequest = Pick<CurveTurn, 'path'>;
 
 // Event data types
 export type GameStartedData = {

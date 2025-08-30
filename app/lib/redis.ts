@@ -1,91 +1,36 @@
 import Redis from 'ioredis';
-import type { MultiplayerGameState, GameEvent, GameStatus, GameType, Player } from '@/app/types/multiplayer';
+import type { MultiplayerGameState, GameEvent, GameStatus, Player } from '@/app/types/multiplayer';
 import type { CurveTurn } from '@/app/types/exquisiteCorpse';
+import { RedisError, validatePipelineResult } from '../api/middleware/redis';
+import { GameError } from '../api/exquisite-corpse/gameError';
 
+export type RedisGameState = Omit<MultiplayerGameState, 'players'>;
+
+// FIXME: Every time any value is set corresponding to a given game ID, reset the TTL for all related keys
+// FIXME: Check that every function updates the relevant status
 class RedisClient {
+  public static MAX_PLAYERS = 8;
+
   private redis: Redis;
   private subscriber: Redis;
   private publisher: Redis;
 
   private static TWO_HOURS = 60 * 60 * 2;
-  private static ADD_PLAYER_SCRIPT = `
-local new_player_json = ARGV[1]
-
-if not new_player_json then
-  return redis.error_reply("Missing player to add")
-end
-
-local new_player = cjson.decode(new_player_json)
-local players_json = redis.call('HGET', KEYS[1], KEYS[2])
-local players = cjson.decode(players_json)
-
--- check if player is already in players array
-for _, player in ipairs(players) do
-  if player.id == newPlayer.id then
-    return redis.error_reply("Player already exists")
-  end
-end
-
-table.insert(players, new_player)
-
-local updated_players_json = cjson.encode(players)
-redis.call(
-  'HMSET', KEYS[1],
-  'updatedAt', redis.call('TIME'),
-  KEYS[2], updated_players_json
-)
-
-return updated_players_json
-`.trim();
-
-  private static PROMOTE_PLAYER_SCRIPT = `
-local player_id = ARGV[1]
-local players_json = redis.call('HGET', KEYS[1], KEYS[2])
-local players = cjson.decode(players_json)
-
-for i, player in ipairs(players) do
-  if player.id == player_id then
-    players[i].isActive = true
-    local updated_players_json = cjson.encode(players)
-
-    redis.call(
-      'HMSET', KEYS[1],
-      'updatedAt', redis.call('TIME'),
-      KEYS[2], updated_players_json
-    )
-
-    return updated_players_json
-  end
-end
-
-return redis.error_reply("No player with given ID")
-`.trim();
-
-
-  private static ADD_TURN_SCRIPT = `
-local new_turn_json = ARGV[1]
-
-if not new_turn_json then
-  return redis.error_reply("Missing turn to add")
-end
-
-local new_turn = cjson.decode(new_turn_json)
-local turns_json = redis.call('HGET', KEYS[1], KEYS[2])
-local turns = cjson.decode(turns_json)
-table.insert(turns, new_turn)
-
-local updated_turns_json = cjson.encode(turns)
-redis.call(
-  'HMSET', KEYS[1],
-  'updatedAt', redis.call('TIME'),
-  KEYS[2], updated_turns_json
-)
-
-return updated_turns_json
-`.trim();
 
   private static getSessionKey(sessionId: string) {
     return `exquisite_corpse:${sessionId}:state`;
+  }
+
+  private static getEventsKey(sessionId: string) {
+    return `exquisite_corpse:${sessionId}:events`;
+  }
+
+  private static getPlayersKey(sessionId: string) {
+    return `exquisite_corpse:${sessionId}:players`;
+  }
+
+  private static getAiRetriesKey(sessionId: string) {
+    return `exquisite_corpse:${sessionId}:ai_retries`;
   }
 
   constructor() {
@@ -106,190 +51,251 @@ return updated_turns_json
     return result;
   }
 
-  async initializeGame(sessionId: string, gameState: MultiplayerGameState): Promise<MultiplayerGameState> {
+  async initializeGame(sessionId: string, gameState: RedisGameState): Promise<RedisGameState> {
     const key = RedisClient.getSessionKey(sessionId);
-    const pipeline = this.redis.pipeline();
+    const result = await this.redis
+      .pipeline()
+      .call('JSON.SET', key, '.', JSON.stringify(gameState), 'NX')
+      .expire(key, RedisClient.TWO_HOURS)
+      .call('JSON.GET', key, '.')
+      .exec();
 
-    pipeline.call('JSON.SET', key, JSON.stringify({
-      sessionId: gameState.sessionId,
-      gameId: gameState.gameId,
-      type: gameState.type,
-      status: gameState.status,
-      createdAt: gameState.createdAt,
-      updatedAt: gameState.updatedAt,
-      players: JSON.stringify(gameState.players),
-      turns: JSON.stringify(gameState.turns)
-    }));
+    return validatePipelineResult(result, res => res[2][1] as RedisGameState);
+  }
 
-    pipeline.expire(key, RedisClient.TWO_HOURS);
+  async initializePlayers(sessionId: string, players: Player[]) {
+    const key = RedisClient.getPlayersKey(sessionId);
+    const playerMap = Object.fromEntries(players.map(player => [player.name, player]));
+    const result = await this.redis
+      .pipeline()
+      .call('JSON.SET', key, '.', JSON.stringify(playerMap), 'NX')
+      .call('JSON.GET', key, '.')
+      .exec();
 
-    pipeline.call('JSON.GET', key)
-
-    const result = await pipeline.exec();
-
-    if (!result) {
-      // TODO: Make this fail more gracefully
-      throw new Error('No result from game initialization pipeline');
-    } else {
-      for (let i = 0; i < result.length; i++) {
-        const error = result[i][0];
-        // TODO: Make this fail more gracefully
-        if (error) throw new Error('Failed to initialize game:', error);
-      }
-
-      return result[2][1] as MultiplayerGameState;
-    }
+    return validatePipelineResult(result, res => res[1][1] as Partial<Record<string, Player>>);
   }
 
   async getGameState(sessionId: string): Promise<MultiplayerGameState | null> {
-    const data = await this.redis.hgetall(`exquisite_corpse:${sessionId}:state`);
+    const result = await this.redis
+      .pipeline()
+      .call('JSON.GET', RedisClient.getSessionKey(sessionId), '.')
+      .call('JSON.GET', RedisClient.getPlayersKey(sessionId), '.')
+      .exec();
 
-    if (!data.sessionId) {
-      return null;
+    const validated = validatePipelineResult(result);
+
+    try {
+      const gameState = JSON.parse(validated[0][1] as string | null ?? '');
+      const players = JSON.parse(validated[1][1] as string | null ?? '');
+
+      return {
+        ...gameState,
+        players
+      }
+    } catch (error) {
+      console.group('Failed to parse game state or player JSON');
+      console.log('gameState', validated[0][1]);
+      console.log('players', validated[1][1]);
+      console.groupEnd();
+
+      const rawGameState = validated[0][1];
+      const rawPlayers = validated[1][1];
+
+      if (rawGameState === null) {
+        throw GameError.GAME_NOT_FOUND(sessionId);
+      } else if (rawPlayers === null) {
+        throw GameError.PLAYERS_NOT_FOUND(sessionId);
+      } else {
+        console.group(`Failed to parse game or players JSON for session ${sessionId}`);
+        console.error(`GameState: ${rawGameState}`);
+        console.error(`Players: ${rawPlayers}`);
+        console.groupEnd();
+
+        throw error;
+      }
     }
-
-    return {
-      sessionId: data.sessionId,
-      gameId: data.gameId,
-      type: data.type as GameType,
-      status: data.status as GameStatus,
-      createdAt: data.createdAt,
-      updatedAt: data.updatedAt,
-      players: JSON.parse(data.players || '[]'),
-      turns: JSON.parse(data.turns || '[]')
-    };
   }
 
-  // Efficient partial updates
-  async updateGameStatus(sessionId: string, status: GameStatus): Promise<void> {
-    await this.redis.hset(`exquisite_corpse:${sessionId}:state`, {
-      status,
-      updatedAt: new Date().toISOString()
-    });
+  async updateGameStatus(sessionId: string, status: GameStatus) {
+    const sessionKey = RedisClient.getSessionKey(sessionId);
+
+    try {
+      return await this.redis.call(
+        'JSON.MSET',
+        sessionKey, '.status', JSON.stringify(status),
+        sessionKey, '.updatedAt', JSON.stringify(new Date().toISOString()),
+      )
+    } catch (error) {
+      throw new RedisError(error as string | Error ?? 'Failed to update game status');
+    }
   }
 
-  // Add a new turn (append-only operation)
-  async addTurn(sessionId: string, turn: CurveTurn): Promise<void> {
-    this.redis.eval(
-      RedisClient.ADD_TURN_SCRIPT,
-      2,
-      `exquisite_corpse:${sessionId}:state`,
-      'turns',
-      JSON.stringify(turn),
+  async addTurn(sessionId: string, turn: CurveTurn) {
+    const sessionKey = RedisClient.getSessionKey(sessionId);
+
+    return validatePipelineResult(
+      await this.redis
+        .pipeline()
+        .call('JSON.ARRAPPEND', sessionKey, '.turns', JSON.stringify(turn))
+        .call('JSON.SET', sessionKey, '.status', JSON.stringify('turn_ended'))
+        .exec()
     );
   }
 
+  // NOTE: Players are separated from other game state since this is essentially
+  // the only way a multi command could realistically fail due to simultaneous access
   async addPlayer(sessionId: string, newPlayer: Player) {
-    this.redis.eval(
-      RedisClient.ADD_PLAYER_SCRIPT,
-      2,
-      `exquisite_corpse:${sessionId}:state`,
-      'players',
-      JSON.stringify(newPlayer),
-    );
+    const playerName = newPlayer.name;
+    const playersKey = RedisClient.getPlayersKey(sessionId);
+
+    // FIXME: check if at max players, multiple attempts on failure
+    try {
+      await this.redis.call(
+        'JSON.SET',
+        playersKey,
+        `.${playerName}`,
+        JSON.stringify(newPlayer),
+        'NX'
+      );
+    } catch (error) {
+      if (error instanceof Error || typeof error === 'string') {
+        throw new RedisError(error);
+      } else {
+        throw error;
+      }
+    }
   }
 
-  async promotePlayer(sessionId: string, playerId: string) {
-    this.redis.eval(
-      RedisClient.PROMOTE_PLAYER_SCRIPT,
-      2,
-      `exquisite_corpse:${sessionId}:state`,
-      'players',
-      playerId,
+  // FIXME: lua script to avoid two round trips w/watch/multi/exec
+  async removePlayer(sessionId: string, playerName: string) {
+    const playersKey = RedisClient.getPlayersKey(sessionId);
+
+    await this.redis.watch(playersKey);
+
+    const playersJson = await this.redis.call('JSON.GET', playersKey, '.') as string | null;
+    const playerMap = await JSON.parse(playersJson ?? '') as Record<string, Player>;
+
+    if (playerMap[playerName]) {
+      const wasActive = playerMap[playerName].isActive;
+
+      delete playerMap[playerName];
+
+      const players = Object.values(playerMap);
+
+      // handle promotions if necessary
+      let toPromote: Player | undefined = undefined;
+      if (wasActive && players.length > 1) {
+        for (const player of players) {
+          if (player.name !== 'AI') {
+            if (
+              !toPromote
+              || (new Date(player.joinedAt).getTime() < new Date(toPromote.joinedAt).getTime())
+            ) {
+              toPromote = player;
+            }
+          }
+        }
+
+        if (toPromote) toPromote.isActive = true;
+      }
+
+      await this.redis.call(
+        'JSON.SET',
+        playersKey,
+        '.',
+        JSON.stringify(playerMap),
+      );
+    }
+  }
+
+  // FIXME: lua script, what if there needs to be more than one promotion?
+  async doPromotion(sessionId: string) {
+    const playersKey = RedisClient.getPlayersKey(sessionId);
+
+    await this.redis.watch(playersKey);
+
+    const playersJson = await this.redis.call('JSON.GET', playersKey, '.') as string | null;
+    const playerMap = await JSON.parse(playersJson ?? '') as Record<string, Player>;
+
+    const players = Object.values(playerMap);
+    const nActivePlayers = players.reduce(
+      (nActive, player) => nActive + Number(player.isActive),
+      0
     );
+
+    // no need to promote if nobody can play anyway
+    if (players.length > 1 && nActivePlayers < 2) {
+      let toPromote: Player | undefined = undefined;
+
+      for (const player of players) {
+        if (player.name !== 'AI') {
+          if (
+            !toPromote
+            || (new Date(player.joinedAt).getTime() < new Date(toPromote.joinedAt).getTime())
+          ) {
+            toPromote = player;
+          }
+        }
+      }
+
+      if (toPromote) {
+        return this.redis.call(
+          'JSON.SET',
+          playersKey,
+          `.${toPromote.name}.isActive`,
+          JSON.stringify(true),
+        );
+      }
+    }
   }
 
   // Update player status
   async updatePlayerStatus(
     sessionId: string,
-    playerId: string,
+    playerName: string,
     updates: Partial<Player>
   ): Promise<void> {
-    const gameState = await this.getGameState(sessionId);
-    if (!gameState) return;
-
-    const playerIndex = gameState.players.findIndex(p => p.id === playerId);
-    if (playerIndex === -1) return;
-
-    // Update player data
-    gameState.players[playerIndex] = {
-      ...gameState.players[playerIndex],
-      ...updates
-    };
-    gameState.updatedAt = new Date().toISOString();
-
-    const pipeline = this.redis.pipeline();
-
-    // Update players data
-    pipeline.hset(`exquisite_corpse:${sessionId}:state`, {
-      players: JSON.stringify(gameState.players),
-      updatedAt: gameState.updatedAt
-    });
-
-    // Update active players set
-    if (updates.isActive !== undefined) {
-      if (updates.isActive) {
-        pipeline.sadd(`exquisite_corpse:${sessionId}:active_players`, playerId);
-      } else {
-        pipeline.srem(`exquisite_corpse:${sessionId}:active_players`, playerId);
-      }
-    }
-
-    // Update connection mapping
-    if (updates.connectionId) {
-      pipeline.hset(`exquisite_corpse:player_connections`, updates.connectionId, sessionId);
-    }
-
-    await pipeline.exec();
+    this.redis.call(
+      'JSON.MSET', RedisClient.getPlayersKey(sessionId),
+      ...Object
+        .entries(updates)
+        .flatMap(([key, val]) => [`.${playerName}.${key}`, JSON.stringify(val)])
+    );
   }
 
-  async deleteGameState(sessionId: string): Promise<void> {
-    const pipeline = this.redis.pipeline();
-
-    // Get players to clean up connections
-    const gameState = await this.getGameState(sessionId);
-    if (gameState) {
-      gameState.players.forEach(player => {
-        pipeline.hdel(`exquisite_corpse:player_connections`, player.connectionId);
-      });
-    }
-
-    // Delete game data
-    pipeline.del(`exquisite_corpse:${sessionId}:state`);
-    pipeline.del(`exquisite_corpse:${sessionId}:active_players`);
-
-    await pipeline.exec();
+  async deleteGameState(sessionId: string) {
+    return validatePipelineResult(
+      await this.redis
+        .pipeline()
+        .del(RedisClient.getSessionKey(sessionId))
+        .del(RedisClient.getPlayersKey(sessionId))
+        .exec()
+    );
   }
 
   async gameExists(sessionId: string): Promise<boolean> {
-    return (await this.redis.exists(`exquisite_corpse:${sessionId}:state`)) === 1;
+    return (await this.redis.exists(RedisClient.getSessionKey(sessionId))) === 1;
   }
 
-  // Get game by connection ID
-  async getGameByConnection(connectionId: string): Promise<string | null> {
-    return await this.redis.hget(`exquisite_corpse:player_connections`, connectionId);
-  }
+  async playerExistsInGame(sessionId: string, playerName: string): Promise<boolean> {
+    const result = await this.redis
+      .pipeline()
+      .exists(RedisClient.getSessionKey(sessionId))
+      .call('JSON.TYPE', RedisClient.getPlayersKey(sessionId), `.${playerName}`)
+      .exec();
 
-  // Get active players count
-  async getActivePlayersCount(sessionId: string): Promise<number> {
-    return await this.redis.scard(`exquisite_corpse:${sessionId}:active_players`);
-  }
-
-  // Check if player is active
-  async isPlayerActive(sessionId: string, playerId: string): Promise<boolean> {
-    const result = await this.redis.sismember(`exquisite_corpse:${sessionId}:active_players`, playerId);
-    return result === 1;
+    return validatePipelineResult(result, res => res[1][1] !== null);
   }
 
   // Event publishing
   async publishEvent<T>(sessionId: string, event: GameEvent<T>): Promise<void> {
-    const channel = `exquisite_corpse:${sessionId}:events`;
+    const channel = RedisClient.getEventsKey(sessionId);
     await this.publisher.publish(channel, JSON.stringify(event));
   }
 
   // Event subscription
   async subscribeToGame(sessionId: string, callback: (event: GameEvent) => void): Promise<void> {
-    const channel = `exquisite_corpse:${sessionId}:events`;
+    const channel = RedisClient.getEventsKey(sessionId);
 
     this.subscriber.on('message', (receivedChannel, message) => {
       if (receivedChannel === channel) {
@@ -306,70 +312,27 @@ return updated_turns_json
   }
 
   async unsubscribeFromGame(sessionId: string): Promise<void> {
-    const channel = `exquisite_corpse:${sessionId}:events`;
+    const channel = RedisClient.getEventsKey(sessionId);
     await this.subscriber.unsubscribe(channel);
-  }
-
-  // Player connection tracking
-  async setPlayerConnection(sessionId: string, playerId: string, connectionId: string): Promise<void> {
-    await this.redis.hset(`exquisite_corpse:player_connections`, connectionId, sessionId);
-  }
-
-  async getPlayerConnection(sessionId: string, playerId: string): Promise<string | null> {
-    // Get game state to find player's connection ID
-    const gameState = await this.getGameState(sessionId);
-    if (!gameState) return null;
-
-    const player = gameState.players.find(p => p.id === playerId);
-    return player?.connectionId || null;
-  }
-
-  async removePlayerConnection(sessionId: string, playerId: string): Promise<void> {
-    // Get player's connection ID first
-    const connectionId = await this.getPlayerConnection(sessionId, playerId);
-    if (connectionId) {
-      await this.redis.hdel(`exquisite_corpse:player_connections`, connectionId);
-    }
-  }
-
-  // Clean up disconnected player by connection ID
-  async cleanupPlayerConnection(connectionId: string): Promise<void> {
-    const sessionId = await this.redis.hget(`exquisite_corpse:player_connections`, connectionId);
-    if (sessionId) {
-      // Remove from connection mapping
-      await this.redis.hdel(`exquisite_corpse:player_connections`, connectionId);
-
-      // Update player status in game
-      const gameState = await this.getGameState(sessionId);
-      if (gameState) {
-        const player = gameState.players.find(p => p.connectionId === connectionId);
-        if (player) {
-          await this.updatePlayerStatus(sessionId, player.id, {
-            isActive: false,
-            connectionStatus: 'disconnected',
-            disconnectedAt: new Date().toISOString(),
-            lastSeenAt: new Date().toISOString()
-          });
-        }
-      }
-    }
   }
 
   // AI turn retry tracking
   async setAIRetryCount(sessionId: string, count: number): Promise<void> {
-    const key = `exquisite_corpse:${sessionId}:ai_retries`;
-    await this.redis.setex(key, RedisClient.TWO_HOURS, count.toString());
+    await this.redis.setex(
+      RedisClient.getAiRetriesKey(sessionId),
+      RedisClient.TWO_HOURS,
+      count.toString()
+    );
   }
 
   async getAIRetryCount(sessionId: string): Promise<number> {
-    const key = `exquisite_corpse:${sessionId}:ai_retries`;
-    const count = await this.redis.get(key);
+    const count = await this.redis.get(RedisClient.getAiRetriesKey(sessionId));
+
     return count ? parseInt(count, 10) : 0;
   }
 
   async resetAIRetryCount(sessionId: string): Promise<void> {
-    const key = `exquisite_corpse:${sessionId}:ai_retries`;
-    await this.redis.del(key);
+    await this.redis.del(RedisClient.getAiRetriesKey(sessionId));
   }
 
   // Get all active game session IDs

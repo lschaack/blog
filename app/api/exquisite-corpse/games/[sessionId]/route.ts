@@ -1,13 +1,16 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { getRedisClient } from '@/app/lib/redis';
 import { Params } from './params';
+import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
+import { withRedisErrorHandler } from '@/app/api/middleware/redis';
+import { compose } from '@/app/api/middleware/compose';
 
-export async function GET(
-  request: NextRequest,
-  props: { params: Promise<Params> }
-) {
-  try {
-    const params = await props.params;
+export const GET = compose(
+  withCatchallErrorHandler,
+  withRedisErrorHandler,
+)(
+  async (_, ctx: { params: Promise<Params> }) => {
+    const params = await ctx.params;
     const sessionId = params.sessionId;
     const redis = getRedisClient();
 
@@ -20,42 +23,21 @@ export async function GET(
     }
 
     return NextResponse.json(gameState);
-
-  } catch (error) {
-    console.error('Get game state error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
   }
-}
+);
 
-export async function DELETE(
-  request: NextRequest,
-  props: { params: Promise<Params> }
-) {
-  try {
-    const params = await props.params;
+export const DELETE = compose(
+  withCatchallErrorHandler,
+  withRedisErrorHandler,
+)(
+  async (_, ctx: { params: Promise<Params> }) => {
+    const params = await ctx.params;
     const sessionId = params.sessionId;
     const redis = getRedisClient();
 
-    const gameExists = await redis.gameExists(sessionId);
-    if (!gameExists) {
-      return NextResponse.json(
-        { error: 'Game not found' },
-        { status: 404 }
-      );
-    }
-
+    // TODO: Add 404 for specific error from game not existing
     await redis.deleteGameState(sessionId);
 
     return NextResponse.json({ success: true });
-
-  } catch (error) {
-    console.error('Delete game error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
-    );
   }
-}
+);

@@ -12,7 +12,7 @@ type GameLobbyProps = {
 
 export const GameLobby = ({ onGameJoined }: GameLobbyProps) => {
   const [mode, setMode] = useState<LobbyMode>('menu');
-  const [gameType, setGameType] = useState<GameType>('ai');
+  const [gameType, setGameType] = useState<GameType>('singleplayer');
 
   const handleCreateGame = (selectedGameType: GameType) => {
     setGameType(selectedGameType);

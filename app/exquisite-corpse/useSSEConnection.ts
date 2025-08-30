@@ -13,7 +13,6 @@ type UseSSEConnectionReturn = {
 
 export const useSSEConnection = (
   sessionId: string | null,
-  playerId: string | null
 ): UseSSEConnectionReturn => {
   const [connectionState, setConnectionState] = useState<SSEConnectionState>('disconnected');
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +33,7 @@ export const useSSEConnection = (
   }, []);
 
   const connect = useCallback(() => {
-    if (!sessionId || !playerId) {
+    if (!sessionId) {
       setConnectionState('disconnected');
       return;
     }
@@ -60,9 +59,7 @@ export const useSSEConnection = (
     };
 
     try {
-      // Since EventSource doesn't support custom headers, we pass playerId via URL params
-      const url = new URL(`/api/exquisite-corpse/games/${sessionId}/events`, window.location.origin);
-      url.searchParams.set('playerId', playerId);
+      const url = new URL(`/api/exquisite-corpse/games/${sessionId}/connect`, window.location.origin);
 
       const customEventSource = new EventSource(url.toString());
       eventSourceRef.current = customEventSource;
@@ -99,12 +96,13 @@ export const useSSEConnection = (
         setConnectionState('error');
         setError('Connection lost');
 
+        // FIXME:
         // Attempt to reconnect after a delay
-        reconnectTimeoutRef.current = setTimeout(() => {
-          if (sessionId && playerId) {
-            connect();
-          }
-        }, 3000);
+        //reconnectTimeoutRef.current = setTimeout(() => {
+        //  if (sessionId && playerId) {
+        //    connect();
+        //  }
+        //}, 3000);
       };
 
     } catch (err) {
@@ -112,12 +110,12 @@ export const useSSEConnection = (
       setConnectionState('error');
       setError('Failed to connect');
     }
-  }, [sessionId, playerId, cleanup]);
+  }, [sessionId, cleanup]);
 
 
   // Initial connection and game state fetch
   useEffect(() => {
-    if (sessionId && playerId) {
+    if (sessionId) {
       connect();
       // Fetch initial game state
       const fetchInitialState = async () => {
@@ -139,15 +137,14 @@ export const useSSEConnection = (
     }
 
     return cleanup;
-  }, [sessionId, playerId, connect, cleanup]);
+  }, [sessionId, connect, cleanup]);
 
   // Cleanup on unmount and handle beforeunload
   useEffect(() => {
     const handleBeforeUnload = () => {
       // Try to notify server of disconnect when page is unloading
-      if (sessionId && playerId) {
-        navigator.sendBeacon(`/api/exquisite-corpse/games/${sessionId}/leave`,
-          JSON.stringify({ playerId }));
+      if (sessionId) {
+        navigator.sendBeacon(`/api/exquisite-corpse/games/${sessionId}/disconnect`);
       }
     };
 
@@ -157,14 +154,12 @@ export const useSSEConnection = (
       window.removeEventListener('beforeunload', handleBeforeUnload);
       cleanup();
     };
-  }, [cleanup, sessionId, playerId]);
+  }, [cleanup, sessionId]);
 
   const reconnect = useCallback(() => {
     cleanup();
-    if (sessionId && playerId) {
-      connect();
-    }
-  }, [sessionId, playerId, connect, cleanup]);
+    if (sessionId) connect();
+  }, [sessionId, connect, cleanup]);
 
   return {
     connectionState,

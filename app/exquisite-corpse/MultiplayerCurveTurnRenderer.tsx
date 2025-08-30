@@ -5,6 +5,7 @@ import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { ensureStartsWith } from "@/app/utils/string";
 import { isAuthorAI, isAuthorUser } from "./gameReducer";
+import { SelfDrawingSketch } from "./SelfDrawingPath";
 
 type MultiplayerCurveTurnRendererProps = {
   handleEndTurn: (turnData: Omit<CurveTurn, keyof BaseTurn>) => void;
@@ -34,18 +35,6 @@ export const MultiplayerCurveTurnRenderer = ({
   const prevTurn = useMemo(() => {
     return turns[currentTurnIndex - 1];
   }, [turns, currentTurnIndex]);
-
-  // Combined display lines: completed turns + current turn line
-  const allDisplayLines = useMemo(() => {
-    return displayTurns
-      .map(turn => turn.path)
-      .concat(currentTurn.lines);
-  }, [displayTurns, currentTurn.lines]);
-
-  // Handle adding lines from Sketchpad
-  const handleAddLine = useCallback((newLine: Line) => {
-    currentTurn.setLines([...allDisplayLines, newLine]);
-  }, [allDisplayLines, currentTurn]);
 
   // Handle ending turn
   const handleEndTurnClick = useCallback(() => {
@@ -82,16 +71,23 @@ export const MultiplayerCurveTurnRenderer = ({
       </div>
 
       {/* Sketchpad */}
-      <Sketchpad
-        width={canvasDimensions.width}
-        height={canvasDimensions.height}
-        lines={allDisplayLines}
-        handleAddLine={line => {
-          if (canDraw) {
-            handleAddLine(line);
-          }
-        }}
-      />
+      <div className="relative">
+        <SelfDrawingSketch
+          paths={displayTurns.map(({ path }) => path)}
+          dimensions={canvasDimensions}
+          className="absolute inset-0 fill-none pointer-events-none"
+        />
+        <Sketchpad
+          width={canvasDimensions.width}
+          height={canvasDimensions.height}
+          lines={currentTurn.lines}
+          handleAddLine={line => {
+            if (canDraw) {
+              currentTurn.addLine(line);
+            }
+          }}
+        />
+      </div>
 
       {/* End turn button */}
       <Button
@@ -105,7 +101,7 @@ export const MultiplayerCurveTurnRenderer = ({
       {prevTurn && (
         <div className="space-y-2 bg-deep-50 rounded-xl p-4">
           <div className="font-light">
-            Turn {prevTurn.number} - {isAuthorAI(prevTurn.author) ? "AI" : isAuthorUser(prevTurn.author, currentUserId) ? "You" : "Player"}
+            Turn {currentTurnIndex} - {isAuthorAI(prevTurn.author) ? "AI" : isAuthorUser(prevTurn.author, currentUserId) ? "You" : "Player"}
           </div>
           {isAuthorAI(prevTurn.author) && prevTurn.title && (
             <h2 className="font-semibold font-geist-mono text-xl [font-variant:all-small-caps]">{prevTurn.title}</h2>

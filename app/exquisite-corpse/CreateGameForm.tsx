@@ -28,7 +28,9 @@ export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFo
         playerName: playerName.trim()
       };
 
-      const response = await fetch('/api/exquisite-corpse/games', {
+      console.log('playerName', request.playerName)
+
+      const response = await fetch('/api/exquisite-corpse/games/create-with-player', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,10 +58,10 @@ export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFo
     <div className="flex flex-col gap-6 max-w-md mx-auto p-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2">
-          Create {gameType === 'ai' ? 'AI' : 'Multiplayer'} Game
+          Create {gameType === 'singleplayer' ? 'AI' : 'Multiplayer'} Game
         </h1>
         <p className="text-gray-600">
-          {gameType === 'ai'
+          {gameType === 'singleplayer'
             ? 'Start a collaborative drawing session with AI'
             : 'Create a game for you and your friends'
           }

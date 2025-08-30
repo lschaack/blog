@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
 import { BaseTurn, CanvasDimensions, CurveTurn } from "@/app/types/exquisiteCorpse";
-import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn, isAuthorAI, isAuthorUser } from "./gameReducer";
+import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn, isAuthorAI, isAuthorUser, getPreviousTurnNumber } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
@@ -22,6 +22,7 @@ export const CurveTurnRenderer = ({
   const gameState = useGameContext<CurveTurn>();
   const currentTurn = useCurrentTurn();
   const prevTurn = getPreviousTurn(gameState);
+  const prevTurnNumber = getPreviousTurnNumber(gameState);
 
   // Get display lines from completed turns
   const displayTurns = useMemo(() => getDisplayTurns(gameState), [gameState]);
@@ -90,7 +91,7 @@ export const CurveTurnRenderer = ({
       {prevTurn && (
         <div className="space-y-2 bg-deep-50 rounded-xl p-4">
           <div className="font-light">
-            Turn {prevTurn.number} - {isAuthorUser(prevTurn.author) ? "You" : "AI"}
+            Turn {prevTurnNumber} - {isAuthorUser(prevTurn.author) ? "You" : "AI"}
           </div>
           {isAuthorAI(prevTurn.author) && (
             <h2 className="font-semibold font-geist-mono text-xl [font-variant:all-small-caps]">{prevTurn.title}</h2>

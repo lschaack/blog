@@ -19,7 +19,6 @@ export const gameReducer = <T extends BaseTurn>(
         ...action.payload,
         author: "user",
         timestamp: new Date().toISOString(),
-        number: state.turns.length + 1,
       } as T;
 
       const newTurns = [...state.turns, newTurn];
@@ -39,7 +38,6 @@ export const gameReducer = <T extends BaseTurn>(
         ...action.payload,
         author: "ai",
         timestamp: new Date().toISOString(),
-        number: state.turns.length + 1,
       } as T;
 
       const newTurns = [...state.turns, newTurn];
@@ -104,6 +102,10 @@ export const getDisplayTurns = <T extends BaseTurn>(state: GameState<T>): T[] =>
 
 export const getCurrentTurnNumber = <T extends BaseTurn>(state: GameState<T>): number => {
   return state.currentTurnIndex + 1;
+};
+
+export const getPreviousTurnNumber = <T extends BaseTurn>(state: GameState<T>): number => {
+  return state.currentTurnIndex;
 };
 
 export const getPreviousTurn = <T extends BaseTurn>(state: GameState<T>) => {

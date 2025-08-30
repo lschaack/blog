@@ -1,4 +1,7 @@
+"use client";
+
 import { useCallback } from 'react';
+import { useRouter } from "next/navigation";
 import { useSSEConnection } from './useSSEConnection';
 import { MultiplayerCurveTurnRenderer } from './MultiplayerCurveTurnRenderer';
 import { Button } from '@/app/components/Button';
@@ -8,32 +11,29 @@ import { getCurrentPlayer } from '../lib/gameUtils';
 
 type MultiplayerGameSessionProps = {
   sessionId: string;
-  playerId: string;
+  playerName: string;
   dimensions: { width: number; height: number };
-  onLeaveGame: () => void;
 };
 
 export const MultiplayerGameSession = ({
   sessionId,
-  playerId,
+  playerName,
   dimensions,
-  onLeaveGame
 }: MultiplayerGameSessionProps) => {
+  const router = useRouter();
   const { connectionState, isConnected, error: connectionError, gameState, reconnect } = useSSEConnection(
     sessionId,
-    playerId
   );
+
+  console.log('gameState', gameState)
 
   // Handle leaving game
   const handleLeaveGame = useCallback(async () => {
-    if (sessionId && playerId) {
+    if (sessionId) {
       try {
         // Notify backend that player is leaving
         await fetch(`/api/exquisite-corpse/games/${sessionId}/leave`, {
           method: 'POST',
-          headers: {
-            'x-player-id': playerId,
-          },
         });
       } catch (error) {
         console.error('Failed to notify backend of player leaving:', error);
@@ -41,21 +41,20 @@ export const MultiplayerGameSession = ({
     }
 
     // Call the provided leave game handler (which will navigate away)
-    onLeaveGame();
-  }, [sessionId, playerId, onLeaveGame]);
+    router.push('/exquisite-corpse');
+  }, [sessionId, router]);
 
   // Submit turn to server
   const handleSubmitTurn = useCallback(async (turnData: Omit<CurveTurn, keyof BaseTurn>) => {
-    if (!sessionId || !playerId) return;
+    if (!sessionId) return;
 
     try {
       const response = await fetch(`/api/exquisite-corpse/games/${sessionId}/turns`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-player-id': playerId,
         },
-        body: JSON.stringify({ turnData, playerId }),
+        body: JSON.stringify(turnData),
       });
 
       if (!response.ok) {
@@ -67,7 +66,7 @@ export const MultiplayerGameSession = ({
       console.error('Failed to submit turn:', error);
       throw error;
     }
-  }, [sessionId, playerId]);
+  }, [sessionId]);
 
   // Retry AI turn
   const handleRetryAI = useCallback(async () => {
@@ -127,15 +126,15 @@ export const MultiplayerGameSession = ({
     );
   }
 
-  const isActivePlayer = gameState?.players.find(player => player.id === playerId)?.isActive ?? false;
+  const isActivePlayer = gameState?.players[playerName].isActive ?? false;
   const currentPlayer = getCurrentPlayer(gameState);
+  console.log('currentPlayer', currentPlayer)
 
   if (!currentPlayer) {
     throw new Error('No current player, check active player logic');
   }
 
-  const isCurrentPlayer = currentPlayer.id === playerId;
-  console.log('gameState', gameState)
+  const isCurrentPlayer = currentPlayer.name === playerName;
 
   return (
     <div className="flex flex-col gap-4 max-w-[512px] mx-auto">
@@ -146,8 +145,8 @@ export const MultiplayerGameSession = ({
           <div className="font-semibold">Game {sessionId}</div>
 
           <div className="text-sm space-y-1">
-            <div>Type: {gameState.type === 'ai' ? 'AI Game' : 'Multiplayer'}</div>
-            <div>Players: {gameState.players.filter(p => p.id !== 'ai').length}</div>
+            <div>Type: {gameState.type === 'singleplayer' ? 'AI Game' : 'Multiplayer'}</div>
+            <div>Players: {Object.keys(gameState.players).length}</div>
             <div>Your status: {isActivePlayer ? 'Active Player' : 'Viewer'}</div>
             {!isConnected && <div className="text-red-600">Disconnected</div>}
           </div>
@@ -156,10 +155,10 @@ export const MultiplayerGameSession = ({
           <div className="mt-3">
             <div className="text-xs font-medium text-gray-600 mb-1">Players:</div>
             <div className="flex flex-wrap gap-2">
-              {gameState.players.filter(p => p.id !== 'ai').map(player => (
+              {Object.values(gameState.players).map(player => (
                 <span
-                  key={player.id}
-                  className={`px-2 py-1 rounded text-xs ${player.id === currentPlayer.id
+                  key={player.name}
+                  className={`px-2 py-1 rounded text-xs ${player.name === currentPlayer.name
                     ? 'bg-blue-100 text-blue-800'
                     : player.isActive
                       ? 'bg-green-100 text-green-800'
@@ -167,7 +166,7 @@ export const MultiplayerGameSession = ({
                     }`}
                 >
                   {player.name}
-                  {player.id === playerId && ' (you)'}
+                  {player.name === playerName && ' (you)'}
                   {isCurrentPlayer && ' ⭐'}
                 </span>
               ))}
@@ -212,11 +211,11 @@ export const MultiplayerGameSession = ({
       {/* Game Canvas */}
       <MultiplayerCurveTurnRenderer
         handleEndTurn={handleSubmitTurn}
-        readOnly={isCurrentPlayer}
+        readOnly={!isCurrentPlayer}
         canvasDimensions={dimensions}
         turns={gameState.turns}
         currentTurnIndex={gameState.turns.length}
-        currentUserId={playerId}
+        currentUserId={playerName}
       />
     </div>
   );

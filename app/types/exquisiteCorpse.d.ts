@@ -14,7 +14,6 @@ export type CanvasDimensions = CanvasDimensions;
 export type BaseTurn = {
   author: string;
   timestamp: string;
-  number: number;
 };
 
 // Turn variant with Line-based drawing

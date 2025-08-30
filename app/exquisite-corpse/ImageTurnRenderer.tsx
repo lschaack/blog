@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
 import { BaseTurn, CanvasDimensions, ImageGeminiFlashPreviewTurn, Line } from "@/app/types/exquisiteCorpse";
-import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn, isAuthorUser } from "./gameReducer";
+import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn, isAuthorUser, getPreviousTurnNumber } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
@@ -22,6 +22,7 @@ export const ImageTurnRenderer = ({
   const gameState = useGameContext<ImageGeminiFlashPreviewTurn>();
   const currentTurn = useCurrentTurn();
   const prevTurn = getPreviousTurn(gameState);
+  const prevTurnNumber = getPreviousTurnNumber(gameState);
 
   // Get display turns from completed image turns
   const displayTurns = useMemo(() => getDisplayTurns(gameState), [gameState]);
@@ -138,7 +139,7 @@ export const ImageTurnRenderer = ({
       {prevTurn && (
         <div className="space-y-2 bg-deep-50 rounded-xl p-4">
           <div className="font-medium">
-            Turn {prevTurn.number} - {isAuthorUser(prevTurn.author) ? "You" : "AI"}
+            Turn {prevTurnNumber} - {isAuthorUser(prevTurn.author) ? "You" : "AI"}
           </div>
           {prevTurn.interpretation && (
             <div className="text-gray-500 font-geist-mono text-sm">

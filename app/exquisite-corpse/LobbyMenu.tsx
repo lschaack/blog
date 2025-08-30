@@ -17,7 +17,7 @@ export const LobbyMenu = ({ onCreateGame, onJoinGame }: LobbyMenuProps) => {
       <div className="flex flex-col gap-3">
         <Button
           label="New AI Game"
-          onClick={() => onCreateGame('ai')}
+          onClick={() => onCreateGame('singleplayer')}
           className="w-full text-left justify-start"
         />
         <Button

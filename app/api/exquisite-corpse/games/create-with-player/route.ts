@@ -1,43 +1,41 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { z } from "zod";
 
 import { getGameService } from '@/app/lib/gameService';
 import { PlayerNameSchema } from '../../schemas';
+import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
+import { withRedisErrorHandler } from '@/app/api/middleware/redis';
+import { withZodRequestValidation } from '@/app/api/middleware/zod';
+import { compose } from '@/app/api/middleware/compose';
+import { Params } from '../[sessionId]/params';
 
 const CreateGameRequestSchema = z.object({
   gameType: z.union([z.literal("multiplayer"), z.literal("singleplayer")], {
-    message: "Invalid gameType. Must be \"multiplayer\" or \"ai\""
+    message: "Invalid gameType. Must be \"multiplayer\" or \"singleplayer\""
   }),
   playerName: PlayerNameSchema,
 })
 
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const parsed = CreateGameRequestSchema.parse(body);
-    const result = await getGameService().createGame(parsed);
+export const POST = compose(
+  withCatchallErrorHandler,
+  withRedisErrorHandler,
+  withZodRequestValidation(CreateGameRequestSchema),
+)(
+  async (
+    _,
+    ctx: {
+      params: Promise<Params>,
+      validatedBody: Promise<z.infer<typeof CreateGameRequestSchema>>
+    }
+  ) => {
+    const validatedBody = await ctx.validatedBody;
+
+    const result = await getGameService().createGame(validatedBody);
 
     const cookieStore = await cookies();
-    cookieStore.set('exquisite_corpse_player_id', result.playerId);
+    cookieStore.set('playerId', result.playerName);
 
-    return NextResponse.json({
-      sessionId: result.sessionId,
-      playerId: result.playerId
-    });
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.errors[0].message },
-        { status: 400 }
-      );
-    } else {
-      return NextResponse.json(
-        { error: error instanceof Error ? error.message : 'Unknown error' },
-        { status: 500 }
-      );
-    }
+    return NextResponse.json(result);
   }
-}
-
-
+)
