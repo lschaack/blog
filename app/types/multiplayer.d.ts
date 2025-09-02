@@ -8,8 +8,6 @@ export type Player = {
   joinedAt: string;
   isActive: boolean;
   connectionStatus: 'connected' | 'disconnected';
-  lastSeenAt: string;
-  disconnectedAt?: string;
 };
 
 export type GameStatus =
@@ -37,8 +35,6 @@ export type MultiplayerGameState = {
 
 export type GameEvent<T = unknown> = {
   type: GameStatus;
-  timestamp: string;
-  gameId: string;
   data: T;
 };
 
@@ -49,45 +45,4 @@ export type CreateGameRequest = {
 
 export type JoinGameRequest = {
   playerName: string;
-};
-
-export type SubmitTurnRequest = Pick<CurveTurn, 'path'>;
-
-// Event data types
-export type GameStartedData = {
-  game: MultiplayerGameState;
-};
-
-export type TurnEndedData = {
-  turn: CurveTurn;
-  nextPlayer: string;
-};
-
-export type PlayerJoinedData = {
-  player: Player;
-  isActive: boolean;
-};
-
-export type PlayerLeftData = {
-  playerId: string;
-  playerName: string;
-};
-
-export type PlayerPromotedData = {
-  playerId: string;
-  playerName: string;
-};
-
-export type AITurnStartedData = {
-  turnNumber: number;
-};
-
-export type AITurnFailedData = {
-  error: string;
-  retryCount: number;
-};
-
-export type DrawingStatusData = {
-  playerId: string;
-  isDrawing: boolean;
 };

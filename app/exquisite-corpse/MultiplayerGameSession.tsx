@@ -126,12 +126,12 @@ export const MultiplayerGameSession = ({
     );
   }
 
-  const isActivePlayer = gameState?.players[playerName].isActive ?? false;
+  const isActivePlayer = gameState?.players[playerName]?.isActive ?? false;
   const currentPlayer = getCurrentPlayer(gameState);
-  console.log('currentPlayer', currentPlayer)
 
   if (!currentPlayer) {
-    throw new Error('No current player, check active player logic');
+    // FIXME: fail more gracefully
+    throw new Error('No current player');
   }
 
   const isCurrentPlayer = currentPlayer.name === playerName;
@@ -165,9 +165,11 @@ export const MultiplayerGameSession = ({
                       : 'bg-gray-100 text-gray-600'
                     }`}
                 >
-                  {player.name}
-                  {player.name === playerName && ' (you)'}
-                  {isCurrentPlayer && ' ⭐'}
+                  {
+                    `${player.name
+                    }${player.name === playerName ? ' (you)' : ''
+                    }${player.name === currentPlayer.name ? ' ⭐' : ''}`
+                  }
                 </span>
               ))}
             </div>
@@ -189,7 +191,9 @@ export const MultiplayerGameSession = ({
       </div>
 
       {/* Game Status */}
+      {/* FIXME: clean this up */}
       <div className="text-center p-2 bg-deep-50 rounded-xl font-semibold text-deep-600">
+        {!isActivePlayer && '(watching) '}
         {gameState.status === 'ai_turn_started' && 'AI is drawing...'}
         {gameState.status === 'ai_turn_failed' && (
           <div className="space-y-2">
@@ -205,7 +209,6 @@ export const MultiplayerGameSession = ({
         {gameState.status === 'turn_ended' && !isCurrentPlayer &&
           `Waiting for ${currentPlayer.name}`}
         {gameState.status === 'game_started' && isCurrentPlayer && 'Start drawing!'}
-        {!isActivePlayer && 'Watching game'}
       </div>
 
       {/* Game Canvas */}

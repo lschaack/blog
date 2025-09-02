@@ -94,8 +94,8 @@ class RedisClient {
       }
     } catch (error) {
       console.group('Failed to parse game state or player JSON');
-      console.log('gameState', validated[0][1]);
-      console.log('players', validated[1][1]);
+      console.error('gameState', validated[0][1]);
+      console.error('players', validated[1][1]);
       console.groupEnd();
 
       const rawGameState = validated[0][1];
@@ -158,11 +158,7 @@ class RedisClient {
         'NX'
       );
     } catch (error) {
-      if (error instanceof Error || typeof error === 'string') {
-        throw new RedisError(error);
-      } else {
-        throw error;
-      }
+      throw new RedisError(error as string | Error);
     }
   }
 
@@ -239,7 +235,7 @@ class RedisClient {
       }
 
       if (toPromote) {
-        return this.redis.call(
+        return await this.redis.call(
           'JSON.SET',
           playersKey,
           `.${toPromote.name}.isActive`,
@@ -254,13 +250,23 @@ class RedisClient {
     sessionId: string,
     playerName: string,
     updates: Partial<Player>
-  ): Promise<void> {
-    this.redis.call(
-      'JSON.MSET', RedisClient.getPlayersKey(sessionId),
-      ...Object
+  ) {
+    const playersKey = RedisClient.getPlayersKey(sessionId);
+
+    let updateArgs: string[] = [];
+    try {
+      updateArgs = Object
         .entries(updates)
-        .flatMap(([key, val]) => [`.${playerName}.${key}`, JSON.stringify(val)])
-    );
+        .flatMap(([key, val]) => [playersKey, `.${playerName}.${key}`, JSON.stringify(val)]);
+    } catch (error) {
+      throw new Error(`Failed to parse JSON for partial update:\n${updates}\n${error}`);
+    }
+
+    try {
+      return await this.redis.call('JSON.MSET', ...updateArgs);
+    } catch (error) {
+      throw new RedisError(error as string | Error);
+    }
   }
 
   async deleteGameState(sessionId: string) {
@@ -274,7 +280,11 @@ class RedisClient {
   }
 
   async gameExists(sessionId: string): Promise<boolean> {
-    return (await this.redis.exists(RedisClient.getSessionKey(sessionId))) === 1;
+    try {
+      return (await this.redis.exists(RedisClient.getSessionKey(sessionId))) === 1;
+    } catch (error) {
+      throw new RedisError(error as string | Error);
+    }
   }
 
   async playerExistsInGame(sessionId: string, playerName: string): Promise<boolean> {

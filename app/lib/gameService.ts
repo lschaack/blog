@@ -6,10 +6,10 @@ import type {
   GameEvent,
   CreateGameRequest,
   JoinGameRequest,
-  SubmitTurnRequest
+  GameStatus
 } from '@/app/types/multiplayer';
 import { generateAICurveTurn } from '@/app/lib/aiTurnService';
-import type { CurveTurn } from '@/app/types/exquisiteCorpse';
+import type { CurveTurn, Line } from '@/app/types/exquisiteCorpse';
 import { getCurrentPlayer } from './gameUtils';
 import { GameError } from '../api/exquisite-corpse/gameError';
 
@@ -22,23 +22,23 @@ export class GameService {
     const sessionId = this.redis.generateSessionId();
     const gameId = randomUUID();
 
-    const now = new Date().toISOString();
+    const _now = Date.now();
+    const now = new Date(_now).toISOString();
+    const oneMsLater = new Date(_now + 1).toISOString();
     const player: Player = {
       name: playerName,
       joinedAt: now,
       isActive: true,
       connectionStatus: 'disconnected',
-      lastSeenAt: now,
     };
 
     const players: Player[] = [player];
     if (request.gameType === 'singleplayer') {
       players.push({
         name: 'AI',
-        joinedAt: now,
+        joinedAt: oneMsLater,
         isActive: true,
         connectionStatus: 'connected',
-        lastSeenAt: now
       });
     }
 
@@ -74,7 +74,6 @@ export class GameService {
       joinedAt: now,
       isActive: false,
       connectionStatus: 'disconnected',
-      lastSeenAt: now
     };
 
     await this.redis.addPlayer(sessionId, newPlayer);
@@ -85,10 +84,10 @@ export class GameService {
     return { playerName };
   }
 
-  async submitTurn(sessionId: string, playerName: string, request: SubmitTurnRequest): Promise<void> {
+  async submitTurn(sessionId: string, playerName: string, path: Line): Promise<void> {
     // TODO: See if there's a good way to check that it's the player's turn in a one-trip request
     const turn: CurveTurn = {
-      ...request,
+      path,
       author: playerName,
       timestamp: new Date().toISOString(),
     };
@@ -107,16 +106,12 @@ export class GameService {
   }
 
   async disconnectPlayer(sessionId: string, playerName: string) {
-    const now = new Date().toISOString();
-
     await this.redis.updatePlayerStatus(sessionId, playerName, {
       connectionStatus: 'disconnected',
-      disconnectedAt: now,
-      lastSeenAt: now,
     });
 
     // Publish player disconnected event
-    await this.publishEvent(sessionId, 'player_disconnected', {
+    await this.publishEvent(sessionId, 'player_left', {
       playerName,
     });
   }
@@ -131,18 +126,13 @@ export class GameService {
   }
 
   async reconnectPlayer(sessionId: string, playerName: string): Promise<void> {
-    const now = new Date().toISOString();
-
     await this.redis.updatePlayerStatus(sessionId, playerName, {
       connectionStatus: 'connected',
-      lastSeenAt: now,
-      disconnectedAt: undefined
     });
 
     await this.redis.doPromotion(sessionId);
 
-    // Publish reconnection event
-    await this.publishEvent(sessionId, 'player_reconnected', {
+    await this.publishEvent(sessionId, 'player_joined', {
       playerName,
     });
   }
@@ -225,13 +215,8 @@ export class GameService {
     }
   }
 
-  private async publishEvent<T>(sessionId: string, type: string, data: T): Promise<void> {
-    const event: GameEvent<T> = {
-      type: type as GameEvent<T>['type'],
-      timestamp: new Date().toISOString(),
-      gameId: sessionId,
-      data
-    };
+  private async publishEvent<T>(sessionId: string, type: GameStatus, data: T): Promise<void> {
+    const event: GameEvent<T> = { type, data };
 
     await this.redis.publishEvent(sessionId, event);
   }

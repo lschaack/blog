@@ -21,11 +21,13 @@ function usePathLength() {
 type SelfDrawingSinglePathProps = Omit<SelfDrawingPathProps, 'path'> & {
   d: string;
   paused: boolean;
+  skip?: boolean;
   handleAnimationEnd: () => void;
 };
 const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
   d,
   paused,
+  skip = false,
   handleAnimationEnd,
   className,
   drawSpeed = 400,
@@ -33,6 +35,7 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
   const [pathRef, pathLength] = usePathLength();
 
   const doAnimate = pathLength && !paused;
+  const duration = skip ? 0 : pathLength / drawSpeed;
 
   return (
     <path
@@ -47,8 +50,8 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
       style={{
         strokeDasharray: pathLength,
         strokeDashoffset: pathLength,
-        animation: doAnimate
-          ? `draw ${pathLength / drawSpeed}s ease forwards`
+        animation: doAnimate || skip
+          ? `draw ${duration}s ease forwards`
           : 'unset',
       }}
     />
@@ -60,11 +63,13 @@ type PathAnimationEvent =
   | 'reset';
 type SelfDrawingPathProps = {
   path: ParsedPath;
+  skip?: boolean;
   className?: string;
   drawSpeed: number;
 }
 const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
   path,
+  skip = false,
   className,
   drawSpeed,
 }) => {
@@ -76,10 +81,10 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
     }
   }, 0);
 
-  // split path into multiple lines identified by move commands
   const paths = useMemo(() => {
     dispatch('reset');
 
+    // split path into multiple lines identified by move commands
     return path.reduce(
       (paths, cmd) => {
         if (cmd[0] === 'M' || cmd[0] === 'm') {
@@ -98,9 +103,10 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
   return (
     paths.map((path, index) => (
       <SelfDrawingSinglePath
-        key={`self-drawing-path-${index}`}
+        key={`single-path-${index}`}
         d={path}
         paused={index > currentAnimationIndex}
+        skip={skip}
         handleAnimationEnd={() => dispatch('increment')}
         className={className}
         drawSpeed={drawSpeed}
@@ -112,12 +118,14 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
 type SelfDrawingSketchProps = {
   dimensions: CanvasDimensions;
   paths: ParsedPath[];
+  animate?: 'all' | 'final';
   className?: string;
   drawSpeed?: number;
 };
 export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   dimensions: { width, height },
   paths,
+  animate = 'final',
   className,
   drawSpeed = 300,
 }) => {
@@ -132,6 +140,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
           key={`path-${index}`}
           className="stroke-2 stroke-black"
           path={path}
+          skip={animate === 'all' ? false : index < paths.length - 1}
           drawSpeed={drawSpeed}
         />
       ))}

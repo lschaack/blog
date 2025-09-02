@@ -29,7 +29,7 @@ export const POST = compose(
     const { sessionId } = await ctx.params;
     const { cookies: { playerId } } = ctx;
 
-    await getGameService().submitTurn(sessionId, playerId, validatedBody);
+    await getGameService().submitTurn(sessionId, playerId, validatedBody.path);
 
     return NextResponse.json({ success: true });
   }

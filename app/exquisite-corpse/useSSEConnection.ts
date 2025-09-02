@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { GameEvent, MultiplayerGameState } from '@/app/types/multiplayer';
+import type { MultiplayerGameState } from '@/app/types/multiplayer';
 
 type SSEConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -45,19 +45,6 @@ export const useSSEConnection = (
     setConnectionState('connecting');
     setError(null);
 
-    const fetchGameState = async () => {
-      if (!sessionId) return;
-      try {
-        const response = await fetch(`/api/exquisite-corpse/games/${sessionId}`);
-        if (response.ok) {
-          const state = await response.json();
-          setGameState(state);
-        }
-      } catch (err) {
-        console.error('Failed to fetch game state:', err);
-      }
-    };
-
     try {
       const url = new URL(`/api/exquisite-corpse/games/${sessionId}/connect`, window.location.origin);
 
@@ -70,22 +57,25 @@ export const useSSEConnection = (
         setError(null);
       };
 
+      customEventSource.addEventListener('game_update', event => {
+        try {
+          const gameState = JSON.parse(event.data);
+
+          setGameState(gameState);
+        } catch (error) {
+          throw new Error(`Failed to parse game state ${event.data}: ${error}`);
+        }
+      });
+
       customEventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
 
           if (data.type === 'heartbeat' || data.type === 'connected') {
-            // Handle system messages
             return;
+          } else {
+            console.warn(`Received event with unknown type "${data.type}"`)
           }
-
-          // Handle game events
-          const gameEvent = data as GameEvent;
-          console.log('Received game event:', gameEvent);
-
-          // Update game state based on events or fetch fresh state
-          fetchGameState();
-
         } catch (err) {
           console.error('Failed to parse SSE message:', err);
         }
@@ -95,14 +85,6 @@ export const useSSEConnection = (
         console.error('SSE error:', err);
         setConnectionState('error');
         setError('Connection lost');
-
-        // FIXME:
-        // Attempt to reconnect after a delay
-        //reconnectTimeoutRef.current = setTimeout(() => {
-        //  if (sessionId && playerId) {
-        //    connect();
-        //  }
-        //}, 3000);
       };
 
     } catch (err) {
@@ -117,19 +99,6 @@ export const useSSEConnection = (
   useEffect(() => {
     if (sessionId) {
       connect();
-      // Fetch initial game state
-      const fetchInitialState = async () => {
-        try {
-          const response = await fetch(`/api/exquisite-corpse/games/${sessionId}`);
-          if (response.ok) {
-            const state = await response.json();
-            setGameState(state);
-          }
-        } catch (err) {
-          console.error('Failed to fetch initial game state:', err);
-        }
-      };
-      fetchInitialState();
     } else {
       cleanup();
       setConnectionState('disconnected');

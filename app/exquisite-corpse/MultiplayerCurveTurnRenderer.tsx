@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { BaseTurn, CanvasDimensions, CurveTurn, Line } from "@/app/types/exquisiteCorpse";
+import { BaseTurn, CanvasDimensions, CurveTurn } from "@/app/types/exquisiteCorpse";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
