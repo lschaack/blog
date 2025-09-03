@@ -28,8 +28,6 @@ export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFo
         playerName: playerName.trim()
       };
 
-      console.log('playerName', request.playerName)
-
       const response = await fetch('/api/exquisite-corpse/games/create-with-player', {
         method: 'POST',
         headers: {

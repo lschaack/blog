@@ -30,8 +30,6 @@ class SessionSubscriptionManager {
     const callbacks = this.sessionCallbacks.get(sessionId);
     if (!callbacks) return false;
 
-    console.log('removing callback');
-
     callbacks.delete(callback);
 
     if (callbacks.size === 0) {
@@ -413,57 +411,6 @@ class RedisClient {
 
   async resetAIRetryCount(sessionId: string): Promise<void> {
     await this.redis.del(RedisClient.getAiRetriesKey(sessionId));
-  }
-
-  // Get all active game session IDs
-  async getAllGameSessions(): Promise<string[]> {
-    const cursor = this.redis.scanStream({
-      match: 'exquisite_corpse:*:state',
-      type: 'hash'
-    });
-
-    const sessionIds: string[] = [];
-
-    for await (const keys of cursor) {
-      for (const key of keys) {
-        const match = key.match(/exquisite_corpse:([^:]+):state/);
-        if (match) {
-          sessionIds.push(match[1]);
-        }
-      }
-    }
-
-    return sessionIds;
-  }
-
-  // Get games by status (for monitoring/cleanup)
-  async getGamesByStatus(status: GameStatus): Promise<string[]> {
-    const cursor = this.redis.scanStream({
-      match: 'exquisite_corpse:*:state',
-      type: 'hash'
-    });
-
-    const sessionIds: string[] = [];
-
-    for await (const keys of cursor) {
-      for (const key of keys) {
-        const gameStatus = await this.redis.hget(key, 'status');
-        if (gameStatus === status) {
-          const match = key.match(/exquisite_corpse:([^:]+):state/);
-          if (match) {
-            sessionIds.push(match[1]);
-          }
-        }
-      }
-    }
-
-    return sessionIds;
-  }
-
-  // Get TTL for a game state
-  async getGameStateTTL(sessionId: string): Promise<number> {
-    const key = `exquisite_corpse:${sessionId}:state`;
-    return await this.redis.ttl(key);
   }
 
   // Cleanup

@@ -82,18 +82,23 @@ export const useSSEConnection = (
       };
 
       customEventSource.onerror = (err) => {
-        console.error('SSE error:', err);
+        console.warn('SSE error:', err);
         setConnectionState('error');
         setError('Connection lost');
-      };
 
+        // FIXME: Add back retries
+        //reconnectTimeoutRef.current = setTimeout(() => {
+        //  if (sessionId) {
+        //    connect();
+        //  }
+        //}, 5000);
+      };
     } catch (err) {
       console.error('Failed to create SSE connection:', err);
       setConnectionState('error');
       setError('Failed to connect');
     }
   }, [sessionId, cleanup]);
-
 
   // Initial connection and game state fetch
   useEffect(() => {

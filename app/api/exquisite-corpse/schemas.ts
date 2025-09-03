@@ -13,12 +13,8 @@ const BaseTurnSchema = z.object({
   author: z.enum(['user', 'ai'], {
     message: 'Turn author must be either "user" or "ai"',
   }),
-  number: z.number({
-    message: 'Missing turn number',
-  }),
   timestamp: z
-    .string()
-    .min(1, 'Missing turn timestamp')
+    .string({ message: 'Missing turn timestamp' })
     .datetime({ message: 'Turn timestamp must be an ISO datetime' }),
 });
 
@@ -92,6 +88,8 @@ export const ImageTurnSchema = BaseTurnSchema.extend({
 });
 
 export const CurveGameContextSchema = createGameContextSchema(CurveTurnSchema);
-export const ImageGameContextSchema = createGameContextSchema(ImageTurnSchema);
+// NOTE: There is an ImageTurnSchema representing complete image turns, but
+// we shouldn't be sending every image to the backend on every turn
+export const ImageGameContextSchema = createGameContextSchema(BaseTurnSchema);
 
 export const PlayerNameSchema = z.string().min(1, "playerName cannot be empty");

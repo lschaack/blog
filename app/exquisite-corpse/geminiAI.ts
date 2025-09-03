@@ -28,7 +28,7 @@ class GeminiAIService {
     }));
   }
 
-  async generateImageTurn(context: GameContext<ImageGeminiFlashPreviewTurn>): Promise<AIImageResponseGeminiFlashPreview> {
+  async generateImageTurn(context: GameContext<Omit<ImageGeminiFlashPreviewTurn, 'image'>>): Promise<AIImageResponseGeminiFlashPreview> {
     return this.extractJson(fetch('/api/exquisite-corpse/draw-image', {
       method: 'POST',
       headers: {
