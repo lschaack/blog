@@ -6,6 +6,56 @@ import { GameError } from '../api/exquisite-corpse/gameError';
 
 export type RedisGameState = Omit<MultiplayerGameState, 'players'>;
 
+class SessionSubscriptionManager {
+  private sessionCallbacks: Map<string, Set<(event: GameEvent) => void>> = new Map();
+  private subscribedSessions: Set<string> = new Set();
+
+  addCallback(sessionId: string, callback: (event: GameEvent) => void): boolean {
+    if (!this.sessionCallbacks.has(sessionId)) {
+      this.sessionCallbacks.set(sessionId, new Set());
+    }
+
+    const callbacks = this.sessionCallbacks.get(sessionId)!;
+    callbacks.add(callback);
+
+    const wasSubscribed = this.subscribedSessions.has(sessionId);
+    if (!wasSubscribed) {
+      this.subscribedSessions.add(sessionId);
+    }
+
+    return !wasSubscribed; // Return true if this is a new subscription
+  }
+
+  removeCallback(sessionId: string, callback: (event: GameEvent) => void): boolean {
+    const callbacks = this.sessionCallbacks.get(sessionId);
+    if (!callbacks) return false;
+
+    console.log('removing callback');
+
+    callbacks.delete(callback);
+
+    if (callbacks.size === 0) {
+      this.sessionCallbacks.delete(sessionId);
+      this.subscribedSessions.delete(sessionId);
+      return true; // Return true if we should unsubscribe from Redis
+    }
+
+    return false;
+  }
+
+  getCallbacks(sessionId: string): Set<(event: GameEvent) => void> {
+    return this.sessionCallbacks.get(sessionId) || new Set();
+  }
+
+  getConnectionCount(sessionId: string): number {
+    return this.sessionCallbacks.get(sessionId)?.size || 0;
+  }
+
+  isSubscribed(sessionId: string): boolean {
+    return this.subscribedSessions.has(sessionId);
+  }
+}
+
 // FIXME: Every time any value is set corresponding to a given game ID, reset the TTL for all related keys
 // FIXME: Check that every function updates the relevant status
 class RedisClient {
@@ -14,6 +64,7 @@ class RedisClient {
   private redis: Redis;
   private subscriber: Redis;
   private publisher: Redis;
+  private subscriptionManager: SessionSubscriptionManager;
 
   private static TWO_HOURS = 60 * 60 * 2;
 
@@ -39,6 +90,23 @@ class RedisClient {
     this.redis = new Redis(redisUrl);
     this.subscriber = new Redis(redisUrl);
     this.publisher = new Redis(redisUrl);
+    this.subscriptionManager = new SessionSubscriptionManager();
+
+    // Single message handler for all game sessions
+    this.subscriber.on('message', (channel: string, message: string) => {
+      // Extract session ID from channel name
+      const match = channel.match(/exquisite_corpse:([^:]+):events/);
+      if (match) {
+        const sessionId = match[1];
+        try {
+          const event = JSON.parse(message) as GameEvent;
+          const callbacks = this.subscriptionManager.getCallbacks(sessionId);
+          callbacks.forEach(cb => cb(event));
+        } catch (error) {
+          console.error('Failed to parse event message:', error);
+        }
+      }
+    });
   }
 
   // Session ID generation (5-character alphanumeric)
@@ -307,23 +375,25 @@ class RedisClient {
   async subscribeToGame(sessionId: string, callback: (event: GameEvent) => void): Promise<void> {
     const channel = RedisClient.getEventsKey(sessionId);
 
-    this.subscriber.on('message', (receivedChannel, message) => {
-      if (receivedChannel === channel) {
-        try {
-          const event = JSON.parse(message) as GameEvent;
-          callback(event);
-        } catch (error) {
-          console.error('Failed to parse event message:', error);
-        }
-      }
-    });
+    const isNewSubscription = this.subscriptionManager.addCallback(sessionId, callback);
 
-    await this.subscriber.subscribe(channel);
+    if (isNewSubscription) {
+      await this.subscriber.subscribe(channel);
+    }
   }
 
-  async unsubscribeFromGame(sessionId: string): Promise<void> {
+  async unsubscribeFromGame(sessionId: string, callback: (event: GameEvent) => void): Promise<void> {
     const channel = RedisClient.getEventsKey(sessionId);
-    await this.subscriber.unsubscribe(channel);
+
+    const shouldUnsubscribe = this.subscriptionManager.removeCallback(sessionId, callback);
+
+    if (shouldUnsubscribe) {
+      await this.subscriber.unsubscribe(channel);
+    }
+  }
+
+  getConnectionCount(sessionId: string): number {
+    return this.subscriptionManager.getConnectionCount(sessionId);
   }
 
   // AI turn retry tracking
@@ -411,6 +481,7 @@ export const getRedisClient = (): RedisClient => {
   if (!redisClient) {
     redisClient = new RedisClient();
   }
+
   return redisClient;
 };
 

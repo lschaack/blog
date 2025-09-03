@@ -6,8 +6,6 @@ export function getCurrentPlayer(gameState: MultiplayerGameState) {
     .filter(player => player.isActive && player.name !== lastPlayerName)
     .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
 
-  console.log('found current player', eligiblePlayers[0])
-
   return eligiblePlayers[0];
 }
 

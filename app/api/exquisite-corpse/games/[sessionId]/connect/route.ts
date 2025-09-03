@@ -22,7 +22,7 @@ export const GET = compose(
     const { sessionId } = await ctx.params;
     const { cookies: { playerId } } = ctx;
 
-    // Verify game exists
+    // Verify game exists and check connection limit
     const redis = getRedisClient();
     const playerExistsInGame = await redis.playerExistsInGame(sessionId, playerId);
 
@@ -30,6 +30,16 @@ export const GET = compose(
       return NextResponse.json(
         { error: `Player "${playerId}" not found in session ${sessionId}` },
         { status: 404 }
+      );
+    }
+
+    // Check if we've reached the maximum number of connections
+    const currentConnections = redis.getConnectionCount(sessionId);
+    console.log('currentConnections', currentConnections)
+    if (currentConnections >= 8) {
+      return NextResponse.json(
+        { error: 'Maximum number of connections (8) reached for this game session' },
+        { status: 429 }
       );
     }
 
@@ -67,7 +77,7 @@ export const GET = compose(
 
         // Subscribe to Redis events
         // FIXME: Avoid extra redis round trips from fetching game here
-        const getRedisEventHandler = (sessionId: string) => async () => {
+        const redisEventHandler = async () => {
           if (isConnectionActive) {
             try {
               const gameState = await redis.getGameState(sessionId);
@@ -81,7 +91,7 @@ export const GET = compose(
           }
         };
 
-        redis.subscribeToGame(sessionId, getRedisEventHandler(sessionId)).catch(error => {
+        redis.subscribeToGame(sessionId, redisEventHandler).catch(error => {
           console.error('Failed to subscribe to game events:', error);
           cleanup();
         });
@@ -96,7 +106,7 @@ export const GET = compose(
           });
 
           // Unsubscribe from Redis
-          redis.unsubscribeFromGame(sessionId).catch(error => {
+          redis.unsubscribeFromGame(sessionId, redisEventHandler).catch(error => {
             console.error('Failed to unsubscribe from game:', error);
           });
 

@@ -25,8 +25,6 @@ export const MultiplayerGameSession = ({
     sessionId,
   );
 
-  console.log('gameState', gameState)
-
   // Handle leaving game
   const handleLeaveGame = useCallback(async () => {
     if (sessionId) {
@@ -130,8 +128,10 @@ export const MultiplayerGameSession = ({
   const currentPlayer = getCurrentPlayer(gameState);
 
   if (!currentPlayer) {
-    // FIXME: fail more gracefully
-    throw new Error('No current player');
+    // FIXME: This should only happen when navigating away (when game update comes back
+    // before navigation completes), but would be a pretty big problem otherwise
+    console.warn('No current player');
+    return null;
   }
 
   const isCurrentPlayer = currentPlayer.name === playerName;
