@@ -8,7 +8,7 @@ elseif redis.call("JSON.TYPE", sessionKey, playerPath) ~= false then
   return redis.error_reply("CONFLICT Player already in game")
 end
 
-local gameType = redis.call("JSON.GET", sessionKey, ".type")
+local gameType = cjson.decode(redis.call("JSON.GET", sessionKey, ".type"))
 local nPlayers = redis.call("JSON.OBJLEN", sessionKey, ".players")
 
 if gameType == "singleplayer" and nPlayers >= 2 or nPlayers >= 8 then
