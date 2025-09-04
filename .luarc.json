@@ -1,0 +1,16 @@
+{
+  "diagnostics": {
+    "globals": [
+      "redis",
+      "KEYS",
+      "ARGV",
+      "cjson",
+      "cmsgpack",
+      "struct",
+      "bit"
+    ]
+  },
+  "workspace": {
+    "library": []
+  }
+}

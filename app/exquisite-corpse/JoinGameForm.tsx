@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Button } from '@/app/components/Button';
-import type { JoinGameRequest } from '@/app/types/multiplayer';
 
 type JoinGameFormProps = {
   onBack: () => void;
-  onGameJoined: (sessionId: string, playerId: string) => void;
+  onGameJoined: (sessionId: string, playerName: string) => void;
 };
 
 export const JoinGameForm = ({ onBack, onGameJoined }: JoinGameFormProps) => {
@@ -27,33 +26,7 @@ export const JoinGameForm = ({ onBack, onGameJoined }: JoinGameFormProps) => {
     setIsLoading(true);
     setError(null);
 
-    try {
-      const request: JoinGameRequest = {
-        playerName: playerName.trim()
-      };
-
-      const response = await fetch(`/api/exquisite-corpse/games/${sessionId.trim().toUpperCase()}/join`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to join game');
-      }
-
-      const data = await response.json();
-      onGameJoined(sessionId.trim().toUpperCase(), data.playerId);
-
-    } catch (err) {
-      console.error('Join game error:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setIsLoading(false);
-    }
+    onGameJoined(sessionId.trim().toUpperCase(), playerName.trim());
   };
 
   return (

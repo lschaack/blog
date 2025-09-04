@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { MultiplayerGameState } from '@/app/types/multiplayer';
+import type { MultiplayerGameState, GameStatus, GameEvent } from '@/app/types/multiplayer';
 
 type SSEConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -8,15 +8,18 @@ type UseSSEConnectionReturn = {
   isConnected: boolean;
   error: string | null;
   gameState: MultiplayerGameState | null;
+  status: GameStatus;
   reconnect: () => void;
 };
 
 export const useSSEConnection = (
   sessionId: string | null,
+  playerName?: string,
 ): UseSSEConnectionReturn => {
   const [connectionState, setConnectionState] = useState<SSEConnectionState>('disconnected');
   const [error, setError] = useState<string | null>(null);
   const [gameState, setGameState] = useState<MultiplayerGameState | null>(null);
+  const [status, setStatus] = useState<GameStatus>('loading');
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -46,7 +49,10 @@ export const useSSEConnection = (
     setError(null);
 
     try {
-      const url = new URL(`/api/exquisite-corpse/games/${sessionId}/connect`, window.location.origin);
+      const url = new URL(
+        `/api/exquisite-corpse/games/${sessionId}/connect?playerName=${playerName}`,
+        window.location.origin
+      );
 
       const customEventSource = new EventSource(url.toString());
       eventSourceRef.current = customEventSource;
@@ -57,11 +63,18 @@ export const useSSEConnection = (
         setError(null);
       };
 
-      customEventSource.addEventListener('game_update', event => {
+      customEventSource.addEventListener('game_update', (event: MessageEvent<string>) => {
         try {
-          const gameState = JSON.parse(event.data);
+          const { gameState: nextGameState, status } = JSON.parse(event.data);
 
-          setGameState(gameState);
+          setStatus(status);
+          setGameState(prevGameState => {
+            if (nextGameState && nextGameState.timestamp > (prevGameState?.timestamp ?? -1)) {
+              return nextGameState;
+            } else {
+              return prevGameState;
+            }
+          });
         } catch (error) {
           throw new Error(`Failed to parse game state ${event.data}: ${error}`);
         }
@@ -98,7 +111,7 @@ export const useSSEConnection = (
       setConnectionState('error');
       setError('Failed to connect');
     }
-  }, [sessionId, cleanup]);
+  }, [sessionId, cleanup, playerName]);
 
   // Initial connection and game state fetch
   useEffect(() => {
@@ -140,6 +153,7 @@ export const useSSEConnection = (
     isConnected: connectionState === 'connected',
     error,
     gameState,
+    status,
     reconnect
   };
 };

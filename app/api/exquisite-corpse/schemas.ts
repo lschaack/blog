@@ -1,3 +1,4 @@
+import { SESSION_ID_MATCHER } from '@/app/exquisite-corpse/sessionId';
 import parseSvgPath from 'parse-svg-path';
 import z from 'zod';
 
@@ -92,4 +93,20 @@ export const CurveGameContextSchema = createGameContextSchema(CurveTurnSchema);
 // we shouldn't be sending every image to the backend on every turn
 export const ImageGameContextSchema = createGameContextSchema(BaseTurnSchema);
 
-export const PlayerNameSchema = z.string().min(1, "playerName cannot be empty");
+export const CreateGameRequestSchema = z.object({
+  gameType: z.union([z.literal("multiplayer"), z.literal("singleplayer")], {
+    message: "Invalid gameType. Must be \"multiplayer\" or \"singleplayer\""
+  }),
+});
+
+export type CreateGameRequest = z.infer<typeof CreateGameRequestSchema>;
+
+export const SessionIdSchema = z.string().regex(SESSION_ID_MATCHER, {
+  message: "Session ID must be a five-character string of uppercase letters and numbers"
+});
+
+export const GameParamsSchema = z.object({
+  sessionId: SessionIdSchema,
+});
+
+export type GameParams = z.infer<typeof GameParamsSchema>;

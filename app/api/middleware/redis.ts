@@ -5,17 +5,9 @@ export class RedisPipelineError extends AggregateError {
   constructor(errors: Error[]) {
     super(errors, 'Redis pipeline failed');
 
+    this.name = 'RedisPipelineError';
+
     Error.captureStackTrace(this, RedisPipelineError);
-  }
-}
-
-export class RedisError extends Error {
-  constructor(message: string | Error) {
-    super(message instanceof Error ? message.message : message);
-
-    this.name = 'RedisError';
-
-    Error.captureStackTrace(this, RedisError);
   }
 }
 
@@ -43,19 +35,35 @@ export function validatePipelineResult<T = NonNullable<PipelineResult>>(
   return transform(result);
 }
 
+const REPLY_ERROR_SPLITTER = /^(?<type>\S+)\s+(?<message>.*)$/;
 export const withRedisErrorHandler: Middleware = handler => {
   return async (request, ctx) => {
     try {
       return await handler(request, ctx);
     } catch (error) {
-      if (error instanceof RedisError) {
-        console.error(JSON.stringify(error, null, 2));
-        console.error(error.stack);
+      if (error instanceof Error && error.name === 'ReplyError') {
+        console.error(error);
 
-        return NextResponse.json(
-          { errors: error.message },
-          { status: 400 }
-        );
+        const { type, message } = REPLY_ERROR_SPLITTER.exec(error.message)?.groups ?? {};
+
+        switch (type) {
+          case 'FORBIDDEN': return NextResponse.json(
+            { errors: message },
+            { status: 403 }
+          );
+          case 'NOT_FOUND': return NextResponse.json(
+            { errors: message },
+            { status: 404 }
+          );
+          case 'CONFLICT': return NextResponse.json(
+            { errors: message },
+            { status: 409 }
+          );
+          default: return NextResponse.json(
+            { errors: 'Unknown Redis error' },
+            { status: 500 }
+          );
+        }
       } else if (error instanceof RedisPipelineError) {
         console.group(error.message);
 

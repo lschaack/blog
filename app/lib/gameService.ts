@@ -1,173 +1,108 @@
 import { randomUUID } from 'crypto';
 import { getRedisClient } from './redis';
 import type {
-  MultiplayerGameState,
   Player,
   GameEvent,
-  CreateGameRequest,
-  JoinGameRequest,
-  GameStatus
+  GameStatus,
+  MultiplayerGameState
 } from '@/app/types/multiplayer';
 import { generateAICurveTurn } from '@/app/lib/aiTurnService';
 import type { CurveTurn, Line } from '@/app/types/exquisiteCorpse';
 import { getCurrentPlayer } from './gameUtils';
-import { GameError } from '../api/exquisite-corpse/gameError';
+import { generateSessionId } from '../exquisite-corpse/sessionId';
+import { CreateGameRequest } from '../api/exquisite-corpse/schemas';
 
 export class GameService {
   private redis = getRedisClient();
   private static MAX_AI_RETRIES = 3;
 
-  async createGame(request: CreateGameRequest): Promise<{ sessionId: string; playerName: string }> {
-    const { playerName } = request;
-    const sessionId = this.redis.generateSessionId();
+  async createGame(request: CreateGameRequest): Promise<{ sessionId: string }> {
+    const sessionId = generateSessionId();
     const gameId = randomUUID();
 
-    const _now = Date.now();
-    const now = new Date(_now).toISOString();
-    const oneMsLater = new Date(_now + 1).toISOString();
-    const player: Player = {
-      name: playerName,
-      joinedAt: now,
-      isActive: true,
-      connectionStatus: 'disconnected',
-    };
-
-    const players: Player[] = [player];
+    const players: Record<string, Player> = {};
     if (request.gameType === 'singleplayer') {
-      players.push({
+      players['AI'] = {
         name: 'AI',
-        joinedAt: oneMsLater,
-        isActive: true,
-        connectionStatus: 'connected',
-      });
+        joinedAt: new Date().toISOString(),
+      };
     }
 
-    const gameState: Omit<MultiplayerGameState, 'players'> = {
+    const gameState = await this.redis.initializeGame(sessionId, {
       sessionId,
       gameId,
       type: request.gameType,
-      status: 'game_started',
       turns: [],
+      players,
       createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    const initialGameState = await this.redis.initializeGame(sessionId, gameState);
-    const initialPlayers = await this.redis.initializePlayers(sessionId, players);
-
-    await this.publishEvent(sessionId, 'game_started', {
-      gameState: {
-        ...initialGameState,
-        players: initialPlayers,
-      } as MultiplayerGameState
+      timestamp: Date.now(),
     });
 
-    return { sessionId, playerName };
+    await this.publishEvent(sessionId, 'game_started', gameState);
+
+    return { sessionId };
   }
 
-  async joinGame(sessionId: string, request: JoinGameRequest): Promise<{ playerName: string }> {
-    const { playerName } = request;
-    const now = new Date().toISOString();
-
+  async addPlayer(sessionId: string, name: string) {
     const newPlayer: Player = {
-      name: playerName,
-      joinedAt: now,
-      isActive: false,
-      connectionStatus: 'disconnected',
+      name,
+      joinedAt: new Date().toISOString(),
     };
 
-    await this.redis.addPlayer(sessionId, newPlayer);
+    const gameState = await this.redis.addPlayer(sessionId, newPlayer);
 
     // Publish player left event
-    await this.publishEvent(sessionId, 'player_joined', { playerName });
+    await this.publishEvent(sessionId, 'player_joined', gameState);
+  }
 
-    return { playerName };
+  async removePlayer(sessionId: string, playerName: string): Promise<void> {
+    const gameState = await this.redis.removePlayer(sessionId, playerName);
+
+    // Publish player left event
+    await this.publishEvent(sessionId, 'player_left', gameState);
   }
 
   async submitTurn(sessionId: string, playerName: string, path: Line): Promise<void> {
-    // TODO: See if there's a good way to check that it's the player's turn in a one-trip request
     const turn: CurveTurn = {
       path,
       author: playerName,
       timestamp: new Date().toISOString(),
     };
 
-    await this.redis.addTurn(sessionId, turn);
+    const gameState = await this.redis.addTurn(sessionId, turn);
 
-    await this.publishEvent(sessionId, 'turn_ended', { turn });
+    await this.publishEvent(sessionId, 'turn_ended', gameState);
 
-    // TODO: Get next game state in single trip?
-    const nextGameState = await this.redis.getGameState(sessionId);
-    const nextPlayer = nextGameState && getCurrentPlayer(nextGameState);
+    const nextPlayer = getCurrentPlayer(gameState);
     // If next player is AI, trigger AI turn
     if (nextPlayer?.name === 'AI') {
-      await this.startAITurn(sessionId);
+      await this.startAITurn(sessionId, gameState);
     }
-  }
-
-  async disconnectPlayer(sessionId: string, playerName: string) {
-    await this.redis.updatePlayerStatus(sessionId, playerName, {
-      connectionStatus: 'disconnected',
-    });
-
-    // Publish player disconnected event
-    await this.publishEvent(sessionId, 'player_left', {
-      playerName,
-    });
-  }
-
-  async removePlayer(sessionId: string, playerName: string): Promise<void> {
-    await this.redis.removePlayer(sessionId, playerName);
-
-    // Publish player left event
-    await this.publishEvent(sessionId, 'player_left', {
-      playerName,
-    });
-  }
-
-  async reconnectPlayer(sessionId: string, playerName: string): Promise<void> {
-    await this.redis.updatePlayerStatus(sessionId, playerName, {
-      connectionStatus: 'connected',
-    });
-
-    await this.redis.doPromotion(sessionId);
-
-    await this.publishEvent(sessionId, 'player_joined', {
-      playerName,
-    });
   }
 
   async retryAITurn(sessionId: string): Promise<void> {
     const gameState = await this.redis.getGameState(sessionId);
 
+    // FIXME: How do I prevent simultaneous AI turns?
+    // TODO: Add check for ai having next turn
     if (!gameState) {
       throw GameError.GAME_NOT_FOUND(sessionId);
-    } else if (gameState.status === 'ai_turn_started') {
-      throw GameError.AI_TURN_IN_PROGRESS();
     }
 
     await this.redis.resetAIRetryCount(sessionId);
-    await this.startAITurn(sessionId);
+    await this.startAITurn(sessionId, gameState);
   }
 
-  private async startAITurn(sessionId: string): Promise<void> {
-    await this.redis.updateGameStatus(sessionId, 'ai_turn_started');
-
-    await this.publishEvent(sessionId, 'ai_turn_started', {});
+  private async startAITurn(sessionId: string, gameState: MultiplayerGameState): Promise<void> {
+    await this.publishEvent(sessionId, 'ai_turn_started');
 
     // Process AI turn in background
-    this.processAITurnBackground(sessionId).catch(error => {
+    this.processAITurnBackground(sessionId, gameState).catch(error => {
       console.error('AI turn failed:', error);
     });
   }
 
-  private async getAITurn(sessionId: string) {
-    const gameState = await this.redis.getGameState(sessionId);
-    if (!gameState) {
-      throw new Error('Game state not found during AI processing');
-    }
-
-    // Generate AI turn using server-side logic
+  private async getAITurn(gameState: MultiplayerGameState) {
     const dimensions = { width: 512, height: 512 };
     const aiResponse = await generateAICurveTurn(gameState.turns, dimensions);
 
@@ -180,43 +115,44 @@ export class GameService {
     return aiTurn;
   }
 
-  private async processAITurnBackground(sessionId: string): Promise<void> {
+  private async processAITurnBackground(sessionId: string, gameState: MultiplayerGameState): Promise<void> {
     try {
-      const turn = await this.getAITurn(sessionId);
+      const turn = await this.getAITurn(gameState);
 
-      await this.redis.addTurn(sessionId, turn);
+      const nextGameState = await this.redis.addTurn(sessionId, turn);
+
+      this.publishEvent(sessionId, 'turn_ended', nextGameState);
+
       await this.redis.resetAIRetryCount(sessionId);
-
-      await this.publishEvent(sessionId, 'turn_ended', { turn });
-
     } catch (error) {
-      await this.handleAITurnFailure(sessionId, error as Error);
+      console.error(`AI turn failed: ${error}`)
+      await this.handleAITurnFailure(sessionId);
     }
   }
 
-  private async handleAITurnFailure(sessionId: string, error: Error): Promise<void> {
+  private async handleAITurnFailure(sessionId: string): Promise<void> {
     const retryCount = await this.redis.getAIRetryCount(sessionId);
     const newRetryCount = retryCount + 1;
 
     if (newRetryCount <= GameService.MAX_AI_RETRIES) {
       await this.redis.setAIRetryCount(sessionId, newRetryCount);
+      const gameState = await this.redis.getGameState(sessionId);
       // Retry after a delay
       setTimeout(() => {
-        this.processAITurnBackground(sessionId).catch(console.error);
+        this.processAITurnBackground(sessionId, gameState).catch(console.error);
       }, 2000 * newRetryCount); // Exponential backoff
     } else {
       // Max retries reached, mark as failed
-      await this.redis.updateGameStatus(sessionId, 'ai_turn_failed');
-
-      await this.publishEvent(sessionId, 'ai_turn_failed', {
-        error: error.message,
-        retryCount,
-      });
+      await this.publishEvent(sessionId, 'ai_turn_failed');
     }
   }
 
-  private async publishEvent<T>(sessionId: string, type: GameStatus, data: T): Promise<void> {
-    const event: GameEvent<T> = { type, data };
+  private async publishEvent(
+    sessionId: string,
+    status: GameStatus,
+    gameState?: MultiplayerGameState,
+  ): Promise<void> {
+    const event: GameEvent = { status, gameState };
 
     await this.redis.publishEvent(sessionId, event);
   }

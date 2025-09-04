@@ -21,8 +21,16 @@ export const MultiplayerGameSession = ({
   dimensions,
 }: MultiplayerGameSessionProps) => {
   const router = useRouter();
-  const { connectionState, isConnected, error: connectionError, gameState, reconnect } = useSSEConnection(
+  const {
+    connectionState,
+    isConnected,
+    error: connectionError,
+    gameState,
+    status,
+    reconnect
+  } = useSSEConnection(
     sessionId,
+    playerName,
   );
 
   // Handle leaving game
@@ -30,7 +38,7 @@ export const MultiplayerGameSession = ({
     if (sessionId) {
       try {
         // Notify backend that player is leaving
-        await fetch(`/api/exquisite-corpse/games/${sessionId}/leave`, {
+        await fetch(`/api/exquisite-corpse/games/${sessionId}/disconnect`, {
           method: 'POST',
         });
       } catch (error) {
@@ -124,8 +132,8 @@ export const MultiplayerGameSession = ({
     );
   }
 
-  const isActivePlayer = gameState?.players[playerName]?.isActive ?? false;
   const currentPlayer = getCurrentPlayer(gameState);
+  console.log('currentPlayer', currentPlayer)
 
   if (!currentPlayer) {
     // FIXME: This should only happen when navigating away (when game update comes back
@@ -147,7 +155,6 @@ export const MultiplayerGameSession = ({
           <div className="text-sm space-y-1">
             <div>Type: {gameState.type === 'singleplayer' ? 'AI Game' : 'Multiplayer'}</div>
             <div>Players: {Object.keys(gameState.players).length}</div>
-            <div>Your status: {isActivePlayer ? 'Active Player' : 'Viewer'}</div>
             {!isConnected && <div className="text-red-600">Disconnected</div>}
           </div>
 
@@ -160,9 +167,7 @@ export const MultiplayerGameSession = ({
                   key={player.name}
                   className={`px-2 py-1 rounded text-xs ${player.name === currentPlayer.name
                     ? 'bg-blue-100 text-blue-800'
-                    : player.isActive
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-600'
+                    : 'bg-green-100 text-green-800'
                     }`}
                 >
                   {
@@ -193,9 +198,8 @@ export const MultiplayerGameSession = ({
       {/* Game Status */}
       {/* FIXME: clean this up */}
       <div className="text-center p-2 bg-deep-50 rounded-xl font-semibold text-deep-600">
-        {!isActivePlayer && '(watching) '}
-        {gameState.status === 'ai_turn_started' && 'AI is drawing...'}
-        {gameState.status === 'ai_turn_failed' && (
+        {status === 'ai_turn_started' && 'AI is drawing...'}
+        {status === 'ai_turn_failed' && (
           <div className="space-y-2">
             <div className="text-red-600">AI turn failed</div>
             <Button
@@ -205,10 +209,10 @@ export const MultiplayerGameSession = ({
             />
           </div>
         )}
-        {gameState.status === 'turn_ended' && isCurrentPlayer && 'Your turn!'}
-        {gameState.status === 'turn_ended' && !isCurrentPlayer &&
+        {status === 'turn_ended' && isCurrentPlayer && 'Your turn!'}
+        {status === 'turn_ended' && !isCurrentPlayer &&
           `Waiting for ${currentPlayer.name}`}
-        {gameState.status === 'game_started' && isCurrentPlayer && 'Start drawing!'}
+        {status === 'game_started' && isCurrentPlayer && 'Start drawing!'}
       </div>
 
       {/* Game Canvas */}

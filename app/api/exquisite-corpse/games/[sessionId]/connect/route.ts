@@ -1,50 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRedisClient } from '@/app/lib/redis';
 import { getGameService } from '@/app/lib/gameService';
-import { Params } from '../params';
 import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
 import { withRedisErrorHandler } from '@/app/api/middleware/redis';
-import { withRequiredCookies } from '@/app/api/middleware/cookies';
 import { compose } from '@/app/api/middleware/compose';
+import { GameParams } from '../../../schemas';
+import { cookies } from 'next/headers';
+import { GameEvent } from '@/app/types/multiplayer';
+import { getMissingCookieResponse } from '@/app/api/middleware/cookies';
 
 export const GET = compose(
-  withRequiredCookies('playerId'),
   withCatchallErrorHandler,
   withRedisErrorHandler,
 )(
   async (
     request: NextRequest,
     ctx: {
-      params: Promise<Params>,
-      cookies: { playerId: string }
+      params: Promise<GameParams>,
+      cookies: { playerName: string },
     }
   ) => {
     const { sessionId } = await ctx.params;
-    const { cookies: { playerId } } = ctx;
 
-    // Verify game exists and check connection limit
+    const { searchParams } = new URL(request.url);
+    const playerNameRequest = searchParams.get('playerName');
+
+    const cookieStore = await cookies();
+
+    if (playerNameRequest) {
+      cookieStore.set({
+        name: 'playerName',
+        value: playerNameRequest,
+        maxAge: 60 * 60 * 24,
+        path: `/api/exquisite-corpse/games/${sessionId}/`
+      });
+    } else if (!cookieStore.has('playerName')) {
+      return getMissingCookieResponse('playerName');
+    }
+
+    const playerName = cookieStore.get('playerName')!.value;
+
     const redis = getRedisClient();
-    const playerExistsInGame = await redis.playerExistsInGame(sessionId, playerId);
-
-    if (!playerExistsInGame) {
-      return NextResponse.json(
-        { error: `Player "${playerId}" not found in session ${sessionId}` },
-        { status: 404 }
-      );
-    }
-
-    // Check if we've reached the maximum number of connections
-    const currentConnections = redis.getConnectionCount(sessionId);
-    console.log('currentConnections', currentConnections)
-    if (currentConnections >= 8) {
-      return NextResponse.json(
-        { error: 'Maximum number of connections (8) reached for this game session' },
-        { status: 429 }
-      );
-    }
-
     const gameService = getGameService();
-    await gameService.reconnectPlayer(sessionId, playerId);
+    await gameService.addPlayer(sessionId, playerName);
 
     // Set up SSE stream
     const encoder = new TextEncoder();
@@ -55,7 +53,12 @@ export const GET = compose(
       async start(controller) {
         try {
           const initialGameState = await redis.getGameState(sessionId);
-          const data = `event: game_update\ndata: ${JSON.stringify(initialGameState)}\n\n`;
+          const initialStateEvent: GameEvent = {
+            status: 'loaded',
+            gameState: initialGameState,
+          }
+
+          const data = `event: game_update\ndata: ${JSON.stringify(initialStateEvent)}\n\n`;
 
           controller.enqueue(encoder.encode(data));
         } catch (error) {
@@ -76,12 +79,10 @@ export const GET = compose(
         }, 30000);
 
         // Subscribe to Redis events
-        // FIXME: Avoid extra redis round trips from fetching game here
-        const redisEventHandler = async () => {
+        const redisEventHandler = async (event: GameEvent) => {
           if (isConnectionActive) {
             try {
-              const gameState = await redis.getGameState(sessionId);
-              const data = `event: game_update\ndata: ${JSON.stringify(gameState)}\n\n`;
+              const data = `event: game_update\ndata: ${JSON.stringify(event)}\n\n`;
 
               controller.enqueue(encoder.encode(data));
             } catch {
@@ -101,7 +102,7 @@ export const GET = compose(
           clearInterval(heartbeatInterval);
 
           // Remove player when connection closes
-          gameService.disconnectPlayer(sessionId, playerId).catch(error => {
+          gameService.removePlayer(sessionId, playerName).catch(error => {
             console.error('Failed to disconnect player:', error);
           });
 

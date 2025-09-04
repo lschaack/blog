@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/app/components/Button';
-import type { GameType, CreateGameRequest } from '@/app/types/multiplayer';
+import type { GameType } from '@/app/types/multiplayer';
+import { CreateGameRequest } from '../api/exquisite-corpse/schemas';
 
 type CreateGameFormProps = {
   gameType: GameType;
   onBack: () => void;
-  onGameCreated: (sessionId: string, playerId: string, isActive: boolean) => void;
+  onGameCreated: (sessionId: string, playerName: string) => void;
 };
 
 export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFormProps) => {
@@ -25,10 +26,9 @@ export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFo
     try {
       const request: CreateGameRequest = {
         gameType,
-        playerName: playerName.trim()
       };
 
-      const response = await fetch('/api/exquisite-corpse/games/create-with-player', {
+      const response = await fetch('/api/exquisite-corpse/games/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,8 +42,8 @@ export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFo
       }
 
       const data = await response.json();
-      onGameCreated(data.sessionId, data.playerId, true); // Creator is always active
 
+      onGameCreated(data.sessionId, playerName.trim());
     } catch (err) {
       console.error('Create game error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');

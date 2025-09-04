@@ -1,23 +1,25 @@
 import { cookies } from 'next/headers';
 import { MultiplayerGameSession } from '../MultiplayerGameSession';
 import Link from 'next/link';
-
-const sessionIdMatcher = /^[0-9A-Z]{5}$/;
+import { SESSION_ID_MATCHER } from '../sessionId';
 
 export default async function GameSessionPage({
-  params
+  params,
+  searchParams,
 }: {
-  params: Promise<{ sessionId: string }>
+  params: Promise<{ sessionId: string }>,
+  searchParams: Promise<{ playerName?: string }>
 }) {
   const { sessionId } = await params;
+  const { playerName: playerNameParam } = await searchParams;
   const cookieStore = await cookies();
 
   const dimensions = { width: 512, height: 512 };
 
   let error: string;
-  if (!sessionIdMatcher.test(sessionId)) {
+  if (!SESSION_ID_MATCHER.test(sessionId)) {
     error = `${sessionId} is not a valid session ID`;
-  } else if (!cookieStore.has('playerId')) {
+  } else if (!playerNameParam && !cookieStore.has('playerName')) {
     error = 'No player ID found, please use join game flow';
   } else {
     error = '';
@@ -40,12 +42,12 @@ export default async function GameSessionPage({
     );
   }
 
-  const { value: playerName } = cookieStore.get('playerId')!;
+  const playerNameCookie = cookieStore.get('playerName')!;
 
   return (
     <MultiplayerGameSession
       sessionId={sessionId}
-      playerName={playerName}
+      playerName={playerNameParam ?? playerNameCookie.value}
       dimensions={dimensions}
     />
   );

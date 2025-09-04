@@ -1,12 +1,32 @@
 import type { MultiplayerGameState } from '@/app/types/multiplayer';
 
-export function getCurrentPlayer(gameState: MultiplayerGameState) {
+export function* playerOrder(gameState: MultiplayerGameState) {
   const lastPlayerName = gameState.turns.at(-1)?.author;
+  // NOTE: This must be sorted, but that should be automatic since players are
+  // appended at join time and removed when they disconnect for any reason
   const eligiblePlayers = Object.values(gameState.players)
-    .filter(player => player.isActive && player.name !== lastPlayerName)
-    .sort((a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime());
+  const lastPlayerIndex = eligiblePlayers.findIndex(player => player.name === lastPlayerName);
+  const lastPlayerInGame = lastPlayerIndex !== -1;
+  const startIndex = lastPlayerIndex + 1; // 0 if lastPlayer is not in eligiblePlayers
+  // wrap around eligible players without hitting lastPlayer
+  const endIndex = Math.max(
+    startIndex,
+    startIndex + eligiblePlayers.length - Number(lastPlayerInGame)
+  );
 
-  return eligiblePlayers[0];
+  for (let i = startIndex; i < endIndex; i++) {
+    const player = eligiblePlayers[i % eligiblePlayers.length];
+
+    if (gameState.type === 'singleplayer' && player.name === 'AI' && gameState.turns.length === 0) {
+      continue;
+    } else {
+      yield player;
+    }
+  }
+}
+
+export function getCurrentPlayer(gameState: MultiplayerGameState) {
+  return playerOrder(gameState).next().value;
 }
 
 /**

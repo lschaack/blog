@@ -1,10 +1,8 @@
-import Redis from 'ioredis';
-import type { MultiplayerGameState, GameEvent, GameStatus, Player } from '@/app/types/multiplayer';
+import { promises as fs } from 'fs';
+import Redis, { ReplyError } from 'ioredis';
+import type { MultiplayerGameState, GameEvent, Player } from '@/app/types/multiplayer';
 import type { CurveTurn } from '@/app/types/exquisiteCorpse';
-import { RedisError, validatePipelineResult } from '../api/middleware/redis';
-import { GameError } from '../api/exquisite-corpse/gameError';
-
-export type RedisGameState = Omit<MultiplayerGameState, 'players'>;
+import { validatePipelineResult } from '../api/middleware/redis';
 
 class SessionSubscriptionManager {
   private sessionCallbacks: Map<string, Set<(event: GameEvent) => void>> = new Map();
@@ -54,8 +52,6 @@ class SessionSubscriptionManager {
   }
 }
 
-// FIXME: Every time any value is set corresponding to a given game ID, reset the TTL for all related keys
-// FIXME: Check that every function updates the relevant status
 class RedisClient {
   public static MAX_PLAYERS = 8;
 
@@ -63,6 +59,8 @@ class RedisClient {
   private subscriber: Redis;
   private publisher: Redis;
   private subscriptionManager: SessionSubscriptionManager;
+
+  private scriptsLoaded: Promise<boolean>;
 
   private static TWO_HOURS = 60 * 60 * 2;
 
@@ -74,10 +72,6 @@ class RedisClient {
     return `exquisite_corpse:${sessionId}:events`;
   }
 
-  private static getPlayersKey(sessionId: string) {
-    return `exquisite_corpse:${sessionId}:players`;
-  }
-
   private static getAiRetriesKey(sessionId: string) {
     return `exquisite_corpse:${sessionId}:ai_retries`;
   }
@@ -85,10 +79,14 @@ class RedisClient {
   constructor() {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
 
-    this.redis = new Redis(redisUrl);
+    this.redis = new Redis(redisUrl, {
+      showFriendlyErrorStack: process.env.NODE_ENV === 'development',
+    });
     this.subscriber = new Redis(redisUrl);
     this.publisher = new Redis(redisUrl);
     this.subscriptionManager = new SessionSubscriptionManager();
+
+    this.scriptsLoaded = this.loadScripts();
 
     // Single message handler for all game sessions
     this.subscriber.on('message', (channel: string, message: string) => {
@@ -107,17 +105,36 @@ class RedisClient {
     });
   }
 
-  // Session ID generation (5-character alphanumeric)
-  generateSessionId(): string {
-    const chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let result = '';
-    for (let i = 0; i < 5; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
+  async loadScripts() {
+    const dirPath = process.cwd() + '/app/lib/';
+
+    const [
+      eqConnect,
+      eqDisconnect,
+      eqAddTurn,
+    ] = await Promise.all([
+      fs.readFile(dirPath + 'connect.lua').then(buff => buff.toString()),
+      fs.readFile(dirPath + 'disconnect.lua').then(buff => buff.toString()),
+      fs.readFile(dirPath + 'addTurn.lua').then(buff => buff.toString()),
+    ]);
+
+    this.redis.defineCommand("eqConnect", {
+      numberOfKeys: 1,
+      lua: eqConnect,
+    });
+    this.redis.defineCommand("eqDisconnect", {
+      numberOfKeys: 1,
+      lua: eqDisconnect,
+    });
+    this.redis.defineCommand("eqAddTurn", {
+      numberOfKeys: 1,
+      lua: eqAddTurn,
+    });
+
+    return true;
   }
 
-  async initializeGame(sessionId: string, gameState: RedisGameState): Promise<RedisGameState> {
+  async initializeGame(sessionId: string, gameState: MultiplayerGameState) {
     const key = RedisClient.getSessionKey(sessionId);
     const result = await this.redis
       .pipeline()
@@ -126,245 +143,83 @@ class RedisClient {
       .call('JSON.GET', key, '.')
       .exec();
 
-    return validatePipelineResult(result, res => res[2][1] as RedisGameState);
+    return validatePipelineResult(result, res => res[2][1] as MultiplayerGameState);
   }
 
-  async initializePlayers(sessionId: string, players: Player[]) {
-    const key = RedisClient.getPlayersKey(sessionId);
-    const playerMap = Object.fromEntries(players.map(player => [player.name, player]));
-    const result = await this.redis
-      .pipeline()
-      .call('JSON.SET', key, '.', JSON.stringify(playerMap), 'NX')
-      .call('JSON.GET', key, '.')
-      .exec();
-
-    return validatePipelineResult(result, res => res[1][1] as Partial<Record<string, Player>>);
-  }
-
-  async getGameState(sessionId: string): Promise<MultiplayerGameState | null> {
-    const result = await this.redis
-      .pipeline()
-      .call('JSON.GET', RedisClient.getSessionKey(sessionId), '.')
-      .call('JSON.GET', RedisClient.getPlayersKey(sessionId), '.')
-      .exec();
-
-    const validated = validatePipelineResult(result);
-
+  parseGameState(gameState: string): Promise<MultiplayerGameState> {
     try {
-      const gameState = JSON.parse(validated[0][1] as string | null ?? '');
-      const players = JSON.parse(validated[1][1] as string | null ?? '');
-
-      return {
-        ...gameState,
-        players
-      }
+      return JSON.parse(gameState);
     } catch (error) {
-      console.group('Failed to parse game state or player JSON');
-      console.error('gameState', validated[0][1]);
-      console.error('players', validated[1][1]);
+      console.group('Failed to parse game state')
+      console.error(`Received state:\n${gameState}`);
+      console.error(`Error:\n${error}`);
       console.groupEnd();
 
-      const rawGameState = validated[0][1];
-      const rawPlayers = validated[1][1];
-
-      if (rawGameState === null) {
-        throw GameError.GAME_NOT_FOUND(sessionId);
-      } else if (rawPlayers === null) {
-        throw GameError.PLAYERS_NOT_FOUND(sessionId);
-      } else {
-        console.group(`Failed to parse game or players JSON for session ${sessionId}`);
-        console.error(`GameState: ${rawGameState}`);
-        console.error(`Players: ${rawPlayers}`);
-        console.groupEnd();
-
-        throw error;
-      }
+      throw error;
     }
   }
 
-  async updateGameStatus(sessionId: string, status: GameStatus) {
-    const sessionKey = RedisClient.getSessionKey(sessionId);
+  async getGameState(sessionId: string) {
+    const result = await this.redis.call(
+      'JSON.GET',
+      RedisClient.getSessionKey(sessionId),
+      '.'
+    );
 
-    try {
-      return await this.redis.call(
-        'JSON.MSET',
-        sessionKey, '.status', JSON.stringify(status),
-        sessionKey, '.updatedAt', JSON.stringify(new Date().toISOString()),
-      )
-    } catch (error) {
-      throw new RedisError(error as string | Error ?? 'Failed to update game status');
+    if (!result) {
+      throw new ReplyError('NOT_FOUND Session does not exist')
     }
+
+    return this.parseGameState(result as string);
   }
 
   async addTurn(sessionId: string, turn: CurveTurn) {
     const sessionKey = RedisClient.getSessionKey(sessionId);
 
-    return validatePipelineResult(
-      await this.redis
-        .pipeline()
-        .call('JSON.ARRAPPEND', sessionKey, '.turns', JSON.stringify(turn))
-        .call('JSON.SET', sessionKey, '.status', JSON.stringify('turn_ended'))
-        .exec()
+    await this.scriptsLoaded;
+
+    return this.parseGameState(
+      await this.redis.eqAddTurn(sessionKey, JSON.stringify(turn))
     );
   }
 
   // NOTE: Players are separated from other game state since this is essentially
   // the only way a multi command could realistically fail due to simultaneous access
   async addPlayer(sessionId: string, newPlayer: Player) {
+    const sessionKey = RedisClient.getSessionKey(sessionId);
+
     const playerName = newPlayer.name;
-    const playersKey = RedisClient.getPlayersKey(sessionId);
 
-    // FIXME: check if at max players, multiple attempts on failure
-    try {
-      await this.redis.call(
-        'JSON.SET',
-        playersKey,
-        `.${playerName}`,
-        JSON.stringify(newPlayer),
-        'NX'
-      );
-    } catch (error) {
-      throw new RedisError(error as string | Error);
-    }
-  }
+    await this.scriptsLoaded;
 
-  // FIXME: lua script to avoid two round trips w/watch/multi/exec
-  async removePlayer(sessionId: string, playerName: string) {
-    const playersKey = RedisClient.getPlayersKey(sessionId);
-
-    await this.redis.watch(playersKey);
-
-    const playersJson = await this.redis.call('JSON.GET', playersKey, '.') as string | null;
-    const playerMap = await JSON.parse(playersJson ?? '') as Record<string, Player>;
-
-    if (playerMap[playerName]) {
-      const wasActive = playerMap[playerName].isActive;
-
-      delete playerMap[playerName];
-
-      const players = Object.values(playerMap);
-
-      // handle promotions if necessary
-      let toPromote: Player | undefined = undefined;
-      if (wasActive && players.length > 1) {
-        for (const player of players) {
-          if (player.name !== 'AI') {
-            if (
-              !toPromote
-              || (new Date(player.joinedAt).getTime() < new Date(toPromote.joinedAt).getTime())
-            ) {
-              toPromote = player;
-            }
-          }
-        }
-
-        if (toPromote) toPromote.isActive = true;
-      }
-
-      await this.redis.call(
-        'JSON.SET',
-        playersKey,
-        '.',
-        JSON.stringify(playerMap),
-      );
-    }
-  }
-
-  // FIXME: lua script, what if there needs to be more than one promotion?
-  async doPromotion(sessionId: string) {
-    const playersKey = RedisClient.getPlayersKey(sessionId);
-
-    await this.redis.watch(playersKey);
-
-    const playersJson = await this.redis.call('JSON.GET', playersKey, '.') as string | null;
-    const playerMap = await JSON.parse(playersJson ?? '') as Record<string, Player>;
-
-    const players = Object.values(playerMap);
-    const nActivePlayers = players.reduce(
-      (nActive, player) => nActive + Number(player.isActive),
-      0
+    return this.parseGameState(
+      await this.redis.eqConnect(
+        sessionKey,
+        `.players.${playerName}`,
+        JSON.stringify(newPlayer)
+      )
     );
-
-    // no need to promote if nobody can play anyway
-    if (players.length > 1 && nActivePlayers < 2) {
-      let toPromote: Player | undefined = undefined;
-
-      for (const player of players) {
-        if (player.name !== 'AI') {
-          if (
-            !toPromote
-            || (new Date(player.joinedAt).getTime() < new Date(toPromote.joinedAt).getTime())
-          ) {
-            toPromote = player;
-          }
-        }
-      }
-
-      if (toPromote) {
-        return await this.redis.call(
-          'JSON.SET',
-          playersKey,
-          `.${toPromote.name}.isActive`,
-          JSON.stringify(true),
-        );
-      }
-    }
   }
 
-  // Update player status
-  async updatePlayerStatus(
-    sessionId: string,
-    playerName: string,
-    updates: Partial<Player>
-  ) {
-    const playersKey = RedisClient.getPlayersKey(sessionId);
+  async removePlayer(sessionId: string, playerName: string) {
+    const sessionKey = RedisClient.getSessionKey(sessionId);
 
-    let updateArgs: string[] = [];
-    try {
-      updateArgs = Object
-        .entries(updates)
-        .flatMap(([key, val]) => [playersKey, `.${playerName}.${key}`, JSON.stringify(val)]);
-    } catch (error) {
-      throw new Error(`Failed to parse JSON for partial update:\n${updates}\n${error}`);
-    }
+    await this.scriptsLoaded;
 
-    try {
-      return await this.redis.call('JSON.MSET', ...updateArgs);
-    } catch (error) {
-      throw new RedisError(error as string | Error);
-    }
+    return this.parseGameState(
+      await this.redis.eqDisconnect(
+        sessionKey,
+        playerName
+      )
+    );
   }
 
   async deleteGameState(sessionId: string) {
-    return validatePipelineResult(
-      await this.redis
-        .pipeline()
-        .del(RedisClient.getSessionKey(sessionId))
-        .del(RedisClient.getPlayersKey(sessionId))
-        .exec()
-    );
-  }
-
-  async gameExists(sessionId: string): Promise<boolean> {
-    try {
-      return (await this.redis.exists(RedisClient.getSessionKey(sessionId))) === 1;
-    } catch (error) {
-      throw new RedisError(error as string | Error);
-    }
-  }
-
-  async playerExistsInGame(sessionId: string, playerName: string): Promise<boolean> {
-    const result = await this.redis
-      .pipeline()
-      .exists(RedisClient.getSessionKey(sessionId))
-      .call('JSON.TYPE', RedisClient.getPlayersKey(sessionId), `.${playerName}`)
-      .exec();
-
-    return validatePipelineResult(result, res => res[1][1] !== null);
+    return this.redis.del(RedisClient.getSessionKey(sessionId));
   }
 
   // Event publishing
-  async publishEvent<T>(sessionId: string, event: GameEvent<T>): Promise<void> {
+  async publishEvent(sessionId: string, event: GameEvent): Promise<void> {
     const channel = RedisClient.getEventsKey(sessionId);
     await this.publisher.publish(channel, JSON.stringify(event));
   }
