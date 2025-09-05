@@ -9,6 +9,7 @@ import { cookies } from 'next/headers';
 import { GameEvent } from '@/app/types/multiplayer';
 import { getMissingCookieResponse } from '@/app/api/middleware/cookies';
 import { CUSTOM_REPLY_ERROR_TYPE } from '@/app/types/exquisiteCorpse';
+import { ReplyError } from 'ioredis';
 
 export const GET = compose(
   withCatchallErrorHandler,
@@ -49,8 +50,8 @@ export const GET = compose(
     try {
       await gameService.addPlayer(sessionId, playerName);
     } catch (error) {
-      if (error instanceof Error && error.name === 'ReplyError') {
-        const { type } = (REPLY_ERROR_SPLITTER.exec(error.message)?.groups ?? {}) as { type?: CUSTOM_REPLY_ERROR_TYPE };
+      if (error instanceof ReplyError) {
+        const { type } = (REPLY_ERROR_SPLITTER.exec((error as Error).message)?.groups ?? {}) as { type?: CUSTOM_REPLY_ERROR_TYPE };
 
         // FIXME: get rid of these once I've got some production logs
         console.error(`Intercepted connection ReplyError with type ${type}`);

@@ -1,5 +1,6 @@
 import { CUSTOM_REPLY_ERROR_TYPE } from "@/app/types/exquisiteCorpse";
 import { Middleware } from "@/app/types/middleware";
+import { ReplyError } from "ioredis";
 import { NextResponse } from "next/server";
 
 export class RedisPipelineError extends AggregateError {
@@ -42,10 +43,10 @@ export const withRedisErrorHandler: Middleware = handler => {
     try {
       return await handler(request, ctx);
     } catch (error) {
-      if (error instanceof Error && error.name === 'ReplyError') {
+      if (error instanceof ReplyError) {
         console.error(error);
 
-        const { type, message } = REPLY_ERROR_SPLITTER.exec(error.message)?.groups ?? {};
+        const { type, message } = REPLY_ERROR_SPLITTER.exec((error as Error).message)?.groups ?? {};
 
         switch (type as CUSTOM_REPLY_ERROR_TYPE) {
           case 'FORBIDDEN': return NextResponse.json(
