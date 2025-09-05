@@ -85,9 +85,6 @@ export class GameService {
 
     // FIXME: How do I prevent simultaneous AI turns?
     // TODO: Add check for ai having next turn
-    if (!gameState) {
-      throw GameError.GAME_NOT_FOUND(sessionId);
-    }
 
     await this.redis.resetAIRetryCount(sessionId);
     await this.startAITurn(sessionId, gameState);

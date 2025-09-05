@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { MultiplayerGameState, GameStatus, GameEvent } from '@/app/types/multiplayer';
+import type { MultiplayerGameState, GameStatus } from '@/app/types/multiplayer';
 
 type SSEConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 type UseSSEConnectionReturn = {
   connectionState: SSEConnectionState;
-  isConnected: boolean;
   error: string | null;
   gameState: MultiplayerGameState | null;
   status: GameStatus;
@@ -94,17 +93,28 @@ export const useSSEConnection = (
         }
       };
 
-      customEventSource.onerror = (err) => {
-        console.warn('SSE error:', err);
-        setConnectionState('error');
-        setError('Connection lost');
+      customEventSource.onerror = (errorEvent) => {
+        console.warn('SSE error:', errorEvent);
 
-        // FIXME: Add back retries
-        //reconnectTimeoutRef.current = setTimeout(() => {
-        //  if (sessionId) {
-        //    connect();
-        //  }
-        //}, 5000);
+        setConnectionState('error');
+
+        // see if there's a custom message from a predictable error state
+        if ((errorEvent as MessageEvent).data) {
+          try {
+            const parsed = JSON.parse((errorEvent as MessageEvent).data);
+
+            if (parsed.message) {
+              setError(parsed.message);
+              customEventSource.close();
+
+              return;
+            }
+          } finally {
+            // swallow error - not sure what this is but assuming it's unrecoverable
+          }
+        }
+
+        setError('Connection lost');
       };
     } catch (err) {
       console.error('Failed to create SSE connection:', err);
@@ -150,7 +160,6 @@ export const useSSEConnection = (
 
   return {
     connectionState,
-    isConnected: connectionState === 'connected',
     error,
     gameState,
     status,

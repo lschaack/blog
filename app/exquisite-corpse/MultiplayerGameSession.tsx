@@ -23,7 +23,6 @@ export const MultiplayerGameSession = ({
   const router = useRouter();
   const {
     connectionState,
-    isConnected,
     error: connectionError,
     gameState,
     status,
@@ -103,15 +102,17 @@ export const MultiplayerGameSession = ({
   }, [gameState, sessionId]);
 
   // Show loading/connecting state
-  if (!isConnected || !gameState) {
+  if (connectionState !== 'connected' || !gameState) {
     return (
       <div className="flex flex-col gap-4 max-w-[512px] mx-auto p-6">
         <div className="text-center p-4 bg-gray-50 rounded-xl">
-          <div className="font-semibold">
-            {connectionState === 'connecting' ? 'Connecting...' : 'Loading game...'}
+          <div className="font-semibold text-2xl [font-variant:all-small-caps]">
+            {connectionState}
           </div>
           {connectionError && (
-            <div className="text-red-600 text-sm mt-2">{connectionError}</div>
+            <div className="text-red-600 font-semibold font-geist-mono mt-2 max-w-[30ch]">
+              {connectionError}
+            </div>
           )}
         </div>
 
@@ -124,7 +125,7 @@ export const MultiplayerGameSession = ({
         )}
 
         <Button
-          label="Leave Game"
+          label="Return to Lobby"
           onClick={handleLeaveGame}
           className="w-full"
         />
@@ -133,7 +134,6 @@ export const MultiplayerGameSession = ({
   }
 
   const currentPlayer = getCurrentPlayer(gameState);
-  console.log('currentPlayer', currentPlayer)
 
   if (!currentPlayer) {
     // FIXME: This should only happen when navigating away (when game update comes back
@@ -155,7 +155,6 @@ export const MultiplayerGameSession = ({
           <div className="text-sm space-y-1">
             <div>Type: {gameState.type === 'singleplayer' ? 'AI Game' : 'Multiplayer'}</div>
             <div>Players: {Object.keys(gameState.players).length}</div>
-            {!isConnected && <div className="text-red-600">Disconnected</div>}
           </div>
 
           {/* Players List */}

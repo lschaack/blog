@@ -91,3 +91,9 @@ export type AICurveResponse = {
   title: string;
 };
 
+// custom prefixes for ReplyErrors sent from redis lua scripts
+export type CUSTOM_REPLY_ERROR_TYPE =
+  | 'FORBIDDEN'
+  | 'NOT_FOUND'
+  | 'CONFLICT';
+

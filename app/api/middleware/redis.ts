@@ -1,3 +1,4 @@
+import { CUSTOM_REPLY_ERROR_TYPE } from "@/app/types/exquisiteCorpse";
 import { Middleware } from "@/app/types/middleware";
 import { NextResponse } from "next/server";
 
@@ -35,7 +36,7 @@ export function validatePipelineResult<T = NonNullable<PipelineResult>>(
   return transform(result);
 }
 
-const REPLY_ERROR_SPLITTER = /^(?<type>\S+)\s+(?<message>.*)$/;
+export const REPLY_ERROR_SPLITTER = /^(?<type>\S+)\s+(?<message>.*)$/;
 export const withRedisErrorHandler: Middleware = handler => {
   return async (request, ctx) => {
     try {
@@ -46,7 +47,7 @@ export const withRedisErrorHandler: Middleware = handler => {
 
         const { type, message } = REPLY_ERROR_SPLITTER.exec(error.message)?.groups ?? {};
 
-        switch (type) {
+        switch (type as CUSTOM_REPLY_ERROR_TYPE) {
           case 'FORBIDDEN': return NextResponse.json(
             { errors: message },
             { status: 403 }

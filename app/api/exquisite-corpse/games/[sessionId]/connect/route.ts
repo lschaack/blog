@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRedisClient } from '@/app/lib/redis';
 import { getGameService } from '@/app/lib/gameService';
 import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
-import { withRedisErrorHandler } from '@/app/api/middleware/redis';
+import { REPLY_ERROR_SPLITTER, withRedisErrorHandler } from '@/app/api/middleware/redis';
 import { compose } from '@/app/api/middleware/compose';
 import { GameParams } from '../../../schemas';
 import { cookies } from 'next/headers';
 import { GameEvent } from '@/app/types/multiplayer';
 import { getMissingCookieResponse } from '@/app/api/middleware/cookies';
+import { CUSTOM_REPLY_ERROR_TYPE } from '@/app/types/exquisiteCorpse';
 
 export const GET = compose(
   withCatchallErrorHandler,
@@ -42,7 +43,46 @@ export const GET = compose(
 
     const redis = getRedisClient();
     const gameService = getGameService();
-    await gameService.addPlayer(sessionId, playerName);
+
+    // NOTE: Can't use traditional errors, so need to make a stream which sends
+    // a single error event before immediately closing itself
+    try {
+      await gameService.addPlayer(sessionId, playerName);
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ReplyError') {
+        const { type } = (REPLY_ERROR_SPLITTER.exec(error.message)?.groups ?? {}) as { type?: CUSTOM_REPLY_ERROR_TYPE };
+
+        const errorEventData = { message: '' };
+        if (type === 'FORBIDDEN') {
+          errorEventData.message = 'This game is already full. Try making a new one!';
+        } else if (type === 'NOT_FOUND') {
+          errorEventData.message = 'This game does not exist or has been cleaned up. Try making a new one!';
+        } else if (type === 'CONFLICT') {
+          errorEventData.message = `A player with the name "${playerName}" is already in the game.`;
+        } else {
+          errorEventData.message = 'Not sure what went wrong, but I\'m impressed that you managed to encounter this message!';
+        }
+
+        const crashAndBurnStream = new ReadableStream({
+          start(controller) {
+            const errorEvent = `event: error\ndata: ${JSON.stringify(errorEventData)}\n\n`;
+
+            controller.enqueue(new TextEncoder().encode(errorEvent));
+            controller.close();
+          }
+        });
+
+        return new NextResponse(crashAndBurnStream, {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'close',
+          },
+        });
+      } else {
+        throw error;
+      }
+    }
 
     // Set up SSE stream
     const encoder = new TextEncoder();
@@ -128,7 +168,6 @@ export const GET = compose(
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
       },
     });
   }
