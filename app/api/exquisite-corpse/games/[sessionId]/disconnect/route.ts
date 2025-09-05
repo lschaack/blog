@@ -9,7 +9,7 @@ import { compose } from '@/app/api/middleware/compose';
 
 // FIXME: Remove subscription?
 export const POST = compose(
-  withRequiredCookies('playerName'),
+  withRequiredCookies('playerName', 'playerToken'),
   withCatchallErrorHandler,
   withRedisErrorHandler,
 )(
@@ -17,13 +17,13 @@ export const POST = compose(
     _,
     ctx: {
       params: Promise<Params>,
-      cookies: { playerName: string }
+      cookies: { playerName: string; playerToken: string }
     }
   ) => {
     const { sessionId } = await ctx.params;
-    const { cookies: { playerName } } = ctx;
+    const { cookies: { playerName, playerToken } } = ctx;
 
-    await getGameService().removePlayer(sessionId, playerName);
+    await getGameService().removePlayer(sessionId, playerName, playerToken);
 
     return NextResponse.json({ success: true });
   }

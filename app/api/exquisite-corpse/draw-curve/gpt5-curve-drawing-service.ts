@@ -4,7 +4,9 @@ import { renderPathCommandsToSvg } from "@/app/utils/svg";
 import { z } from "zod";
 import { jsonrepair } from 'jsonrepair';
 import OpenAI from 'openai';
-import { RawPathSchema } from "../schemas";
+import { BASE64_PNG_PREFIX, RawPathSchema } from "../schemas";
+import { Resvg } from '@resvg/resvg-js';
+import { writeFileSync } from "fs";
 
 const AICurveResponseSchema = z.object({
   interpretation: z.string().min(1, "Interpretation cannot be empty"),
@@ -21,7 +23,7 @@ export class GPT5CurveDrawingService {
     this.client = new OpenAI({ apiKey });
   }
 
-  private buildPrompt(context: GameContext<CurveTurn>): string {
+  private buildPrompt(svg: string): string {
     return `
 You are an expert graphic designer specializing in vector art using the pen tool. You're playing a collaborative drawing game called "Exquisite Corpse."
 
@@ -30,7 +32,7 @@ DRAWING RULES:
 - Only use absolute commands
 
 GAME STATE:
-${renderPathCommandsToSvg(context.history.map(turn => turn.path), context.canvasDimensions)}
+${svg}
 
 TASK:
 Describe what you think the sketch represents or is becoming, draw on top of it to add your contribution to the collaborative artwork, and describe why you chose to add this specific element and how it brings your interpretation to life
@@ -56,21 +58,27 @@ Respond with a JSON object in this exact format:
     };
   }
 
-  async generateTurn(context: GameContext<CurveTurn>): Promise<AICurveResponse> {
+  async generateTurn(context: Omit<GameContext<CurveTurn>, 'image'>): Promise<AICurveResponse> {
     try {
-      const prompt = this.buildPrompt(context);
+      const svg = renderPathCommandsToSvg(context.history.map(turn => turn.path), context.canvasDimensions);
+      const resvg = new Resvg(svg, {
+        shapeRendering: 0,
+        imageRendering: 1,
+      })
+      const png = resvg.render().asPng();
+      writeFileSync(`rendered-svg-${crypto.randomUUID()}`, png);
+      const base64 = `${BASE64_PNG_PREFIX}${png.toString('base64')}`;
+      const prompt = this.buildPrompt(svg);
 
-      // Convert base64 image to proper format for OpenAI
-      const imageData = context.image;
-      const base64Data = imageData.replace('data:image/png;base64,', '');
-      const imageSize = getBase64FileSizeMb(base64Data);
+      const imageSize = getBase64FileSizeMb(base64);
 
       if (imageSize > GPT5CurveDrawingService.MAX_IMG_SIZE_MB) {
         throw new Error(`Image size ${imageSize}mb is greater than the max ${GPT5CurveDrawingService.MAX_IMG_SIZE_MB}mb`);
       }
 
       const response = await this.client.chat.completions.create({
-        model: "gpt-5",
+        // FIXME: Test different models
+        model: "gpt-5-nano",
         messages: [
           {
             role: "user",
@@ -82,8 +90,7 @@ Respond with a JSON object in this exact format:
               {
                 type: "image_url",
                 image_url: {
-                  url: imageData,
-                  detail: "high"
+                  url: base64,
                 }
               }
             ]
@@ -124,3 +131,18 @@ Respond with a JSON object in this exact format:
     }
   }
 }
+
+let gpt5CurveDrawingService: GPT5CurveDrawingService | null = null;
+
+export const getGpt5CurveDrawingService = (): GPT5CurveDrawingService => {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('No AI API key configured');
+  }
+
+  if (!gpt5CurveDrawingService) {
+    gpt5CurveDrawingService = new GPT5CurveDrawingService(process.env.OPENAI_API_KEY);
+  }
+
+  return gpt5CurveDrawingService;
+};
+

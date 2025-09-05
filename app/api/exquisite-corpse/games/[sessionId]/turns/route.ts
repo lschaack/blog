@@ -12,7 +12,7 @@ import { compose } from '@/app/api/middleware/compose';
 const SubmitTurnRequestSchema = CurveTurnSchema.pick({ path: true });
 
 export const POST = compose(
-  withRequiredCookies('playerName'),
+  withRequiredCookies('playerName', 'playerToken'),
   withCatchallErrorHandler,
   withRedisErrorHandler,
   withZodRequestValidation(SubmitTurnRequestSchema),
@@ -21,15 +21,15 @@ export const POST = compose(
     _,
     ctx: {
       params: Promise<Params>,
-      cookies: { playerName: string },
+      cookies: { playerName: string, playerToken: string },
       validatedBody: Promise<z.infer<typeof SubmitTurnRequestSchema>>
     }
   ) => {
     const validatedBody = await ctx.validatedBody;
     const { sessionId } = await ctx.params;
-    const { cookies: { playerName } } = ctx;
+    const { cookies: { playerName, playerToken } } = ctx;
 
-    await getGameService().submitTurn(sessionId, playerName, validatedBody.path);
+    await getGameService().submitTurn(sessionId, playerName, playerToken, validatedBody.path);
 
     return NextResponse.json({ success: true });
   }

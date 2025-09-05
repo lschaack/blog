@@ -25,7 +25,6 @@ export const getAICurveTurn = async (
   const gameContext: GameContext<CurveTurn> = {
     image: base64Image,
     canvasDimensions: dimensions,
-    currentTurn: history.length + 1,
     history: history
   };
 

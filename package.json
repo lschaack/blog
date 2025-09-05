@@ -21,6 +21,7 @@
     "@google/generative-ai": "^0.24.1",
     "@next/bundle-analyzer": "^15.3.5",
     "@next/env": "^15.2.2",
+    "@resvg/resvg-js": "^2.6.2",
     "@timohausmann/quadtree-ts": "^2.2.2",
     "@types/d3-random": "^3.0.3",
     "@types/lodash": "^4.17.16",

@@ -43,33 +43,39 @@ export class GameService {
     return { sessionId };
   }
 
-  async addPlayer(sessionId: string, name: string) {
+  async addPlayer(sessionId: string, name: string, token: string) {
     const newPlayer: Player = {
       name,
       joinedAt: new Date().toISOString(),
     };
 
-    const gameState = await this.redis.addPlayer(sessionId, newPlayer);
+    const gameState = await this.redis.addPlayer(sessionId, newPlayer, token);
 
     // Publish player left event
     await this.publishEvent(sessionId, 'player_joined', gameState);
   }
 
-  async removePlayer(sessionId: string, playerName: string): Promise<void> {
-    const gameState = await this.redis.removePlayer(sessionId, playerName);
+  async removePlayer(sessionId: string, playerName: string, playerToken: string): Promise<void> {
+    const gameState = await this.redis.removePlayer(sessionId, playerName, playerToken);
 
     // Publish player left event
     await this.publishEvent(sessionId, 'player_left', gameState);
   }
 
-  async submitTurn(sessionId: string, playerName: string, path: Line): Promise<void> {
+  async submitTurn(sessionId: string, playerName: string, playerToken: string, path: Line): Promise<void> {
     const turn: CurveTurn = {
       path,
       author: playerName,
       timestamp: new Date().toISOString(),
     };
 
-    const gameState = await this.redis.addTurn(sessionId, turn);
+    // FIXME: Publish error event?
+    const gameState = await this.redis.addTurn(
+      sessionId,
+      turn,
+      playerName,
+      playerToken
+    );
 
     await this.publishEvent(sessionId, 'turn_ended', gameState);
 
@@ -116,7 +122,7 @@ export class GameService {
     try {
       const turn = await this.getAITurn(gameState);
 
-      const nextGameState = await this.redis.addTurn(sessionId, turn);
+      const nextGameState = await this.redis.addAiTurn(sessionId, turn);
 
       this.publishEvent(sessionId, 'turn_ended', nextGameState);
 

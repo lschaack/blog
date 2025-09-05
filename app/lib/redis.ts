@@ -53,8 +53,6 @@ class SessionSubscriptionManager {
 }
 
 class RedisClient {
-  public static MAX_PLAYERS = 8;
-
   private redis: Redis;
   private subscriber: Redis;
   private publisher: Redis;
@@ -62,10 +60,14 @@ class RedisClient {
 
   private scriptsLoaded: Promise<boolean>;
 
-  private static TWO_HOURS = 60 * 60 * 2;
+  private static ONE_HOUR = 60 * 60;
 
   private static getSessionKey(sessionId: string) {
     return `exquisite_corpse:${sessionId}:state`;
+  }
+
+  private static getConnectionKey(sessionId: string) {
+    return `exquisite_corpse:${sessionId}:connections`;
   }
 
   private static getEventsKey(sessionId: string) {
@@ -119,15 +121,15 @@ class RedisClient {
     ]);
 
     this.redis.defineCommand("eqConnect", {
-      numberOfKeys: 1,
+      numberOfKeys: 2,
       lua: eqConnect,
     });
     this.redis.defineCommand("eqDisconnect", {
-      numberOfKeys: 1,
+      numberOfKeys: 2,
       lua: eqDisconnect,
     });
     this.redis.defineCommand("eqAddTurn", {
-      numberOfKeys: 1,
+      numberOfKeys: 2,
       lua: eqAddTurn,
     });
 
@@ -135,15 +137,26 @@ class RedisClient {
   }
 
   async initializeGame(sessionId: string, gameState: MultiplayerGameState) {
-    const key = RedisClient.getSessionKey(sessionId);
-    const result = await this.redis
+    const sessionKey = RedisClient.getSessionKey(sessionId);
+    const connectionKey = RedisClient.getConnectionKey(sessionId);
+
+    const pipeline = this.redis
       .pipeline()
-      .call('JSON.SET', key, '.', JSON.stringify(gameState), 'NX')
-      .expire(key, RedisClient.TWO_HOURS)
-      .call('JSON.GET', key, '.')
+      .call('JSON.SET', sessionKey, '.', JSON.stringify(gameState), 'NX')
+      .expire(sessionKey, RedisClient.ONE_HOUR);
+
+    if (gameState.type === 'singleplayer') {
+      // create player token for AI
+      pipeline
+        .call('HSET', connectionKey, 'AI', crypto.randomUUID())
+        .expire(connectionKey, RedisClient.ONE_HOUR);
+    }
+
+    const result = await pipeline
+      .call('JSON.GET', sessionKey, '.')
       .exec();
 
-    return validatePipelineResult(result, res => res[2][1] as MultiplayerGameState);
+    return validatePipelineResult(result, res => res.at(-1)![1] as MultiplayerGameState);
   }
 
   parseGameState(gameState: string): Promise<MultiplayerGameState> {
@@ -173,20 +186,51 @@ class RedisClient {
     return this.parseGameState(result as string);
   }
 
-  async addTurn(sessionId: string, turn: CurveTurn) {
+  async addTurn(sessionId: string, turn: CurveTurn, playerName: string, playerToken: string) {
     const sessionKey = RedisClient.getSessionKey(sessionId);
+    const connectionKey = RedisClient.getConnectionKey(sessionId);
 
     await this.scriptsLoaded;
 
     return this.parseGameState(
-      await this.redis.eqAddTurn(sessionKey, JSON.stringify(turn))
+      await this.redis.eqAddTurn(
+        sessionKey,
+        connectionKey,
+        JSON.stringify(turn),
+        playerName,
+        playerToken
+      )
     );
   }
 
-  // NOTE: Players are separated from other game state since this is essentially
-  // the only way a multi command could realistically fail due to simultaneous access
-  async addPlayer(sessionId: string, newPlayer: Player) {
+  async addAiTurn(sessionId: string, turn: CurveTurn) {
     const sessionKey = RedisClient.getSessionKey(sessionId);
+    const connectionKey = RedisClient.getConnectionKey(sessionId);
+
+    const aiPlayerToken = await this.redis.hget(connectionKey, 'AI');
+
+    if (!aiPlayerToken) {
+      throw new ReplyError('ERR AI Token is missing, something went very wrong');
+    } else {
+      console.log(`got aiPlayerToken:`, aiPlayerToken)
+    }
+
+    await this.scriptsLoaded;
+
+    return this.parseGameState(
+      await this.redis.eqAddTurn(
+        sessionKey,
+        connectionKey,
+        JSON.stringify(turn),
+        'AI',
+        aiPlayerToken
+      )
+    );
+  }
+
+  async addPlayer(sessionId: string, newPlayer: Player, playerToken: string) {
+    const sessionKey = RedisClient.getSessionKey(sessionId);
+    const connectionKey = RedisClient.getConnectionKey(sessionId);
 
     const playerName = newPlayer.name;
 
@@ -195,21 +239,26 @@ class RedisClient {
     return this.parseGameState(
       await this.redis.eqConnect(
         sessionKey,
-        `.players.${playerName}`,
-        JSON.stringify(newPlayer)
+        connectionKey,
+        playerName,
+        JSON.stringify(newPlayer),
+        playerToken,
       )
     );
   }
 
-  async removePlayer(sessionId: string, playerName: string) {
+  async removePlayer(sessionId: string, playerName: string, playerToken: string) {
     const sessionKey = RedisClient.getSessionKey(sessionId);
+    const connectionKey = RedisClient.getConnectionKey(sessionId);
 
     await this.scriptsLoaded;
 
     return this.parseGameState(
       await this.redis.eqDisconnect(
         sessionKey,
-        playerName
+        connectionKey,
+        playerName,
+        playerToken,
       )
     );
   }
@@ -253,7 +302,7 @@ class RedisClient {
   async setAIRetryCount(sessionId: string, count: number): Promise<void> {
     await this.redis.setex(
       RedisClient.getAiRetriesKey(sessionId),
-      RedisClient.TWO_HOURS,
+      RedisClient.ONE_HOUR,
       count.toString()
     );
   }

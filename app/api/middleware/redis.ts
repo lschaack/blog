@@ -44,8 +44,6 @@ export const withRedisErrorHandler: Middleware = handler => {
       return await handler(request, ctx);
     } catch (error) {
       if (error instanceof ReplyError) {
-        console.error(error);
-
         const { type, message } = REPLY_ERROR_SPLITTER.exec((error as Error).message)?.groups ?? {};
 
         switch (type as CUSTOM_REPLY_ERROR_TYPE) {
@@ -62,7 +60,7 @@ export const withRedisErrorHandler: Middleware = handler => {
             { status: 409 }
           );
           default: return NextResponse.json(
-            { errors: 'Unknown Redis error' },
+            { errors: 'An unknown error occurred' },
             { status: 500 }
           );
         }

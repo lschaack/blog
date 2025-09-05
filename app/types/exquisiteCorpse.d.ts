@@ -72,7 +72,6 @@ export type TurnRenderer<Turn extends BaseTurn> = ComponentType<TurnRendererProp
 export type GameContext<Turn extends BaseTurn> = {
   image: string; // base64 encoded PNG
   canvasDimensions: CanvasDimensions;
-  currentTurn: number;
   history: Turn[];
 };
 

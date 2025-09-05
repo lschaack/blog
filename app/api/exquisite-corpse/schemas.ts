@@ -2,7 +2,7 @@ import { SESSION_ID_MATCHER } from '@/app/exquisite-corpse/sessionId';
 import parseSvgPath from 'parse-svg-path';
 import z from 'zod';
 
-const BASE64_PNG_PREFIX = 'data:image/png;base64,';
+export const BASE64_PNG_PREFIX = 'data:image/png;base64,';
 // https://gist.github.com/ondrek/7413434
 const BASE64_MIN_CHARS = 32;
 
@@ -26,7 +26,6 @@ const BaseGameContextSchema = z.object({
     width: z.number({ message: 'Missing canvas width' }),
     height: z.number({ message: 'Missing canvas height' }),
   }),
-  currentTurn: z.number({ message: 'Missing current turn number' }),
 }, {
   message: 'Missing game context',
 });

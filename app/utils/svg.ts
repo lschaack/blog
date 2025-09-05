@@ -30,7 +30,7 @@ export function renderPathCommandsToSvg(paths: ParsedPath[], dimensions: CanvasD
     path { stroke: black; stroke-width: 2; fill: none; }
   </style>
     ${paths
-      .map(path => `  <path d="${path.map(([type, ...params]) => `${type} ${params.join(' ')}`)}" />`)
+      .map((path, index) => `  <path data-turn-number="${index + 1}" d="${path.map(([type, ...params]) => `${type} ${params.join(' ')}`)}" />`)
       .join('\n')
     }
 </svg>
