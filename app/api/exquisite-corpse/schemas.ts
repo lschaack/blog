@@ -7,7 +7,8 @@ const BASE64_PNG_PREFIX = 'data:image/png;base64,';
 const BASE64_MIN_CHARS = 32;
 
 const Base64ImageSchema = z.string()
-  .startsWith(BASE64_PNG_PREFIX, 'Image must be well-formed base64 including prefix')
+  .startsWith(BASE64_PNG_PREFIX, 'Image missing base64 prefix')
+  .regex(/^[A-Za-z0-9+/]*={0,2}$/, '')
   .min(BASE64_MIN_CHARS, 'Missing image data');
 
 const BaseTurnSchema = z.object({

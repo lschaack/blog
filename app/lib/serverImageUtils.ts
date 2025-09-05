@@ -8,6 +8,7 @@ import type { Line } from '@/app/types/exquisiteCorpse';
  * This is a simplified version that creates a placeholder image
  * In a production environment, you'd want to use node-canvas or similar
  */
+// FIXME: WTF claude
 export const renderLinesToBase64Server = async (
   lines: Line[],
   width: number,
@@ -16,10 +17,10 @@ export const renderLinesToBase64Server = async (
 ): Promise<string> => {
   // For now, return a simple white image as base64
   // In production, you'd implement actual server-side canvas rendering
-  
+
   // TODO: Use lines and backgroundImage parameters
   console.log(`Rendering ${lines.length} lines${backgroundImage ? ' with background' : ''}`);
-  
+
   // Create a minimal PNG header for a white image
   const canvas = createSimpleWhiteImage(width, height);
   return canvas;
@@ -33,13 +34,13 @@ function createSimpleWhiteImage(width: number, height: number): string {
   // Create a minimal base64 PNG for a white rectangle
   // This is a very basic implementation
   const header = 'data:image/png;base64,';
-  
+
   // TODO: Use width and height to create properly sized image
   console.log(`Creating ${width}x${height} white image`);
-  
+
   // Simple 1x1 white PNG base64
   const whitePixel = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
-  
+
   return header + whitePixel;
 }
 
@@ -51,17 +52,17 @@ export const validateBase64ImageServer = (imageString: string): boolean => {
     if (!imageString.startsWith('data:image/png;base64,')) {
       return false;
     }
-    
+
     const base64Data = imageString.replace('data:image/png;base64,', '');
     const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
     if (!base64Regex.test(base64Data)) {
       return false;
     }
-    
+
     if (base64Data.length < 100) {
       return false;
     }
-    
+
     return true;
   } catch {
     return false;

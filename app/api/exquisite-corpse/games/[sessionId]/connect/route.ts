@@ -52,6 +52,9 @@ export const GET = compose(
       if (error instanceof Error && error.name === 'ReplyError') {
         const { type } = (REPLY_ERROR_SPLITTER.exec(error.message)?.groups ?? {}) as { type?: CUSTOM_REPLY_ERROR_TYPE };
 
+        // FIXME: get rid of these once I've got some production logs
+        console.error(`Intercepted connection ReplyError with type ${type}`);
+
         const errorEventData = { message: '' };
         if (type === 'FORBIDDEN') {
           errorEventData.message = 'This game is already full. Try making a new one!';
@@ -62,6 +65,8 @@ export const GET = compose(
         } else {
           errorEventData.message = 'Not sure what went wrong, but I\'m impressed that you managed to encounter this message!';
         }
+
+        console.error(`Derived message ${errorEventData.message}`);
 
         const crashAndBurnStream = new ReadableStream({
           start(controller) {
@@ -80,6 +85,13 @@ export const GET = compose(
           },
         });
       } else {
+        // FIXME: get rid of these once I've got some production logs
+        console.group(`Failed to intercept connection ReplyError`);
+        console.error('error instanceof Error', error instanceof Error);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        console.error('error.name', (error as any)?.name);
+        console.groupEnd();
+
         throw error;
       }
     }
