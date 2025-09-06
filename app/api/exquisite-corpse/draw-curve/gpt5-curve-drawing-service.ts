@@ -6,7 +6,6 @@ import { jsonrepair } from 'jsonrepair';
 import OpenAI from 'openai';
 import { BASE64_PNG_PREFIX, RawPathSchema } from "../schemas";
 import sharp from 'sharp';
-import { writeFileSync } from "fs";
 
 const AICurveResponseSchema = z.object({
   interpretation: z.string().min(1, "Interpretation cannot be empty"),

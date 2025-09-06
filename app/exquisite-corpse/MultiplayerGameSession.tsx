@@ -45,7 +45,6 @@ export const MultiplayerGameSession = ({
       }
     }
 
-    // Call the provided leave game handler (which will navigate away)
     router.push('/exquisite-corpse');
   }, [sessionId, router]);
 
@@ -135,15 +134,11 @@ export const MultiplayerGameSession = ({
   }
 
   const currentPlayer = getCurrentPlayer(gameState);
+  const isCurrentPlayer = Boolean(currentPlayer && currentPlayer.name === playerName);
 
-  if (!currentPlayer) {
-    // FIXME: This should only happen when navigating away (when game update comes back
-    // before navigation completes), but would be a pretty big problem otherwise
-    console.warn('No current player');
-    return null;
-  }
-
-  const isCurrentPlayer = currentPlayer.name === playerName;
+  // FIXME: This should only happen when navigating away (when game update comes back
+  // before navigation completes), but would be a pretty big problem otherwise
+  if (!currentPlayer) console.warn('No current player');
 
   return (
     <div className="flex flex-col gap-4 max-w-[512px] mx-auto">
@@ -165,15 +160,15 @@ export const MultiplayerGameSession = ({
               {Object.values(gameState.players).map(player => (
                 <span
                   key={player.name}
-                  className={`px-2 py-1 rounded text-xs ${player.name === currentPlayer.name
+                  className={`px-2 py-1 rounded text-xs ${isCurrentPlayer
                     ? 'bg-blue-100 text-blue-800'
-                    : 'bg-green-100 text-green-800'
-                    }`}
+                    : 'bg-green-100 text-green-800'}`
+                  }
                 >
                   {
                     `${player.name
                     }${player.name === playerName ? ' (you)' : ''
-                    }${player.name === currentPlayer.name ? ' ⭐' : ''}`
+                    }${player.name === currentPlayer?.name ? ' ⭐' : ''}`
                   }
                 </span>
               ))}
@@ -210,7 +205,7 @@ export const MultiplayerGameSession = ({
           </div>
         )}
         {status === 'turn_ended' && isCurrentPlayer && 'Your turn!'}
-        {status === 'turn_ended' && !isCurrentPlayer &&
+        {status === 'turn_ended' && !isCurrentPlayer && !!currentPlayer &&
           `Waiting for ${currentPlayer.name}`}
         {status === 'game_started' && isCurrentPlayer && 'Start drawing!'}
       </div>

@@ -137,21 +137,24 @@ export const useSSEConnection = (
   }, [sessionId, connect, cleanup]);
 
   // Cleanup on unmount and handle beforeunload
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      // Try to notify server of disconnect when page is unloading
-      if (sessionId) {
-        navigator.sendBeacon(`/api/exquisite-corpse/games/${sessionId}/disconnect`);
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      cleanup();
-    };
-  }, [cleanup, sessionId]);
+  // FIXME: Cleanup is automatic when the SSE connection closes
+  // But this makes sense to add if I bring back the joined/connected difference
+  //
+  //useEffect(() => {
+  //  const handleBeforeUnload = () => {
+  //    // Try to notify server of disconnect when page is unloading
+  //    if (sessionId) {
+  //      navigator.sendBeacon(`/api/exquisite-corpse/games/${sessionId}/disconnect`);
+  //    }
+  //  };
+  //
+  //  window.addEventListener('beforeunload', handleBeforeUnload);
+  //
+  //  return () => {
+  //    window.removeEventListener('beforeunload', handleBeforeUnload);
+  //    cleanup();
+  //  };
+  //}, [cleanup, sessionId]);
 
   const reconnect = useCallback(() => {
     cleanup();
