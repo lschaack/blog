@@ -7,7 +7,6 @@ import { compose } from '@/app/api/middleware/compose';
 import { GameParams } from '../../../schemas';
 import { cookies } from 'next/headers';
 import { GameEvent } from '@/app/types/multiplayer';
-import { getMissingCookieResponse } from '@/app/api/middleware/cookies';
 import { CUSTOM_REPLY_ERROR_TYPE } from '@/app/types/exquisiteCorpse';
 import { ReplyError } from 'ioredis';
 
@@ -136,7 +135,6 @@ export const GET = compose(
     request: NextRequest,
     ctx: {
       params: Promise<GameParams>,
-      cookies: { playerName: string },
     }
   ) => {
     const { sessionId } = await ctx.params;
@@ -151,17 +149,6 @@ export const GET = compose(
 
     const playerName = playerNameRequest ?? playerNameCookie?.value;
     const playerToken = playerTokenCookie?.value ?? crypto.randomUUID();
-
-    if (playerNameRequest) {
-      cookieStore.set({
-        name: 'playerName',
-        value: playerNameRequest,
-        maxAge: 60 * 60 * 24,
-        path: `/api/exquisite-corpse/games/${sessionId}/`
-      });
-    } else if (!cookieStore.has('playerName')) {
-      return getMissingCookieResponse('playerName');
-    }
 
     if (!playerName) {
       return getCrashAndBurnStream({
@@ -197,23 +184,36 @@ export const GET = compose(
       }
     }
 
-    if (!cookieStore.has('playerName')) {
-      cookieStore.set({
-        name: 'playerName',
-        value: playerName,
-        maxAge: ONE_DAY_S,
-        path: `/api/exquisite-corpse/games/${sessionId}/`
-      });
-    }
+    cookieStore.set({
+      name: 'playerName',
+      value: playerName,
+      maxAge: ONE_DAY_S,
+      path: `/api/exquisite-corpse/games/${sessionId}`
+    });
 
-    if (!cookieStore.has('playerToken')) {
-      cookieStore.set({
-        name: 'playerToken',
-        value: playerToken,
-        maxAge: ONE_DAY_S,
-        path: `/api/exquisite-corpse/games/${sessionId}/`
-      });
-    }
+    /**
+      * some funky stuff:
+      * - I want to be able to access playerName persistentely on the client
+      * - I need it to be accessable on the server
+      * - I want the cookies to be scoped to the actual routes where they're used
+      * - the /api/ prefix for api routes prevents one cookie being accessible from both
+      * - trying to set two cookies with the same name winds up setting only one cookie
+      *   with the latest config b/c/o a quirk in the nextjs cookies api, so I guess I
+      *   just need to set two differently-named cookies
+      */
+    cookieStore.set({
+      name: 'clientPlayerName',
+      value: playerName,
+      maxAge: ONE_DAY_S,
+      path: `/exquisite-corpse/${sessionId}`
+    });
+
+    cookieStore.set({
+      name: 'playerToken',
+      value: playerToken,
+      maxAge: ONE_DAY_S,
+      path: `/api/exquisite-corpse/games/${sessionId}`
+    });
 
     return getSuccessStream(sessionId, playerName, playerToken, request);
   }

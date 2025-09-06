@@ -26,7 +26,12 @@ export function* playerOrder(gameState: MultiplayerGameState) {
 }
 
 export function getCurrentPlayer(gameState: MultiplayerGameState) {
-  return playerOrder(gameState).next().value;
+  const currentPlayer = playerOrder(gameState).next().value;
+  if (!currentPlayer) {
+    console.error('Failed to find current player for game state:', gameState);
+  }
+
+  return currentPlayer;
 }
 
 /**

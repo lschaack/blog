@@ -5,7 +5,7 @@ import { z } from "zod";
 import { jsonrepair } from 'jsonrepair';
 import OpenAI from 'openai';
 import { BASE64_PNG_PREFIX, RawPathSchema } from "../schemas";
-import { Resvg } from '@resvg/resvg-js';
+import sharp from 'sharp';
 import { writeFileSync } from "fs";
 
 const AICurveResponseSchema = z.object({
@@ -31,8 +31,23 @@ DRAWING RULES:
 - Define your addition as a single line of path commands as used in the \`d\` parameter of a \`<path>\` element
 - Only use absolute commands
 
+PATH INFO:
+- 0 0 is top left
+- 512 512 is bottom right
+- Cardinal directions as unit vectors:
+  - N = 0 -1
+  - E = 1 0
+  - S = 0 1
+  - W = -1 0
+
 GAME STATE:
 ${svg}
+
+STRATEGY:
+- Come up with an idea to draw
+- Decide where it should go on the image
+- Connect the point on the image to the corresponding path in the svg
+- Use that path to double-check that your addition is correctly positioned
 
 TASK:
 Describe what you think the sketch represents or is becoming, draw on top of it to add your contribution to the collaborative artwork, and describe why you chose to add this specific element and how it brings your interpretation to life
@@ -61,12 +76,11 @@ Respond with a JSON object in this exact format:
   async generateTurn(context: Omit<GameContext<CurveTurn>, 'image'>): Promise<AICurveResponse> {
     try {
       const svg = renderPathCommandsToSvg(context.history.map(turn => turn.path), context.canvasDimensions);
-      const resvg = new Resvg(svg, {
-        shapeRendering: 0,
-        imageRendering: 1,
-      })
-      const png = resvg.render().asPng();
-      writeFileSync(`rendered-svg-${crypto.randomUUID()}`, png);
+      const png = await sharp(Buffer.from(svg, 'utf-8'))
+        .flatten({ background: '#ffffff' })
+        .png()
+        .toBuffer();
+
       const base64 = `${BASE64_PNG_PREFIX}${png.toString('base64')}`;
       const prompt = this.buildPrompt(svg);
 
@@ -78,7 +92,7 @@ Respond with a JSON object in this exact format:
 
       const response = await this.client.chat.completions.create({
         // FIXME: Test different models
-        model: "gpt-5-nano",
+        model: "gpt-5",
         messages: [
           {
             role: "user",

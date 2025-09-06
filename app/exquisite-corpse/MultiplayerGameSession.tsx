@@ -11,7 +11,7 @@ import { getCurrentPlayer } from '../lib/gameUtils';
 
 type MultiplayerGameSessionProps = {
   sessionId: string;
-  playerName: string;
+  playerName?: string;
   dimensions: { width: number; height: number };
 };
 
@@ -102,6 +102,7 @@ export const MultiplayerGameSession = ({
   }, [gameState, sessionId]);
 
   // Show loading/connecting state
+  // TODO: put this in its own component and check player name exists
   if (connectionState !== 'connected' || !gameState) {
     return (
       <div className="flex flex-col gap-4 max-w-[512px] mx-auto p-6">

@@ -2,6 +2,7 @@
   "name": "blog",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -21,7 +22,6 @@
     "@google/generative-ai": "^0.24.1",
     "@next/bundle-analyzer": "^15.3.5",
     "@next/env": "^15.2.2",
-    "@resvg/resvg-js": "^2.6.2",
     "@timohausmann/quadtree-ts": "^2.2.2",
     "@types/d3-random": "^3.0.3",
     "@types/lodash": "^4.17.16",
@@ -42,6 +42,7 @@
     "parse-svg-path": "^0.1.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "sharp": "^0.34.3",
     "simplex-noise": "^4.0.3",
     "zod": "^3.25.76"
   },

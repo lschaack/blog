@@ -25,14 +25,12 @@ export const isClosePathCommand = (command: PathCommand): command is ClosePathCo
 
 export function renderPathCommandsToSvg(paths: ParsedPath[], dimensions: CanvasDimensions): string {
   return `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dimensions.width} ${dimensions.height}">
-  <style>
-    path { stroke: black; stroke-width: 2; fill: none; }
-  </style>
-    ${paths
-      .map((path, index) => `  <path data-turn-number="${index + 1}" d="${path.map(([type, ...params]) => `${type} ${params.join(' ')}`)}" />`)
-      .join('\n')
-    }
+<svg xmlns="http://www.w3.org/2000/svg" width="${dimensions.width}" height="${dimensions.height}" viewBox="0 0 ${dimensions.width} ${dimensions.height}">
+  <g stroke="#000" stroke-width="2" fill="none">
+${paths
+      .map((path, index) => `    <path data-turn-number="${index + 1}" d="${path.map(([type, ...params]) => `${type} ${params.join(' ')}`).join(' ')}" />`)
+      .join('\n')}
+  </g>
 </svg>
 `.trim();
   ;

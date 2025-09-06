@@ -211,8 +211,6 @@ class RedisClient {
 
     if (!aiPlayerToken) {
       throw new ReplyError('ERR AI Token is missing, something went very wrong');
-    } else {
-      console.log(`got aiPlayerToken:`, aiPlayerToken)
     }
 
     await this.scriptsLoaded;
