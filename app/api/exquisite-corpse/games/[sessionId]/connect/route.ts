@@ -1,109 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getRedisClient } from '@/app/lib/redis';
 import { getGameService } from '@/app/lib/gameService';
 import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
 import { REPLY_ERROR_SPLITTER, withRedisErrorHandler } from '@/app/api/middleware/redis';
 import { compose } from '@/app/api/middleware/compose';
 import { GameParams } from '../../../schemas';
-import { cookies } from 'next/headers';
-import { GameEvent } from '@/app/types/multiplayer';
 import { CUSTOM_REPLY_ERROR_TYPE } from '@/app/types/exquisiteCorpse';
 import { ReplyError } from 'ioredis';
-
-const ONE_DAY_S = 60 * 60 * 24;
-
-const getSuccessStream = (sessionId: string, playerName: string, playerToken: string, request: NextRequest) => {
-  const redis = getRedisClient();
-  const gameService = getGameService();
-
-  // Set up SSE stream
-  const encoder = new TextEncoder();
-  let heartbeatInterval: NodeJS.Timeout;
-  let isConnectionActive = true;
-
-  return new NextResponse(
-    new ReadableStream({
-      async start(controller) {
-        try {
-          const initialGameState = await redis.getGameState(sessionId);
-          const initialStateEvent: GameEvent = {
-            status: 'loaded',
-            gameState: initialGameState,
-          }
-
-          const data = `event: game_update\ndata: ${JSON.stringify(initialStateEvent)}\n\n`;
-
-          controller.enqueue(encoder.encode(data));
-        } catch (error) {
-          throw new Error(`Failed to get initial game state: ${error}`)
-        }
-
-        // Set up heartbeat every 30 seconds
-        heartbeatInterval = setInterval(() => {
-          if (isConnectionActive) {
-            try {
-              const heartbeat = `data: ${JSON.stringify({ type: 'heartbeat' })}\n\n`;
-              controller.enqueue(encoder.encode(heartbeat));
-            } catch {
-              console.log('Heartbeat failed, closing connection');
-              cleanup();
-            }
-          }
-        }, 30000);
-
-        // Subscribe to Redis events
-        const redisEventHandler = async (event: GameEvent) => {
-          if (isConnectionActive) {
-            try {
-              const data = `event: game_update\ndata: ${JSON.stringify(event)}\n\n`;
-
-              controller.enqueue(encoder.encode(data));
-            } catch {
-              console.log('Failed to send event, closing connection');
-              cleanup();
-            }
-          }
-        };
-
-        redis.subscribeToGame(sessionId, redisEventHandler).catch(error => {
-          console.error('Failed to subscribe to game events:', error);
-          cleanup();
-        });
-
-        const cleanup = () => {
-          isConnectionActive = false;
-          clearInterval(heartbeatInterval);
-
-          // Remove player when connection closes
-          gameService.removePlayer(sessionId, playerName, playerToken).catch(error => {
-            console.error('Failed to disconnect player:', error);
-          });
-
-          // Unsubscribe from Redis
-          redis.unsubscribeFromGame(sessionId, redisEventHandler).catch(error => {
-            console.error('Failed to unsubscribe from game:', error);
-          });
-
-          try {
-            controller.close();
-          } catch {
-            console.log('Controller already closed');
-          }
-        };
-
-        // Handle connection close
-        request.signal.addEventListener('abort', cleanup);
-      },
-    }),
-    {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    }
-  );
-}
+import { withRequiredCookies } from '@/app/api/middleware/cookies';
+import { cookies } from 'next/headers';
+import { ONE_DAY_S } from '@/app/utils/time';
+import { GameEvent } from '@/app/types/multiplayer';
 
 // NOTE: Can't use traditional errors w/SSE, but we can use a stream which sends
 // a single error event before immediately closing itself
@@ -127,7 +33,35 @@ const getCrashAndBurnStream = (errorEventData: { message: string }) => {
   );
 }
 
+const getConnectionErrorMessage = (error: unknown, playerName: string) => {
+  let errorMessage = 'Something went terribly wrong.';
+
+  if (error instanceof ReplyError) {
+    // improve error message if I have a good idea of what caused it
+    const { type, message } = (
+      REPLY_ERROR_SPLITTER.exec((error as Error).message)?.groups ?? {}
+    ) as { type?: CUSTOM_REPLY_ERROR_TYPE, message?: string };
+
+    if (type === 'FORBIDDEN') {
+      errorMessage = `Cannot verify that you are actually ${playerName}. Use the join game flow!`;
+    } else if (type === 'NOT_FOUND') {
+      if (message?.startsWith('Player')) {
+        errorMessage = `Player "${playerName}" is not in the game. Use the join game flow!`;
+      } else {
+        errorMessage = 'This game does not exist or has been cleaned up. Try making a new one!';
+      }
+    } else if (type === 'CONFLICT') {
+      errorMessage = `A player with the name "${playerName}" is already in the game.`;
+    } else {
+      errorMessage = 'Not sure what went wrong, but I\'m impressed that you managed to encounter this message!';
+    }
+  }
+
+  return errorMessage;
+}
+
 export const GET = compose(
+  withRequiredCookies('playerName', 'playerToken'),
   withCatchallErrorHandler,
   withRedisErrorHandler,
 )(
@@ -135,86 +69,99 @@ export const GET = compose(
     request: NextRequest,
     ctx: {
       params: Promise<GameParams>,
+      cookies: { playerName: string, playerToken: string },
     }
   ) => {
     const { sessionId } = await ctx.params;
+    const { cookies: { playerName, playerToken } } = ctx;
 
-    const { searchParams } = new URL(request.url);
-    const playerNameRequest = searchParams.get('playerName');
-
-    const cookieStore = await cookies();
-
-    const playerNameCookie = cookieStore.get('playerName');
-    const playerTokenCookie = cookieStore.get('playerToken');
-
-    const playerName = playerNameRequest ?? playerNameCookie?.value;
-    const playerToken = playerTokenCookie?.value ?? crypto.randomUUID();
-
-    if (!playerName) {
+    if (!playerName || !playerToken) {
       return getCrashAndBurnStream({
-        message: 'Missing player name, use the join game flow! Or add a playerName query param if you\'re feeling freaky.'
-      })
+        message: 'Missing player info, use the join game flow!'
+      });
     }
+
+    const connectionToken = crypto.randomUUID();
+
+    // NOTE: ideally would only set this on successful connection
+    // but it's a bad idea to await the end of the start method of the stream
+    // and this needs to be called before the response is initially sent to work
+    (await cookies()).set({
+      name: 'connectionToken',
+      value: connectionToken,
+      maxAge: ONE_DAY_S,
+      path: `/api/exquisite-corpse/games/${sessionId}`
+    });
 
     const gameService = getGameService();
 
-    try {
-      // TODO: if the token is valid but doesn't match the provided name, show:
-      // - "join as {current name}"
-      // - "rejoin under new name"
-      await gameService.addPlayer(sessionId, playerName, playerToken);
-    } catch (error) {
-      if (error instanceof ReplyError) {
-        const { type } = (REPLY_ERROR_SPLITTER.exec((error as Error).message)?.groups ?? {}) as { type?: CUSTOM_REPLY_ERROR_TYPE };
+    // Set up SSE stream
+    const encoder = new TextEncoder();
+    let heartbeatInterval: NodeJS.Timeout;
 
-        const errorEventData = { message: '' };
-        if (type === 'FORBIDDEN') {
-          errorEventData.message = 'This game is already full. Try making a new one!';
-        } else if (type === 'NOT_FOUND') {
-          errorEventData.message = 'This game does not exist or has been cleaned up. Try making a new one!';
-        } else if (type === 'CONFLICT') {
-          errorEventData.message = `A player with the name "${playerName}" is already in the game.`;
-        } else {
-          errorEventData.message = 'Not sure what went wrong, but I\'m impressed that you managed to encounter this message!';
+    const stream = new ReadableStream({
+      async start(controller) {
+        // Set up heartbeat every 30 seconds
+        heartbeatInterval = setInterval(() => {
+          try {
+            const heartbeat = `data: ${JSON.stringify({ type: 'heartbeat' })}\n\n`;
+            controller.enqueue(encoder.encode(heartbeat));
+          } catch {
+            console.log('Heartbeat failed, closing connection');
+            cleanup();
+          }
+        }, 30000);
+
+        const cleanup = () => {
+          clearInterval(heartbeatInterval);
+
+          gameService.disconnect(sessionId, playerName, connectionToken).catch(error => {
+            console.error('Failed to disconnect player:', error);
+          });
+
+          try {
+            controller.close();
+          } catch {
+            console.log('Controller already closed');
+          }
+        };
+
+        request.signal.addEventListener('abort', cleanup);
+
+        try {
+          const initialGameState = await getGameService().connect(
+            sessionId,
+            playerName,
+            playerToken,
+            connectionToken,
+            { controller, cleanup }
+          );
+
+          const initialGameStateEvent: GameEvent = {
+            status: 'loaded',
+            gameState: initialGameState,
+          }
+
+          controller.enqueue(encoder.encode(
+            `event: game_update\ndata: ${JSON.stringify(initialGameStateEvent)}\n\n`
+          ));
+        } catch (error) {
+          const message = getConnectionErrorMessage(error, playerName);
+          const errorEvent = `event: error\ndata: ${JSON.stringify({ message })}\n\n`;
+
+          controller.enqueue(encoder.encode(errorEvent));
+
+          return cleanup();
         }
-
-        return getCrashAndBurnStream(errorEventData);
-      } else {
-        throw error;
       }
-    }
-
-    cookieStore.set({
-      name: 'playerName',
-      value: playerName,
-      maxAge: ONE_DAY_S,
-      path: `/api/exquisite-corpse/games/${sessionId}`
     });
 
-    /**
-      * some funky stuff:
-      * - I want to be able to access playerName persistentely on the client
-      * - I need it to be accessable on the server
-      * - I want the cookies to be scoped to the actual routes where they're used
-      * - the /api/ prefix for api routes prevents one cookie being accessible from both
-      * - trying to set two cookies with the same name winds up setting only one cookie
-      *   with the latest config b/c/o a quirk in the nextjs cookies api, so I guess I
-      *   just need to set two differently-named cookies
-      */
-    cookieStore.set({
-      name: 'clientPlayerName',
-      value: playerName,
-      maxAge: ONE_DAY_S,
-      path: `/exquisite-corpse/${sessionId}`
-    });
-
-    cookieStore.set({
-      name: 'playerToken',
-      value: playerToken,
-      maxAge: ONE_DAY_S,
-      path: `/api/exquisite-corpse/games/${sessionId}`
-    });
-
-    return getSuccessStream(sessionId, playerName, playerToken, request);
+    return new NextResponse(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      },
+    })
   }
 )

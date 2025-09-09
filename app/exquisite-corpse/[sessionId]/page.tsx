@@ -18,7 +18,7 @@ export default async function GameSessionPage({
   return (
     <MultiplayerGameSession
       sessionId={sessionId}
-      playerName={playerNameParam ?? playerNameCookie.value}
+      playerName={playerNameParam ?? playerNameCookie?.value}
       dimensions={dimensions}
     />
   );

@@ -1,21 +1,21 @@
 local sessionKey = KEYS[1]
 local playersKey = KEYS[2]
-local connectionsKey = KEYS[3]
-local connectionToken = ARGV[1]
-local playerName = ARGV[2]
+local playerName = ARGV[1]
+local playerData = ARGV[2]
 local playerToken = ARGV[3]
 
 local playerPath = ".players." .. playerName
-local foundPlayerToken = redis.call("HGET", playersKey, playerName)
 
 if redis.call("EXISTS", sessionKey) == 0 then
   return redis.error_reply("NOT_FOUND Session does not exist")
-elseif foundPlayerToken == nil then
-  return redis.error_reply("NOT_FOUND Player not in game")
-elseif foundPlayerToken ~= playerToken then
-  return redis.error_reply("FORBIDDEN Incorrect or missing token")
-elseif redis.call("HGET", connectionsKey, playerPath) ~= false then
-  return redis.error_reply("CONFLICT Player already connected")
+elseif redis.call("HGET", playersKey, playerName) ~= false then
+  return redis.error_reply("CONFLICT Player already in game")
+end
+
+local gameType = cjson.decode(redis.call("JSON.GET", sessionKey, ".type"))
+local nPlayers = redis.call("HLEN", playersKey)
+if gameType == "singleplayer" and nPlayers >= 2 or nPlayers >= 8 then
+  return redis.error_reply("FORBIDDEN Game is full")
 end
 
 local time = redis.call("TIME")
@@ -23,19 +23,19 @@ local seconds = tonumber(time[1])
 local microseconds = tonumber(time[2])
 local milliseconds = math.floor((seconds * 1000000 + microseconds) / 1000)
 
-redis.call("HSET", connectionsKey, playerName, connectionToken)
 redis.call(
   "JSON.MSET",
   sessionKey,
-  playerPath .. ".connected",
-  cjson.encode(true),
+  playerPath,
+  playerData,
   sessionKey,
   ".timestamp",
   cjson.encode(milliseconds)
 )
 
+redis.call("HSET", playersKey, playerName, playerToken)
+
 redis.call("EXPIRE", sessionKey, 60 * 60)
 redis.call("EXPIRE", playersKey, 60 * 60)
-redis.call("EXPIRE", connectionsKey, 60 * 60)
 
 return redis.call("JSON.GET", sessionKey, ".")

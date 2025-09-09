@@ -1,65 +1,82 @@
 import { randomUUID } from 'crypto';
-import { getRedisClient } from './redis';
+import { getGameEventManager, getRedisClient, SSEClient } from './redis';
 import type {
   Player,
   GameEvent,
   GameStatus,
-  MultiplayerGameState
+  MultiplayerGameState,
+  GameType
 } from '@/app/types/multiplayer';
 import { generateAICurveTurn } from '@/app/lib/aiTurnService';
 import type { CurveTurn, Line } from '@/app/types/exquisiteCorpse';
 import { getCurrentPlayer } from './gameUtils';
 import { generateSessionId } from '../exquisite-corpse/sessionId';
-import { CreateGameRequest } from '../api/exquisite-corpse/schemas';
 
 export class GameService {
   private redis = getRedisClient();
+  private eventManager = getGameEventManager();
   private static MAX_AI_RETRIES = 3;
 
-  async createGame(request: CreateGameRequest): Promise<{ sessionId: string }> {
+  async createGame(type: GameType): Promise<{ sessionId: string }> {
     const sessionId = generateSessionId();
     const gameId = randomUUID();
 
     const players: Record<string, Player> = {};
-    if (request.gameType === 'singleplayer') {
+    if (type === 'singleplayer') {
       players['AI'] = {
         name: 'AI',
+        connected: true,
         joinedAt: new Date().toISOString(),
       };
     }
 
-    const gameState = await this.redis.initializeGame(sessionId, {
+    await this.redis.initializeGame(sessionId, {
       sessionId,
       gameId,
-      type: request.gameType,
+      type,
       turns: [],
       players,
       createdAt: new Date().toISOString(),
       timestamp: Date.now(),
     });
 
-    await this.publishEvent(sessionId, 'game_started', gameState);
-
     return { sessionId };
   }
 
-  async addPlayer(sessionId: string, name: string, token: string) {
+  async join(sessionId: string, name: string, token: string) {
     const newPlayer: Player = {
       name,
+      connected: false,
       joinedAt: new Date().toISOString(),
     };
 
-    const gameState = await this.redis.addPlayer(sessionId, newPlayer, token);
+    const gameState = await this.redis.join(sessionId, newPlayer, token);
 
-    // Publish player left event
     await this.publishEvent(sessionId, 'player_joined', gameState);
   }
 
-  async removePlayer(sessionId: string, playerName: string, playerToken: string): Promise<void> {
-    const gameState = await this.redis.removePlayer(sessionId, playerName, playerToken);
+  async leave(sessionId: string, playerName: string, playerToken: string): Promise<void> {
+    const gameState = await this.redis.leave(sessionId, playerName, playerToken);
 
-    // Publish player left event
     await this.publishEvent(sessionId, 'player_left', gameState);
+  }
+
+  async connect(sessionId: string, playerName: string, playerToken: string, connectionToken: string, client: SSEClient) {
+    const gameState = await this.redis.connectPlayer(sessionId, playerName, playerToken, connectionToken);
+
+    this.eventManager.subscribeToGame(sessionId, connectionToken, client);
+
+    await this.publishEvent(sessionId, 'player_connected', gameState);
+
+    return gameState;
+  }
+
+  async disconnect(sessionId: string, playerName: string, connectionToken: string): Promise<void> {
+    const gameState = await this.redis.disconnectPlayer(sessionId, playerName, connectionToken);
+
+    this.eventManager.unsubscribeFromGame(sessionId, connectionToken);
+
+    await this.publishEvent(sessionId, 'player_disconnected', gameState);
   }
 
   async submitTurn(sessionId: string, playerName: string, playerToken: string, path: Line): Promise<void> {
@@ -69,7 +86,6 @@ export class GameService {
       timestamp: new Date().toISOString(),
     };
 
-    // FIXME: Publish error event?
     const gameState = await this.redis.addTurn(
       sessionId,
       turn,
@@ -157,7 +173,7 @@ export class GameService {
   ): Promise<void> {
     const event: GameEvent = { status, gameState };
 
-    await this.redis.publishEvent(sessionId, event);
+    await this.eventManager.publishEvent(sessionId, event);
   }
 }
 

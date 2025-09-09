@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Button } from '@/app/components/Button';
 import type { GameType } from '@/app/types/multiplayer';
-import { CreateGameRequest } from '../api/exquisite-corpse/schemas';
+import { CreateWithPlayerRequest } from '../api/exquisite-corpse/schemas';
 
 type CreateGameFormProps = {
   gameType: GameType;
   onBack: () => void;
-  onGameCreated: (sessionId: string, playerName: string) => void;
+  onGameCreated: (sessionId: string) => void;
 };
 
 export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFormProps) => {
@@ -24,11 +24,12 @@ export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFo
     setError(null);
 
     try {
-      const request: CreateGameRequest = {
+      const request: CreateWithPlayerRequest = {
         gameType,
+        playerName,
       };
 
-      const response = await fetch('/api/exquisite-corpse/games/create', {
+      const createGameResponse = await fetch('/api/exquisite-corpse/games/create-with-player', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -36,14 +37,14 @@ export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFo
         body: JSON.stringify(request),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
+      if (!createGameResponse.ok) {
+        const errorData = await createGameResponse.json();
         throw new Error(errorData.error || 'Failed to create game');
       }
 
-      const data = await response.json();
+      const createGameData = await createGameResponse.json();
 
-      onGameCreated(data.sessionId, playerName.trim());
+      onGameCreated(createGameData.sessionId);
     } catch (err) {
       console.error('Create game error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');

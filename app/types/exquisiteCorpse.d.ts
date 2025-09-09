@@ -5,8 +5,7 @@ export type Point = [number, number];
 
 // Legacy types for backward compatibility during transition
 export type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
-// FIXME: Line is now effectively any number of lines
-export type Line = ParsedPath; // Updated to use parsed path format
+export type Line = ParsedPath;
 
 export type CanvasDimensions = CanvasDimensions;
 

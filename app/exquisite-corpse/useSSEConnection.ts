@@ -13,7 +13,6 @@ type UseSSEConnectionReturn = {
 
 export const useSSEConnection = (
   sessionId: string | null,
-  playerName?: string,
 ): UseSSEConnectionReturn => {
   const [connectionState, setConnectionState] = useState<SSEConnectionState>('disconnected');
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +48,7 @@ export const useSSEConnection = (
 
     try {
       const url = new URL(
-        `/api/exquisite-corpse/games/${sessionId}/connect?playerName=${playerName}`,
+        `/api/exquisite-corpse/games/${sessionId}/connect`,
         window.location.origin
       );
 
@@ -79,23 +78,7 @@ export const useSSEConnection = (
         }
       });
 
-      customEventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          if (data.type === 'heartbeat' || data.type === 'connected') {
-            return;
-          } else {
-            console.warn(`Received event with unknown type "${data.type}"`)
-          }
-        } catch (err) {
-          console.error('Failed to parse SSE message:', err);
-        }
-      };
-
-      customEventSource.onerror = (errorEvent) => {
-        console.warn('SSE error:', errorEvent);
-
+      customEventSource.addEventListener('error', (errorEvent) => {
         setConnectionState('error');
 
         // see if there's a custom message from a predictable error state
@@ -114,14 +97,31 @@ export const useSSEConnection = (
           }
         }
 
-        setError('Connection lost');
+        setError('Something went wrong enough that I can\'t actually tell you what it is');
+
+        customEventSource.close();
+      });
+
+      customEventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+
+          if (data.type === 'heartbeat' || data.type === 'connected') {
+            return;
+          } else {
+            console.warn(`Received event with unknown type "${data.type}"`)
+          }
+        } catch (err) {
+          console.error('Failed to parse SSE message:', err);
+        }
       };
+
     } catch (err) {
       console.error('Failed to create SSE connection:', err);
       setConnectionState('error');
       setError('Failed to connect');
     }
-  }, [sessionId, cleanup, playerName]);
+  }, [sessionId, cleanup]);
 
   // Initial connection and game state fetch
   useEffect(() => {
@@ -137,24 +137,21 @@ export const useSSEConnection = (
   }, [sessionId, connect, cleanup]);
 
   // Cleanup on unmount and handle beforeunload
-  // FIXME: Cleanup is automatic when the SSE connection closes
-  // But this makes sense to add if I bring back the joined/connected difference
-  //
-  //useEffect(() => {
-  //  const handleBeforeUnload = () => {
-  //    // Try to notify server of disconnect when page is unloading
-  //    if (sessionId) {
-  //      navigator.sendBeacon(`/api/exquisite-corpse/games/${sessionId}/disconnect`);
-  //    }
-  //  };
-  //
-  //  window.addEventListener('beforeunload', handleBeforeUnload);
-  //
-  //  return () => {
-  //    window.removeEventListener('beforeunload', handleBeforeUnload);
-  //    cleanup();
-  //  };
-  //}, [cleanup, sessionId]);
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Try to notify server of disconnect when page is unloading
+      if (sessionId) {
+        navigator.sendBeacon(`/api/exquisite-corpse/games/${sessionId}/disconnect`);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanup();
+    };
+  }, [cleanup, sessionId]);
 
   const reconnect = useCallback(() => {
     cleanup();

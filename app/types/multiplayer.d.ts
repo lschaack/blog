@@ -6,6 +6,7 @@ export type GameType = 'singleplayer' | 'multiplayer';
 export type Player = {
   name: string;
   joinedAt: string;
+  connected: boolean;
 };
 
 export type GameStatus =
@@ -16,6 +17,9 @@ export type GameStatus =
   | 'ai_turn_started'
   | 'ai_turn_failed'
   | 'player_joined'
+  | 'player_left'
+  | 'player_connected'
+  | 'player_disconnected'
   | 'player_left'
   | 'player_promoted'
   | 'player_started_drawing'

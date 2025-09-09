@@ -90,7 +90,7 @@ Respond with a JSON object in this exact format:
       }
 
       const response = await this.client.chat.completions.create({
-        // FIXME: Test different models
+        // TODO: Test different models
         model: "gpt-5",
         messages: [
           {

@@ -3,27 +3,43 @@ import type { Redis } from 'ioredis';
 
 declare module 'ioredis' {
   interface Redis {
-    eqConnect(
+    eqJoin(
       sessionKey: string,
-      connectionKey: string,
+      playersKey: string,
       playerName: string,
       playerJson: string,
-      playerToken: string
+      playerToken: string,
+    ): Promise<string>;
+
+    eqLeave(
+      sessionKey: string,
+      playersKey: string,
+      playerName: string,
+      playerToken: string,
+    ): Promise<string>;
+
+    eqConnect(
+      sessionKey: string,
+      playersKey: string,
+      connectionsKey: string,
+      connectionToken: string,
+      playerName: string,
+      playerToken: string,
     ): Promise<string>;
 
     eqDisconnect(
       sessionKey: string,
-      connectionKey: string,
+      connectionsKey: string,
+      connectionToken: string,
       playerName: string,
-      playerToken: string
     ): Promise<string>;
 
     eqAddTurn(
       sessionKey: string,
-      connectionKey: string,
+      playersKey: string,
       turnData: string,
       playerName: string,
-      playerToken: string
+      playerToken: string,
     ): Promise<string>;
   }
 }

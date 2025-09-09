@@ -37,7 +37,7 @@ function createGameContextSchema<TurnSchema extends typeof BaseTurnSchema>(turnS
 }
 
 export const RawPathSchema = z.string()
-  .min(1, 'Path cannot be empty')
+  .min(1, 'Missing path')
   .transform((string, ctx) => {
     // extract the `d` property
     const match = string.match(/^([MLHVCSQTAZ0-9\s,.\-+]+)$/);
@@ -98,7 +98,6 @@ export const CreateGameRequestSchema = z.object({
     message: "Invalid gameType. Must be \"multiplayer\" or \"singleplayer\""
   }),
 });
-
 export type CreateGameRequest = z.infer<typeof CreateGameRequestSchema>;
 
 export const SessionIdSchema = z.string().regex(SESSION_ID_MATCHER, {
@@ -108,5 +107,16 @@ export const SessionIdSchema = z.string().regex(SESSION_ID_MATCHER, {
 export const GameParamsSchema = z.object({
   sessionId: SessionIdSchema,
 });
-
 export type GameParams = z.infer<typeof GameParamsSchema>;
+
+export const JoinGameRequestSchema = z.object({
+  playerName: z
+    .string()
+    .min(1, 'Missing player name')
+    // I like letting people break the UI but I am storing this so don't get too crazy
+    .max(256, 'Player name is too long'),
+});
+export type JoinGameRequest = z.infer<typeof JoinGameRequestSchema>;
+
+export const CreateWithPlayerRequestSchema = CreateGameRequestSchema.merge(JoinGameRequestSchema);
+export type CreateWithPlayerRequest = z.infer<typeof CreateWithPlayerRequestSchema>;

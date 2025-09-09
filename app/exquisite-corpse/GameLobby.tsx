@@ -7,7 +7,7 @@ import { JoinGameForm } from './JoinGameForm';
 type LobbyMode = 'menu' | 'create' | 'join';
 
 type GameLobbyProps = {
-  onGameJoined: (sessionId: string, playerName: string) => void;
+  onGameJoined: (sessionId: string) => void;
 };
 
 export const GameLobby = ({ onGameJoined }: GameLobbyProps) => {

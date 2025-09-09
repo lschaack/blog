@@ -44,23 +44,25 @@ export const withRedisErrorHandler: Middleware = handler => {
       return await handler(request, ctx);
     } catch (error) {
       if (error instanceof ReplyError) {
+        console.error(error);
+
         const { type, message } = REPLY_ERROR_SPLITTER.exec((error as Error).message)?.groups ?? {};
 
         switch (type as CUSTOM_REPLY_ERROR_TYPE) {
           case 'FORBIDDEN': return NextResponse.json(
-            { errors: message },
+            { error: message },
             { status: 403 }
           );
           case 'NOT_FOUND': return NextResponse.json(
-            { errors: message },
+            { error: message },
             { status: 404 }
           );
           case 'CONFLICT': return NextResponse.json(
-            { errors: message },
+            { error: message },
             { status: 409 }
           );
           default: return NextResponse.json(
-            { errors: 'An unknown error occurred' },
+            { error: 'An unknown error occurred' },
             { status: 500 }
           );
         }

@@ -27,17 +27,14 @@ export const MultiplayerGameSession = ({
     gameState,
     status,
     reconnect
-  } = useSSEConnection(
-    sessionId,
-    playerName,
-  );
+  } = useSSEConnection(sessionId);
 
   // Handle leaving game
   const handleLeaveGame = useCallback(async () => {
     if (sessionId) {
       try {
         // Notify backend that player is leaving
-        await fetch(`/api/exquisite-corpse/games/${sessionId}/disconnect`, {
+        await fetch(`/api/exquisite-corpse/games/${sessionId}/leave`, {
           method: 'POST',
         });
       } catch (error) {

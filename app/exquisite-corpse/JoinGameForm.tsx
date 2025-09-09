@@ -13,12 +13,12 @@ export const JoinGameForm = ({ onBack, onGameJoined }: JoinGameFormProps) => {
   const [error, setError] = useState<string | null>(null);
 
   const handleJoinGame = async () => {
-    if (!playerName.trim()) {
+    if (!playerName) {
       setError('Please enter your name');
       return;
     }
 
-    if (!sessionId.trim() || sessionId.trim().length !== 5) {
+    if (!sessionId || sessionId.length !== 5) {
       setError('Please enter a valid 5-character game ID');
       return;
     }
@@ -26,7 +26,31 @@ export const JoinGameForm = ({ onBack, onGameJoined }: JoinGameFormProps) => {
     setIsLoading(true);
     setError(null);
 
-    onGameJoined(sessionId.trim().toUpperCase(), playerName.trim());
+    try {
+      const joinResponse = await fetch(`/api/exquisite-corpse/games/${sessionId}/join`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ playerName: playerName }),
+      });
+
+      if (!joinResponse.ok) {
+        const { error } = await joinResponse.json();
+
+        setError(error);
+      } else {
+        onGameJoined(sessionId, playerName);
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('Something went wrong');
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -45,7 +69,7 @@ export const JoinGameForm = ({ onBack, onGameJoined }: JoinGameFormProps) => {
             id="player-name"
             type="text"
             value={playerName}
-            onChange={(e) => setPlayerName(e.target.value)}
+            onChange={(e) => setPlayerName(e.target.value.trim())}
             placeholder="Enter your name"
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={isLoading}
@@ -61,7 +85,7 @@ export const JoinGameForm = ({ onBack, onGameJoined }: JoinGameFormProps) => {
             id="session-id"
             type="text"
             value={sessionId}
-            onChange={(e) => setSessionId(e.target.value.toUpperCase())}
+            onChange={(e) => setSessionId(e.target.value.toUpperCase().trim())}
             placeholder="ABCD1"
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg font-mono tracking-widest"
             disabled={isLoading}
