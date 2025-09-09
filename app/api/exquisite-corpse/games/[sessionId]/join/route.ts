@@ -28,10 +28,10 @@ export const POST = compose(
 
     if (existingPlayerName) {
       // FIXME: on the frontend, show "leave" and "reconnect as {playerName}"
-      return NextResponse.json({
-        error: 'Please leave the game before rejoining',
-        status: 409,
-      });
+      return NextResponse.json(
+        { error: 'Please leave the game before rejoining' },
+        { status: 409 },
+      );
     }
 
     const playerToken = crypto.randomUUID();

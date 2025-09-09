@@ -5,7 +5,7 @@ import { compose } from '@/app/api/middleware/compose';
 import { GameParams } from '../../../schemas';
 import { getGameService } from '@/app/lib/gameService';
 import { withRequiredCookies } from '@/app/api/middleware/cookies';
-import { cookies } from 'next/headers';
+import { deletePlayerCookies } from '../cookies';
 
 export const POST = compose(
   withRequiredCookies('playerName', 'playerToken'),
@@ -24,9 +24,7 @@ export const POST = compose(
 
     await getGameService().leave(sessionId, playerName, playerToken);
 
-    const cookieStore = await cookies();
-    cookieStore.delete('playerName');
-    cookieStore.delete('playerToken');
+    await deletePlayerCookies(sessionId, playerName, playerToken)
 
     return NextResponse.json({ success: true });
   }

@@ -35,3 +35,30 @@ export async function setPlayerCookies(sessionId: string, playerName: string, pl
     path: `/api/exquisite-corpse/games/${sessionId}`
   });
 }
+
+// NOTE: I'm relying on sub-route behavior to scope these cookies, so they can't be deleted w/the
+// built-in cookieStore.delete() since deletion doesn't come from the exact domain that sets them
+export async function deletePlayerCookies(sessionId: string, playerName: string, playerToken: string) {
+  const cookieStore = await cookies();
+
+  cookieStore.set({
+    name: 'clientPlayerName',
+    value: playerName,
+    maxAge: 0,
+    path: `/exquisite-corpse/${sessionId}`
+  });
+
+  cookieStore.set({
+    name: 'playerName',
+    value: playerName,
+    maxAge: 0,
+    path: `/api/exquisite-corpse/games/${sessionId}`
+  });
+
+  cookieStore.set({
+    name: 'playerToken',
+    value: playerToken,
+    maxAge: 0,
+    path: `/api/exquisite-corpse/games/${sessionId}`
+  });
+}
