@@ -118,6 +118,151 @@ function updateCurrentPosition(
   return [currentX, currentY];
 }
 
+export function getCurvature(segment: PathSegment, t: number): number {
+  // Clamp t to [0, 1]
+  t = Math.max(0, Math.min(1, t));
+
+  const [moveTo, drawCmd] = segment;
+  const startX = moveTo[1];
+  const startY = moveTo[2];
+
+  // Line commands have zero curvature
+  if (isLineToCommand(drawCmd) || isLineToRelativeCommand(drawCmd) ||
+    isHorizontalLineToCommand(drawCmd) || isHorizontalLineToRelativeCommand(drawCmd) ||
+    isVerticalLineToCommand(drawCmd) || isVerticalLineToRelativeCommand(drawCmd)) {
+    return 0;
+  }
+
+  // Cubic Bezier curves
+  if (isCubicBezierCommand(drawCmd)) {
+    // C x1 y1 x2 y2 x y - absolute cubic bezier
+    const [, x1, y1, x2, y2, x, y] = drawCmd;
+    return calculateCubicBezierCurvature(startX, startY, x1, y1, x2, y2, x, y, t);
+  }
+
+  if (isCubicBezierRelativeCommand(drawCmd)) {
+    // c dx1 dy1 dx2 dy2 dx dy - relative cubic bezier
+    const [, dx1, dy1, dx2, dy2, dx, dy] = drawCmd;
+    return calculateCubicBezierCurvature(
+      startX, startY,
+      startX + dx1, startY + dy1,
+      startX + dx2, startY + dy2,
+      startX + dx, startY + dy,
+      t
+    );
+  }
+
+  // Smooth cubic bezier
+  if (isSmoothCubicBezierCommand(drawCmd)) {
+    // S x2 y2 x y - smooth cubic bezier (control point is reflection of previous)
+    // For simplicity, treating as quadratic-like curve
+    const [, x2, y2, x, y] = drawCmd;
+    return calculateQuadraticBezierCurvature(startX, startY, x2, y2, x, y, t);
+  }
+
+  if (isSmoothCubicBezierRelativeCommand(drawCmd)) {
+    const [, dx2, dy2, dx, dy] = drawCmd;
+    return calculateQuadraticBezierCurvature(
+      startX, startY,
+      startX + dx2, startY + dy2,
+      startX + dx, startY + dy,
+      t
+    );
+  }
+
+  // Quadratic Bezier curves
+  if (isQuadraticBezierCommand(drawCmd)) {
+    // Q x1 y1 x y - absolute quadratic bezier
+    const [, x1, y1, x, y] = drawCmd;
+    return calculateQuadraticBezierCurvature(startX, startY, x1, y1, x, y, t);
+  }
+
+  if (isQuadraticBezierRelativeCommand(drawCmd)) {
+    // q dx1 dy1 dx dy - relative quadratic bezier
+    const [, dx1, dy1, dx, dy] = drawCmd;
+    return calculateQuadraticBezierCurvature(
+      startX, startY,
+      startX + dx1, startY + dy1,
+      startX + dx, startY + dy,
+      t
+    );
+  }
+
+  // Smooth quadratic bezier
+  if (isSmoothQuadraticBezierCommand(drawCmd)) {
+    // T x y - smooth quadratic bezier
+    const [, x, y] = drawCmd;
+    // Simplified as linear for smooth curves without previous control point info
+    return 0;
+  }
+
+  if (isSmoothQuadraticBezierRelativeCommand(drawCmd)) {
+    return 0;
+  }
+
+  // Arc commands
+  if (isArcCommand(drawCmd) || isArcRelativeCommand(drawCmd)) {
+    // A rx ry x-axis-rotation large-arc-flag sweep-flag x y
+    const [, rx, ry] = drawCmd;
+    // For elliptical arc, curvature varies. Using average radius approximation
+    const avgRadius = (rx + ry) / 2;
+    return avgRadius > 0 ? 1 / avgRadius : 0;
+  }
+
+  return 0;
+}
+
+function calculateCubicBezierCurvature(
+  x0: number, y0: number,  // start point
+  x1: number, y1: number,  // first control point  
+  x2: number, y2: number,  // second control point
+  x3: number, y3: number,  // end point
+  t: number
+): number {
+  // First derivative
+  const dx = 3 * (1 - t) * (1 - t) * (x1 - x0) +
+    6 * (1 - t) * t * (x2 - x1) +
+    3 * t * t * (x3 - x2);
+
+  const dy = 3 * (1 - t) * (1 - t) * (y1 - y0) +
+    6 * (1 - t) * t * (y2 - y1) +
+    3 * t * t * (y3 - y2);
+
+  // Second derivative
+  const ddx = 6 * (1 - t) * (x2 - 2 * x1 + x0) +
+    6 * t * (x3 - 2 * x2 + x1);
+
+  const ddy = 6 * (1 - t) * (y2 - 2 * y1 + y0) +
+    6 * t * (y3 - 2 * y2 + y1);
+
+  // Curvature formula: |x'y'' - y'x''| / (x'^2 + y'^2)^(3/2)
+  const numerator = Math.abs(dx * ddy - dy * ddx);
+  const denominator = Math.pow(dx * dx + dy * dy, 1.5);
+
+  return denominator > 0 ? numerator / denominator : 0;
+}
+
+function calculateQuadraticBezierCurvature(
+  x0: number, y0: number,  // start point
+  x1: number, y1: number,  // control point
+  x2: number, y2: number,  // end point
+  t: number
+): number {
+  // First derivative
+  const dx = 2 * (1 - t) * (x1 - x0) + 2 * t * (x2 - x1);
+  const dy = 2 * (1 - t) * (y1 - y0) + 2 * t * (y2 - y1);
+
+  // Second derivative (constant for quadratic)
+  const ddx = 2 * (x2 - 2 * x1 + x0);
+  const ddy = 2 * (y2 - 2 * y1 + y0);
+
+  // Curvature formula
+  const numerator = Math.abs(dx * ddy - dy * ddx);
+  const denominator = Math.pow(dx * dx + dy * dy, 1.5);
+
+  return denominator > 0 ? numerator / denominator : 0;
+}
+
 export function renderPathCommandsToSvg(paths: ParsedPath[], dimensions: CanvasDimensions): string {
   return `
 <svg xmlns="http://www.w3.org/2000/svg" width="${dimensions.width}" height="${dimensions.height}" viewBox="0 0 ${dimensions.width} ${dimensions.height}">
