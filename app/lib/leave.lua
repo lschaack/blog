@@ -1,5 +1,6 @@
 local sessionKey = KEYS[1]
 local playersKey = KEYS[2]
+local playerOrderKey = KEYS[3]
 local playerName = ARGV[1]
 local playerToken = ARGV[2]
 
@@ -14,6 +15,16 @@ elseif foundPlayerToken ~= playerToken then
   return redis.error_reply("FORBIDDEN Incorrect or missing token")
 end
 
+local nPlayers = redis.call("HLEN", playersKey)
+
+local currentPlayer = cjson.decode(redis.call("JSON.GET", sessionKey, ".currentPlayer"))
+if nPlayers <= 2 then -- no longer enough players in the game
+  currentPlayer = nil
+elseif playerName == currentPlayer then
+  currentPlayer = redis.call("LMOVE", playerOrderKey, playerOrderKey, "LEFT", "RIGHT")
+end
+redis.call("LREM", playerOrderKey, 1, playerName)
+
 local time = redis.call("TIME")
 local seconds = tonumber(time[1])
 local microseconds = tonumber(time[2])
@@ -21,6 +32,19 @@ local milliseconds = math.floor((seconds * 1000000 + microseconds) / 1000)
 
 redis.call("HDEL", playersKey, playerName)
 redis.call("JSON.DEL", sessionKey, playerPath)
-redis.call("JSON.SET", sessionKey, ".timestamp", cjson.encode(milliseconds))
+redis.call("JSON.SET", sessionKey, ".currentPlayer", cjson.encode(currentPlayer))
+
+redis.call(
+  "JSON.ARRAPPEND",
+  sessionKey,
+  ".eventLog",
+  cjson.encode({
+    event = "player_left",
+    timestamp = milliseconds,
+    data = {
+      playerName = playerName,
+    },
+  })
+)
 
 return redis.call("JSON.GET", sessionKey, ".")

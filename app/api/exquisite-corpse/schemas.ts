@@ -6,14 +6,16 @@ export const BASE64_PNG_PREFIX = 'data:image/png;base64,';
 // https://gist.github.com/ondrek/7413434
 const BASE64_MIN_CHARS = 32;
 
+export const MAX_PLAYER_NAME_LENGTH = 24;
+
 const Base64ImageSchema = z.string()
   .startsWith(BASE64_PNG_PREFIX, 'Image missing base64 prefix')
   .regex(/^[A-Za-z0-9+/]*={0,2}$/, '')
   .min(BASE64_MIN_CHARS, 'Missing image data');
 
 const BaseTurnSchema = z.object({
-  author: z.enum(['user', 'ai'], {
-    message: 'Turn author must be either "user" or "ai"',
+  author: z.enum(['user', 'AI'], {
+    message: 'Turn author must be either "user" or "AI"',
   }),
   timestamp: z
     .string({ message: 'Missing turn timestamp' })
@@ -99,6 +101,7 @@ export const CreateGameRequestSchema = z.object({
   }),
 });
 export type CreateGameRequest = z.infer<typeof CreateGameRequestSchema>;
+export type GameType = CreateGameRequest['gameType'];
 
 export const SessionIdSchema = z.string().regex(SESSION_ID_MATCHER, {
   message: "Session ID must be a five-character string of uppercase letters and numbers"
@@ -113,8 +116,7 @@ export const JoinGameRequestSchema = z.object({
   playerName: z
     .string()
     .min(1, 'Missing player name')
-    // I like letting people break the UI but I am storing this so don't get too crazy
-    .max(256, 'Player name is too long'),
+    .max(MAX_PLAYER_NAME_LENGTH, `Player name cannot be longer than ${MAX_PLAYER_NAME_LENGTH} chars`),
 });
 export type JoinGameRequest = z.infer<typeof JoinGameRequestSchema>;
 

@@ -2,15 +2,13 @@ import { randomUUID } from 'crypto';
 import { getGameEventManager, getRedisClient, SSEClient } from './redis';
 import type {
   Player,
-  GameEvent,
-  GameStatus,
+  GameStateUpdate,
   MultiplayerGameState,
-  GameType
 } from '@/app/types/multiplayer';
 import { generateAICurveTurn } from '@/app/lib/aiTurnService';
 import type { CurveTurn, Line } from '@/app/types/exquisiteCorpse';
-import { getCurrentPlayer } from './gameUtils';
 import { generateSessionId } from '../exquisite-corpse/sessionId';
+import { GameType } from '../api/exquisite-corpse/schemas';
 
 export class GameService {
   private redis = getRedisClient();
@@ -26,7 +24,6 @@ export class GameService {
       players['AI'] = {
         name: 'AI',
         connected: true,
-        joinedAt: new Date().toISOString(),
       };
     }
 
@@ -35,9 +32,12 @@ export class GameService {
       gameId,
       type,
       turns: [],
+      eventLog: [{
+        type: 'game_created',
+        timestamp: Date.now(),
+      }],
       players,
-      createdAt: new Date().toISOString(),
-      timestamp: Date.now(),
+      currentPlayer: null,
     });
 
     return { sessionId };
@@ -47,18 +47,17 @@ export class GameService {
     const newPlayer: Player = {
       name,
       connected: false,
-      joinedAt: new Date().toISOString(),
     };
 
     const gameState = await this.redis.join(sessionId, newPlayer, token);
 
-    await this.publishEvent(sessionId, 'player_joined', gameState);
+    await this.publishGameState(sessionId, gameState);
   }
 
   async leave(sessionId: string, playerName: string, playerToken: string): Promise<void> {
     const gameState = await this.redis.leave(sessionId, playerName, playerToken);
 
-    await this.publishEvent(sessionId, 'player_left', gameState);
+    await this.publishGameState(sessionId, gameState);
   }
 
   async connect(sessionId: string, playerName: string, playerToken: string, connectionToken: string, client: SSEClient) {
@@ -66,7 +65,7 @@ export class GameService {
 
     this.eventManager.subscribeToGame(sessionId, connectionToken, client);
 
-    await this.publishEvent(sessionId, 'player_connected', gameState);
+    await this.publishGameState(sessionId, gameState);
 
     return gameState;
   }
@@ -76,7 +75,7 @@ export class GameService {
 
     this.eventManager.unsubscribeFromGame(sessionId, connectionToken);
 
-    await this.publishEvent(sessionId, 'player_disconnected', gameState);
+    await this.publishGameState(sessionId, gameState);
   }
 
   async submitTurn(sessionId: string, playerName: string, playerToken: string, path: Line): Promise<void> {
@@ -93,32 +92,19 @@ export class GameService {
       playerToken
     );
 
-    await this.publishEvent(sessionId, 'turn_ended', gameState);
+    await this.publishGameState(sessionId, gameState);
 
-    const nextPlayer = getCurrentPlayer(gameState);
-    // If next player is AI, trigger AI turn
-    if (nextPlayer?.name === 'AI') {
-      await this.startAITurn(sessionId, gameState);
+    if (gameState.currentPlayer === 'AI') {
+      this.startAITurn(sessionId);
     }
   }
 
-  async retryAITurn(sessionId: string): Promise<void> {
-    const gameState = await this.redis.getGameState(sessionId);
+  async startAITurn(sessionId: string): Promise<void> {
+    const gameState = await this.redis.startAiTurn(sessionId);
 
-    // FIXME: How do I prevent simultaneous AI turns?
-    // TODO: Add check for ai having next turn
+    this.processAITurnBackground(sessionId, gameState);
 
-    await this.redis.resetAIRetryCount(sessionId);
-    await this.startAITurn(sessionId, gameState);
-  }
-
-  private async startAITurn(sessionId: string, gameState: MultiplayerGameState): Promise<void> {
-    await this.publishEvent(sessionId, 'ai_turn_started');
-
-    // Process AI turn in background
-    this.processAITurnBackground(sessionId, gameState).catch(error => {
-      console.error('AI turn failed:', error);
-    });
+    await this.publishGameState(sessionId, gameState);
   }
 
   private async getAITurn(gameState: MultiplayerGameState) {
@@ -140,7 +126,7 @@ export class GameService {
 
       const nextGameState = await this.redis.addAiTurn(sessionId, turn);
 
-      this.publishEvent(sessionId, 'turn_ended', nextGameState);
+      this.publishGameState(sessionId, nextGameState);
 
       await this.redis.resetAIRetryCount(sessionId);
     } catch (error) {
@@ -156,22 +142,22 @@ export class GameService {
     if (newRetryCount <= GameService.MAX_AI_RETRIES) {
       await this.redis.setAIRetryCount(sessionId, newRetryCount);
       const gameState = await this.redis.getGameState(sessionId);
-      // Retry after a delay
+
       setTimeout(() => {
-        this.processAITurnBackground(sessionId, gameState).catch(console.error);
+        this.processAITurnBackground(sessionId, gameState);
       }, 2000 * newRetryCount); // Exponential backoff
     } else {
-      // Max retries reached, mark as failed
-      await this.publishEvent(sessionId, 'ai_turn_failed');
+      const nextGameState = await this.redis.failAiTurn(sessionId);
+
+      this.publishGameState(sessionId, nextGameState);
     }
   }
 
-  private async publishEvent(
+  private async publishGameState(
     sessionId: string,
-    status: GameStatus,
     gameState?: MultiplayerGameState,
   ): Promise<void> {
-    const event: GameEvent = { status, gameState };
+    const event: GameStateUpdate = { status: 'game_update', gameState };
 
     await this.eventManager.publishEvent(sessionId, event);
   }

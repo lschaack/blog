@@ -69,8 +69,12 @@ export const withRedisErrorHandler: Middleware = handler => {
       } else if (error instanceof RedisPipelineError) {
         console.group(error.message);
 
+        let message = '';
         for (let i = 0; i < error.errors.length; i++) {
           const err = error.errors[i];
+          if (i > 0) message += '\n';
+          message += err.message;
+
           console.group(`error ${i}`);
           console.error(JSON.stringify(err, null, 2));
           console.groupEnd();
@@ -81,7 +85,7 @@ export const withRedisErrorHandler: Middleware = handler => {
         console.groupEnd();
 
         return NextResponse.json(
-          { errors: error.errors.map(({ message }) => message) },
+          { error: message },
           { status: 400 }
         );
       } else {

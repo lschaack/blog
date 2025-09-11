@@ -1,42 +1,37 @@
 import type { CurveTurn } from './exquisiteCorpse';
 
-// FIXME: Get these from zod schemas
-export type GameType = 'singleplayer' | 'multiplayer';
-
 export type Player = {
   name: string;
-  joinedAt: string;
   connected: boolean;
 };
 
-export type GameStatus =
-  | 'loading'
-  | 'loaded'
-  | 'game_started'
+export type GameEventType =
+  | 'game_created'
   | 'turn_ended'
   | 'ai_turn_started'
   | 'ai_turn_failed'
   | 'player_joined'
   | 'player_left'
   | 'player_connected'
-  | 'player_disconnected'
-  | 'player_left'
-  | 'player_promoted'
-  | 'player_started_drawing'
-  | 'player_stopped_drawing'
-  | 'game_ended';
+  | 'player_disconnected';
+
+type GameEvent = {
+  type: GameEventType;
+  timestamp: number;
+  data?: Partial<Record<string, string>>;
+}
 
 export type MultiplayerGameState = {
   sessionId: string;
   gameId: string;
   type: GameType;
   players: Record<string, Player>; // map from player name to Player
+  currentPlayer: string | null;
   turns: CurveTurn[];
-  createdAt: string;
-  timestamp: number;
+  eventLog: GameEvent[];
 };
 
-export type GameEvent = {
-  status: GameStatus;
+export type GameStateUpdate = {
+  status: string;
   gameState?: MultiplayerGameState;
 };

@@ -1,14 +1,22 @@
 import { useState } from 'react';
 import { Button } from '@/app/components/Button';
+import { MAX_PLAYER_NAME_LENGTH } from '../api/exquisite-corpse/schemas';
 
 type JoinGameFormProps = {
   onBack: () => void;
-  onGameJoined: (sessionId: string, playerName: string) => void;
+  onGameJoined: (sessionId: string) => void;
+  initPlayerName?: string;
+  initSessionId?: string;
 };
 
-export const JoinGameForm = ({ onBack, onGameJoined }: JoinGameFormProps) => {
-  const [playerName, setPlayerName] = useState('');
-  const [sessionId, setSessionId] = useState('');
+export const JoinGameForm = ({
+  onBack,
+  onGameJoined,
+  initPlayerName = '',
+  initSessionId = '',
+}: JoinGameFormProps) => {
+  const [playerName, setPlayerName] = useState(initPlayerName);
+  const [sessionId, setSessionId] = useState(initSessionId);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,7 +48,7 @@ export const JoinGameForm = ({ onBack, onGameJoined }: JoinGameFormProps) => {
 
         setError(error);
       } else {
-        onGameJoined(sessionId, playerName);
+        onGameJoined(sessionId);
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -73,7 +81,7 @@ export const JoinGameForm = ({ onBack, onGameJoined }: JoinGameFormProps) => {
             placeholder="Enter your name"
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={isLoading}
-            maxLength={50}
+            maxLength={MAX_PLAYER_NAME_LENGTH}
           />
         </div>
 

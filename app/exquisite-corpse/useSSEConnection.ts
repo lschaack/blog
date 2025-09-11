@@ -1,23 +1,21 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { MultiplayerGameState, GameStatus } from '@/app/types/multiplayer';
+import type { MultiplayerGameState } from '@/app/types/multiplayer';
 
 type SSEConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
-type UseSSEConnectionReturn = {
+export type SSEConnection = {
   connectionState: SSEConnectionState;
   error: string | null;
   gameState: MultiplayerGameState | null;
-  status: GameStatus;
   reconnect: () => void;
 };
 
 export const useSSEConnection = (
   sessionId: string | null,
-): UseSSEConnectionReturn => {
+): SSEConnection => {
   const [connectionState, setConnectionState] = useState<SSEConnectionState>('disconnected');
   const [error, setError] = useState<string | null>(null);
   const [gameState, setGameState] = useState<MultiplayerGameState | null>(null);
-  const [status, setStatus] = useState<GameStatus>('loading');
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -63,11 +61,16 @@ export const useSSEConnection = (
 
       customEventSource.addEventListener('game_update', (event: MessageEvent<string>) => {
         try {
-          const { gameState: nextGameState, status } = JSON.parse(event.data);
+          const { gameState: nextGameState } = JSON.parse(event.data);
 
-          setStatus(status);
           setGameState(prevGameState => {
-            if (nextGameState && nextGameState.timestamp > (prevGameState?.timestamp ?? -1)) {
+            const prevLastEvent = prevGameState?.eventLog.at(-1);
+            const nextLastEvent = nextGameState?.eventLog.at(-1);
+
+            const prevTimestamp = prevLastEvent?.timestamp ?? -1;
+            const nextTimestamp = nextLastEvent?.timestamp ?? 0;
+
+            if (!prevLastEvent || nextTimestamp > prevTimestamp) {
               return nextGameState;
             } else {
               return prevGameState;
@@ -82,6 +85,7 @@ export const useSSEConnection = (
         setConnectionState('error');
 
         // see if there's a custom message from a predictable error state
+        // FIXME: add handler for application/json errors
         if ((errorEvent as MessageEvent).data) {
           try {
             const parsed = JSON.parse((errorEvent as MessageEvent).data);
@@ -162,7 +166,6 @@ export const useSSEConnection = (
     connectionState,
     error,
     gameState,
-    status,
     reconnect
   };
 };

@@ -9,7 +9,7 @@ import { ReplyError } from 'ioredis';
 import { withRequiredCookies } from '@/app/api/middleware/cookies';
 import { cookies } from 'next/headers';
 import { ONE_DAY_S } from '@/app/utils/time';
-import { GameEvent } from '@/app/types/multiplayer';
+import { GameStateUpdate } from '@/app/types/multiplayer';
 
 // NOTE: Can't use traditional errors w/SSE, but we can use a stream which sends
 // a single error event before immediately closing itself
@@ -137,8 +137,8 @@ export const GET = compose(
             { controller, cleanup }
           );
 
-          const initialGameStateEvent: GameEvent = {
-            status: 'loaded',
+          const initialGameStateEvent: GameStateUpdate = {
+            status: 'game_update',
             gameState: initialGameState,
           }
 

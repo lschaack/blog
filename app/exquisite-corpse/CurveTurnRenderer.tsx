@@ -89,7 +89,7 @@ export const CurveTurnRenderer = ({
       />
 
       {prevTurn && (
-        <div className="space-y-2 bg-deep-50 rounded-xl p-4">
+        <div className="card space-y-2">
           <div className="font-light">
             Turn {prevTurnNumber} - {isAuthorUser(prevTurn.author) ? "You" : "AI"}
           </div>

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/app/components/Button';
-import type { GameType } from '@/app/types/multiplayer';
-import { CreateWithPlayerRequest } from '../api/exquisite-corpse/schemas';
+import { CreateWithPlayerRequest, GameType, MAX_PLAYER_NAME_LENGTH } from '../api/exquisite-corpse/schemas';
 
 type CreateGameFormProps = {
   gameType: GameType;
@@ -80,7 +79,7 @@ export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFo
             placeholder="Enter your name"
             className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={isLoading}
-            maxLength={50}
+            maxLength={MAX_PLAYER_NAME_LENGTH}
           />
         </div>
 

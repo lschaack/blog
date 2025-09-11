@@ -36,7 +36,7 @@ export const gameReducer = <T extends BaseTurn>(
     case "end_ai_turn": {
       const newTurn: T = {
         ...action.payload,
-        author: "ai",
+        author: "AI",
         timestamp: new Date().toISOString(),
       } as T;
 
@@ -134,7 +134,7 @@ export const getLastTurn = <T extends BaseTurn>(state: GameState<T>): T | undefi
 
 // Helper functions to determine turn author types
 export const isAuthorAI = (author: string): boolean => {
-  return author === "ai";
+  return author === "AI";
 };
 
 export const isAuthorUser = (author: string, currentUserId?: string): boolean => {

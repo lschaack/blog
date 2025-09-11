@@ -1,10 +1,12 @@
 import { promises as fs } from 'fs';
 import Redis, { ReplyError } from 'ioredis';
-import type { MultiplayerGameState, GameEvent, Player } from '@/app/types/multiplayer';
+import type { MultiplayerGameState, GameStateUpdate, Player } from '@/app/types/multiplayer';
 import type { CurveTurn } from '@/app/types/exquisiteCorpse';
 import { validatePipelineResult } from '../api/middleware/redis';
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const REDIS_URL = process.env.NODE_ENV === 'development'
+  ? 'redis://localhost:6379'
+  : process.env.REDIS_URL!;
 
 export type SSEClient = {
   controller: ReadableStreamDefaultController;
@@ -42,7 +44,7 @@ class GameEventManager {
           const sessionId = match[1];
 
           try {
-            const event = JSON.parse(message) as GameEvent;
+            const event = JSON.parse(message) as GameStateUpdate;
 
             this.handleEvent(sessionId, event)
           } catch (error) {
@@ -53,13 +55,13 @@ class GameEventManager {
     });
   }
 
-  async publishEvent(sessionId: string, event: GameEvent): Promise<void> {
+  async publishEvent(sessionId: string, event: GameStateUpdate): Promise<void> {
     const channel = GameEventManager.getEventsKey(sessionId);
 
     await this.publisher.publish(channel, JSON.stringify(event));
   }
 
-  async handleEvent(sessionId: string, event: GameEvent) {
+  async handleEvent(sessionId: string, event: GameStateUpdate) {
     const connectionTokens = this.connections.get(sessionId);
 
     if (!connectionTokens?.size) {
@@ -111,18 +113,27 @@ class GameStateManager {
 
   private static ONE_HOUR = 60 * 60;
 
+  // JSON representation of game state
   private static getSessionKey(sessionId: string) {
     return `exquisite_corpse:${sessionId}:state`;
   }
 
+  // list of player names for quick order tracking
+  private static getPlayerOrderKey(sessionId: string) {
+    return `exquisite_corpse:${sessionId}:player_order`;
+  }
+
+  // hash map from player name to player token
   private static getPlayersKey(sessionId: string) {
     return `exquisite_corpse:${sessionId}:players`;
   }
 
+  // hash map from player name to connection token
   private static getConnectionsKey(sessionId: string) {
     return `exquisite_corpse:${sessionId}:connections`;
   }
 
+  // number of retries for the given session
   private static getAiRetriesKey(sessionId: string) {
     return `exquisite_corpse:${sessionId}:ai_retries`;
   }
@@ -144,24 +155,28 @@ class GameStateManager {
       eqConnect,
       eqDisconnect,
       eqAddTurn,
+      eqStartAiTurn,
+      eqFailAiTurn,
     ] = await Promise.all([
       fs.readFile(dirPath + 'join.lua').then(buff => buff.toString()),
       fs.readFile(dirPath + 'leave.lua').then(buff => buff.toString()),
       fs.readFile(dirPath + 'connect.lua').then(buff => buff.toString()),
       fs.readFile(dirPath + 'disconnect.lua').then(buff => buff.toString()),
       fs.readFile(dirPath + 'addTurn.lua').then(buff => buff.toString()),
+      fs.readFile(dirPath + 'startAiTurn.lua').then(buff => buff.toString()),
+      fs.readFile(dirPath + 'failAiTurn.lua').then(buff => buff.toString()),
     ]);
 
     this.redis.defineCommand("eqJoin", {
-      numberOfKeys: 2,
+      numberOfKeys: 4,
       lua: eqJoin,
     });
     this.redis.defineCommand("eqLeave", {
-      numberOfKeys: 2,
+      numberOfKeys: 3,
       lua: eqLeave,
     });
     this.redis.defineCommand("eqConnect", {
-      numberOfKeys: 3,
+      numberOfKeys: 4,
       lua: eqConnect,
     });
     this.redis.defineCommand("eqDisconnect", {
@@ -169,16 +184,26 @@ class GameStateManager {
       lua: eqDisconnect,
     });
     this.redis.defineCommand("eqAddTurn", {
-      numberOfKeys: 2,
+      numberOfKeys: 4,
       lua: eqAddTurn,
+    });
+    this.redis.defineCommand("eqStartAiTurn", {
+      numberOfKeys: 1,
+      lua: eqStartAiTurn,
+    });
+    this.redis.defineCommand("eqFailAiTurn", {
+      numberOfKeys: 1,
+      lua: eqFailAiTurn,
     });
 
     return true;
   }
 
+  // WARNING: Assumes that gameState.players is an array of at most one player representing the AI
   async initializeGame(sessionId: string, gameState: MultiplayerGameState) {
     const sessionKey = GameStateManager.getSessionKey(sessionId);
     const playersKey = GameStateManager.getPlayersKey(sessionId);
+    const playerOrderKey = GameStateManager.getPlayerOrderKey(sessionId);
 
     const pipeline = this.redis
       .pipeline()
@@ -189,7 +214,9 @@ class GameStateManager {
       // create player token for AI
       pipeline
         .call('HSET', playersKey, 'AI', crypto.randomUUID())
-        .expire(playersKey, GameStateManager.ONE_HOUR);
+        .expire(playersKey, GameStateManager.ONE_HOUR)
+        .call('LPUSH', playerOrderKey, 'AI')
+        .expire(playerOrderKey, GameStateManager.ONE_HOUR);
     }
 
     const result = await pipeline.exec();
@@ -227,6 +254,8 @@ class GameStateManager {
   async addTurn(sessionId: string, turn: CurveTurn, playerName: string, playerToken: string) {
     const sessionKey = GameStateManager.getSessionKey(sessionId);
     const playersKey = GameStateManager.getPlayersKey(sessionId);
+    const playerOrderKey = GameStateManager.getPlayerOrderKey(sessionId);
+    const connectionsKey = GameStateManager.getConnectionsKey(sessionId);
 
     await this.scriptsLoaded;
 
@@ -234,6 +263,8 @@ class GameStateManager {
       await this.redis.eqAddTurn(
         sessionKey,
         playersKey,
+        playerOrderKey,
+        connectionsKey,
         JSON.stringify(turn),
         playerName,
         playerToken
@@ -244,6 +275,8 @@ class GameStateManager {
   async addAiTurn(sessionId: string, turn: CurveTurn) {
     const sessionKey = GameStateManager.getSessionKey(sessionId);
     const playersKey = GameStateManager.getPlayersKey(sessionId);
+    const playerOrderKey = GameStateManager.getPlayerOrderKey(sessionId);
+    const connectionsKey = GameStateManager.getConnectionsKey(sessionId);
 
     const aiPlayerToken = await this.redis.hget(playersKey, 'AI');
 
@@ -257,6 +290,8 @@ class GameStateManager {
       await this.redis.eqAddTurn(
         sessionKey,
         playersKey,
+        playerOrderKey,
+        connectionsKey,
         JSON.stringify(turn),
         'AI',
         aiPlayerToken
@@ -267,6 +302,8 @@ class GameStateManager {
   async join(sessionId: string, newPlayer: Player, playerToken: string) {
     const sessionKey = GameStateManager.getSessionKey(sessionId);
     const playersKey = GameStateManager.getPlayersKey(sessionId);
+    const playerOrderKey = GameStateManager.getPlayerOrderKey(sessionId);
+    const connectionsKey = GameStateManager.getConnectionsKey(sessionId);
 
     const playerName = newPlayer.name;
 
@@ -276,6 +313,8 @@ class GameStateManager {
       await this.redis.eqJoin(
         sessionKey,
         playersKey,
+        playerOrderKey,
+        connectionsKey,
         playerName,
         JSON.stringify(newPlayer),
         playerToken,
@@ -286,6 +325,7 @@ class GameStateManager {
   async leave(sessionId: string, playerName: string, playerToken: string) {
     const sessionKey = GameStateManager.getSessionKey(sessionId);
     const playersKey = GameStateManager.getPlayersKey(sessionId);
+    const playerOrderKey = GameStateManager.getPlayerOrderKey(sessionId);
 
     await this.scriptsLoaded;
 
@@ -293,6 +333,7 @@ class GameStateManager {
       await this.redis.eqLeave(
         sessionKey,
         playersKey,
+        playerOrderKey,
         playerName,
         playerToken,
       )
@@ -302,6 +343,7 @@ class GameStateManager {
   async connectPlayer(sessionId: string, playerName: string, playerToken: string, connectionToken: string) {
     const sessionKey = GameStateManager.getSessionKey(sessionId);
     const playersKey = GameStateManager.getPlayersKey(sessionId);
+    const playerOrderKey = GameStateManager.getPlayerOrderKey(sessionId);
     const connectionsKey = GameStateManager.getConnectionsKey(sessionId);
 
     await this.scriptsLoaded;
@@ -310,6 +352,7 @@ class GameStateManager {
       await this.redis.eqConnect(
         sessionKey,
         playersKey,
+        playerOrderKey,
         connectionsKey,
         connectionToken,
         playerName,
@@ -332,6 +375,30 @@ class GameStateManager {
         playerName,
       )
     );
+  }
+
+  async startAiTurn(sessionId: string) {
+    const sessionKey = GameStateManager.getSessionKey(sessionId);
+
+    await this.scriptsLoaded;
+
+    return this.parseGameState(
+      await this.redis.eqStartAiTurn(
+        sessionKey,
+      )
+    )
+  }
+
+  async failAiTurn(sessionId: string) {
+    const sessionKey = GameStateManager.getSessionKey(sessionId);
+
+    await this.scriptsLoaded;
+
+    return this.parseGameState(
+      await this.redis.eqFailAiTurn(
+        sessionKey,
+      )
+    )
   }
 
   async deleteGameState(sessionId: string) {

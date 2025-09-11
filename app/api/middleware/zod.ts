@@ -7,14 +7,9 @@ export const withZodRequestValidation = <Schema extends ZodType>(
 ): Middleware<{ validatedBody: Promise<z.infer<Schema>> }> => {
   return handler => async (request, ctx) => {
     try {
-      // kind of confusing control flow here, but here's what I expect to happen:
-      // - validatedBody gets return as part of ctx
-      // - when it's awaited by the handler which this wraps, it could throw an error
-      // - b/c this function wraps that handler, it will bubble up to the following catch block
-      // - that way, no .catch is needed on the validatedBody promise and a failure still
-      //   results in the relevant NextResponse being sent
-      const validatedBody = request.json().then(schema.parse);
+      const validatedBody = await request.json().then(schema.parse);
 
+      // no need to await handler since I'm only validating the schema passed to this middleware
       return handler(request, {
         ...ctx,
         validatedBody,
@@ -23,16 +18,21 @@ export const withZodRequestValidation = <Schema extends ZodType>(
       if (error instanceof z.ZodError) {
         console.group(`Failed to parse zod schema with ${error.errors.length} errors`);
 
+        let message = '';
         for (let i = 0; i < error.errors.length; i++) {
+          const err = error.errors[i];
+          if (i > 0) message += '\n';
+          message += err.message;
+
           console.group(`Zod error ${i}`);
-          console.error(error.errors[i]);
+          console.error(err);
           console.groupEnd();
         }
 
         console.groupEnd();
 
         return NextResponse.json(
-          { errors: error.errors.map(({ message }) => message) },
+          { error: message },
           { status: 400 }
         );
       } else {

@@ -26,17 +26,11 @@ export function* playerOrder(gameState: MultiplayerGameState) {
 }
 
 export function getCurrentPlayer(gameState: MultiplayerGameState) {
-  const currentPlayer = playerOrder(gameState).next().value;
+  const currentPlayer = playerOrder(gameState);
+
   if (!currentPlayer) {
     console.error('Failed to find current player for game state:', gameState);
   }
 
-  return currentPlayer;
-}
-
-/**
- * Check if a specific player is currently the active player
- */
-export function isCurrentPlayer(gameState: MultiplayerGameState, playerName: string): boolean {
-  return getCurrentPlayer(gameState)?.name === playerName;
+  return currentPlayer ?? null;
 }

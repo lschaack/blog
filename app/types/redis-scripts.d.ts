@@ -6,6 +6,8 @@ declare module 'ioredis' {
     eqJoin(
       sessionKey: string,
       playersKey: string,
+      playerOrderKey: string,
+      connectionsKey: string,
       playerName: string,
       playerJson: string,
       playerToken: string,
@@ -14,6 +16,7 @@ declare module 'ioredis' {
     eqLeave(
       sessionKey: string,
       playersKey: string,
+      playerOrderKey: string,
       playerName: string,
       playerToken: string,
     ): Promise<string>;
@@ -21,6 +24,7 @@ declare module 'ioredis' {
     eqConnect(
       sessionKey: string,
       playersKey: string,
+      playerOrderKey: string,
       connectionsKey: string,
       connectionToken: string,
       playerName: string,
@@ -37,9 +41,19 @@ declare module 'ioredis' {
     eqAddTurn(
       sessionKey: string,
       playersKey: string,
+      playerOrderKey: string,
+      connectionsKey: string,
       turnData: string,
       playerName: string,
       playerToken: string,
+    ): Promise<string>;
+
+    eqStartAiTurn(
+      sessionKey: string,
+    ): Promise<string>;
+
+    eqFailAiTurn(
+      sessionKey: string,
     ): Promise<string>;
   }
 }

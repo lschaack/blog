@@ -17,7 +17,7 @@ export const GET = compose(
     const sessionId = params.sessionId;
     const gameService = getGameService();
 
-    await gameService.retryAITurn(sessionId);
+    await gameService.startAITurn(sessionId);
 
     return NextResponse.json({ success: true });
   }

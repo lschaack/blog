@@ -27,14 +27,19 @@ local seconds = tonumber(time[1])
 local microseconds = tonumber(time[2])
 local milliseconds = math.floor((seconds * 1000000 + microseconds) / 1000)
 
+redis.call("JSON.SET", sessionKey, playerPath .. ".connected", cjson.encode(false))
+
 redis.call(
-  "JSON.MSET",
+  "JSON.ARRAPPEND",
   sessionKey,
-  playerPath .. ".connected",
-  cjson.encode(false),
-  sessionKey,
-  ".timestamp",
-  milliseconds
+  ".eventLog",
+  cjson.encode({
+    event = "player_disconnected",
+    timestamp = milliseconds,
+    data = {
+      playerName = playerName,
+    },
+  })
 )
 
 return redis.call("JSON.GET", sessionKey, ".")

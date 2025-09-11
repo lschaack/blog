@@ -1,8 +1,8 @@
-import { FC } from 'react';
+import { FC, ReactNode } from 'react';
 import clsx from 'clsx';
 
 type BaseButtonProps = {
-  label: string;
+  label: ReactNode;
   onClick: () => void;
   className?: string;
   disabled?: boolean;
@@ -33,8 +33,8 @@ export const Button: FC<ButtonProps> = ({ label, onClick, className, disabled = 
       onClick={onClick}
       className={clsx(
         className,
-        "text-base/loose font-geist-mono font-semibold text-text-extralight",
-        "w-full p-2 rounded-[10px] cursor-pointer pop-active",
+        "text-base/loose font-geist-mono font-semibold text-nowrap text-text-extralight",
+        "w-full py-2 px-3 rounded-[10px] cursor-pointer pop-active",
         danger
           ? "bg-red-600"
           : friendly
