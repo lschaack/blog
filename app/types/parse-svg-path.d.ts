@@ -47,7 +47,17 @@ declare module 'parse-svg-path' {
     | ClosePathCommand;
 
   // Union type for all path commands which result in a line being drawn
-  export type DrawCommand = Exclude<PathCommand, | MoveToCommand | MoveToRelativeCommand | ClosePathCommand>;
+  export type DrawCommand = Exclude<PathCommand,
+    | MoveToCommand | MoveToRelativeCommand
+    | ClosePathCommand
+  >;
+
+  // All path commands where curvature != 0
+  export type CurveCommand = Exclude<DrawCommand,
+    | LineToCommand | LineToRelativeCommand
+    | HorizontalLineToCommand | HorizontalLineToRelativeCommand
+    | VerticalLineToCommand | VerticalLineToRelativeCommand
+  >;
 
   // A parsed SVG path is an array of path commands
   export type ParsedPath = PathCommand[];

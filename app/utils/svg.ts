@@ -1,4 +1,4 @@
-import { ArcCommand, ArcRelativeCommand, ClosePathCommand, CubicBezierCommand, CubicBezierRelativeCommand, DrawCommand, HorizontalLineToCommand, HorizontalLineToRelativeCommand, LineToCommand, LineToRelativeCommand, MoveToCommand, MoveToRelativeCommand, ParsedPath, PathCommand, QuadraticBezierCommand, QuadraticBezierRelativeCommand, SmoothCubicBezierCommand, SmoothCubicBezierRelativeCommand, SmoothQuadraticBezierCommand, SmoothQuadraticBezierRelativeCommand, VerticalLineToCommand, VerticalLineToRelativeCommand } from "parse-svg-path";
+import { ArcCommand, ArcRelativeCommand, ClosePathCommand, CubicBezierCommand, CubicBezierRelativeCommand, CurveCommand, DrawCommand, HorizontalLineToCommand, HorizontalLineToRelativeCommand, LineToCommand, LineToRelativeCommand, MoveToCommand, MoveToRelativeCommand, ParsedPath, PathCommand, QuadraticBezierCommand, QuadraticBezierRelativeCommand, SmoothCubicBezierCommand, SmoothCubicBezierRelativeCommand, SmoothQuadraticBezierCommand, SmoothQuadraticBezierRelativeCommand, VerticalLineToCommand, VerticalLineToRelativeCommand } from "parse-svg-path";
 
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 
@@ -39,7 +39,7 @@ export const pathToD = (path: PathCommand[]) => {
 
 // utilities for breaking up paths into individual curves and lines, making it possible to
 // produce a draw animation which adjusts its speed based on the curvature of the DrawCommand
-export type PathSegment = [MoveToCommand, DrawCommand];
+export type PathSegment<Cmd extends DrawCommand = DrawCommand> = [MoveToCommand, Cmd];
 export function breakUpPath(path: PathCommand[]): [MoveToCommand, DrawCommand][] {
   const result: [MoveToCommand, DrawCommand][] = [];
   let currentX = 0;
@@ -118,31 +118,29 @@ function updateCurrentPosition(
   return [currentX, currentY];
 }
 
-export function getCurvature(segment: PathSegment, t: number): number {
-  // Clamp t to [0, 1]
-  t = Math.max(0, Math.min(1, t));
+type GetCurvature = (segment: PathSegment, t: number) => number;
+const noCurvature = () => 0;
+const arcCurvature: GetCurvature = segment => {
+  const [, drawCmd] = segment as PathSegment<ArcCommand | ArcRelativeCommand>;
 
-  const [moveTo, drawCmd] = segment;
-  const startX = moveTo[1];
-  const startY = moveTo[2];
+  // A rx ry x-axis-rotation large-arc-flag sweep-flag x y
+  const [, rx, ry] = drawCmd;
+  // For elliptical arc, curvature varies. Using average radius approximation
+  const avgRadius = (rx + ry) / 2;
 
-  // Line commands have zero curvature
-  if (isLineToCommand(drawCmd) || isLineToRelativeCommand(drawCmd) ||
-    isHorizontalLineToCommand(drawCmd) || isHorizontalLineToRelativeCommand(drawCmd) ||
-    isVerticalLineToCommand(drawCmd) || isVerticalLineToRelativeCommand(drawCmd)) {
-    return 0;
-  }
-
-  // Cubic Bezier curves
-  if (isCubicBezierCommand(drawCmd)) {
+  return avgRadius > 0 ? 1 / avgRadius : 0;
+}
+const CMD_TO_GET_CURVATURE: Record<CurveCommand[0], GetCurvature> = {
+  'C': ([[, startX, startY], drawCmd], t) => {
     // C x1 y1 x2 y2 x y - absolute cubic bezier
-    const [, x1, y1, x2, y2, x, y] = drawCmd;
-    return calculateCubicBezierCurvature(startX, startY, x1, y1, x2, y2, x, y, t);
-  }
+    const [, x1, y1, x2, y2, x, y] = drawCmd as CubicBezierCommand;
 
-  if (isCubicBezierRelativeCommand(drawCmd)) {
+    return calculateCubicBezierCurvature(startX, startY, x1, y1, x2, y2, x, y, t);
+  },
+  'c': ([[, startX, startY], drawCmd], t) => {
     // c dx1 dy1 dx2 dy2 dx dy - relative cubic bezier
-    const [, dx1, dy1, dx2, dy2, dx, dy] = drawCmd;
+    const [, dx1, dy1, dx2, dy2, dx, dy] = drawCmd as CubicBezierRelativeCommand;
+
     return calculateCubicBezierCurvature(
       startX, startY,
       startX + dx1, startY + dy1,
@@ -150,66 +148,66 @@ export function getCurvature(segment: PathSegment, t: number): number {
       startX + dx, startY + dy,
       t
     );
-  }
-
-  // Smooth cubic bezier
-  if (isSmoothCubicBezierCommand(drawCmd)) {
+  },
+  'S': ([[, startX, startY], drawCmd], t) => {
     // S x2 y2 x y - smooth cubic bezier (control point is reflection of previous)
     // For simplicity, treating as quadratic-like curve
-    const [, x2, y2, x, y] = drawCmd;
-    return calculateQuadraticBezierCurvature(startX, startY, x2, y2, x, y, t);
-  }
+    const [, x2, y2, x, y] = drawCmd as SmoothCubicBezierCommand;
 
-  if (isSmoothCubicBezierRelativeCommand(drawCmd)) {
-    const [, dx2, dy2, dx, dy] = drawCmd;
+    return calculateQuadraticBezierCurvature(startX, startY, x2, y2, x, y, t);
+  },
+  's': ([[, startX, startY], drawCmd], t) => {
+    const [, dx2, dy2, dx, dy] = drawCmd as SmoothCubicBezierRelativeCommand;
+
     return calculateQuadraticBezierCurvature(
       startX, startY,
       startX + dx2, startY + dy2,
       startX + dx, startY + dy,
       t
     );
-  }
-
-  // Quadratic Bezier curves
-  if (isQuadraticBezierCommand(drawCmd)) {
+  },
+  'Q': ([[, startX, startY], drawCmd], t) => {
     // Q x1 y1 x y - absolute quadratic bezier
-    const [, x1, y1, x, y] = drawCmd;
-    return calculateQuadraticBezierCurvature(startX, startY, x1, y1, x, y, t);
-  }
+    const [, x1, y1, x, y] = drawCmd as QuadraticBezierCommand;
 
-  if (isQuadraticBezierRelativeCommand(drawCmd)) {
+    return calculateQuadraticBezierCurvature(startX, startY, x1, y1, x, y, t);
+  },
+  'q': ([[, startX, startY], drawCmd], t) => {
     // q dx1 dy1 dx dy - relative quadratic bezier
-    const [, dx1, dy1, dx, dy] = drawCmd;
+    const [, dx1, dy1, dx, dy] = drawCmd as QuadraticBezierRelativeCommand;
+
     return calculateQuadraticBezierCurvature(
       startX, startY,
       startX + dx1, startY + dy1,
       startX + dx, startY + dy,
       t
     );
+  },
+  // T x y - smooth quadratic bezier
+  // Simplified as linear for smooth curves without previous control point info
+  'T': noCurvature,
+  't': noCurvature,
+  'A': arcCurvature,
+  'a': arcCurvature,
+}
+
+export function getCurvature(segment: PathSegment<CurveCommand>, t: number): number {
+  if (t < 0 || t > 1) {
+    console.error(`Cannot calculate curvature at ${t} outside of [0, 1]. Using clamped value.`)
   }
 
-  // Smooth quadratic bezier
-  if (isSmoothQuadraticBezierCommand(drawCmd)) {
-    // T x y - smooth quadratic bezier
-    const [, x, y] = drawCmd;
-    // Simplified as linear for smooth curves without previous control point info
+  // Clamp t to [0, 1]
+  t = Math.max(0, Math.min(1, t));
+
+  const cmd = segment[1][0];
+
+  if (!CMD_TO_GET_CURVATURE[cmd]) {
+    console.error(`Cannot calculate curvature for command type "${cmd}"`);
+
     return 0;
   }
 
-  if (isSmoothQuadraticBezierRelativeCommand(drawCmd)) {
-    return 0;
-  }
-
-  // Arc commands
-  if (isArcCommand(drawCmd) || isArcRelativeCommand(drawCmd)) {
-    // A rx ry x-axis-rotation large-arc-flag sweep-flag x y
-    const [, rx, ry] = drawCmd;
-    // For elliptical arc, curvature varies. Using average radius approximation
-    const avgRadius = (rx + ry) / 2;
-    return avgRadius > 0 ? 1 / avgRadius : 0;
-  }
-
-  return 0;
+  return CMD_TO_GET_CURVATURE[cmd](segment, t);
 }
 
 function calculateCubicBezierCurvature(
