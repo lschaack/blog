@@ -1,4 +1,5 @@
 import { ArcCommand, ArcRelativeCommand, ClosePathCommand, CubicBezierCommand, CubicBezierRelativeCommand, CurveCommand, DrawCommand, HorizontalLineToCommand, HorizontalLineToRelativeCommand, LineToCommand, LineToRelativeCommand, MoveToCommand, MoveToRelativeCommand, ParsedPath, PathCommand, QuadraticBezierCommand, QuadraticBezierRelativeCommand, SmoothCubicBezierCommand, SmoothCubicBezierRelativeCommand, SmoothQuadraticBezierCommand, SmoothQuadraticBezierRelativeCommand, VerticalLineToCommand, VerticalLineToRelativeCommand } from "parse-svg-path";
+import fitCurve from "fit-curve";
 
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 
@@ -259,6 +260,91 @@ function calculateQuadraticBezierCurvature(
   const denominator = Math.pow(dx * dx + dy * dy, 1.5);
 
   return denominator > 0 ? numerator / denominator : 0;
+}
+
+function isCurveCommand(command: DrawCommand): command is CurveCommand {
+  const cmd = command[0];
+  return cmd === 'C' || cmd === 'c' || cmd === 'S' || cmd === 's' ||
+    cmd === 'Q' || cmd === 'q' || cmd === 'T' || cmd === 't' ||
+    cmd === 'A' || cmd === 'a';
+}
+
+export function getAnimationTimingFunction(segment: PathSegment): string {
+  const [, drawCmd] = segment;
+
+  if (!isCurveCommand(drawCmd)) {
+    return 'linear';
+  }
+
+  const curveSegment = segment as PathSegment<CurveCommand>;
+  const samples = 20; // Number of samples along the curve
+  const points: [number, number][] = [];
+
+  // Sample curvature at regular intervals
+  const curvatures: number[] = [];
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const curvature = getCurvature(curveSegment, t);
+    curvatures.push(curvature);
+  }
+
+  // Convert curvature to relative time cost (higher curvature = more time)
+  // Add a base cost to prevent division by zero and ensure smooth animation
+  const baseCost = 0.1;
+  const curvatureWeight = 1.0;
+  const timeCosts = curvatures.map(k => baseCost + curvatureWeight * k);
+
+  // Calculate cumulative time distribution
+  let totalCost = 0;
+  const cumulativeCosts: number[] = [];
+
+  for (let i = 0; i <= samples; i++) {
+    cumulativeCosts.push(totalCost);
+    if (i < samples) {
+      totalCost += timeCosts[i];
+    }
+  }
+
+  // Normalize cumulative costs to [0, 1] and create points for curve fitting
+  for (let i = 0; i <= samples; i++) {
+    const progress = i / samples; // Input progress (0-1)
+    const time = totalCost > 0 ? cumulativeCosts[i] / totalCost : progress; // Output time (0-1)
+    points.push([progress, time]);
+  }
+
+  // If the timing is effectively linear, return linear
+  const firstQuarter = points[Math.floor(samples * 0.25)][1];
+  const half = points[Math.floor(samples * 0.5)][1];
+  const thirdQuarter = points[Math.floor(samples * 0.75)][1];
+
+  if (Math.abs(firstQuarter - 0.25) < 0.05 &&
+    Math.abs(half - 0.5) < 0.05 &&
+    Math.abs(thirdQuarter - 0.75) < 0.05) {
+    return 'linear';
+  }
+
+  try {
+    // Fit cubic bezier curve to the timing points
+    const curves = fitCurve(points, 0.1);
+
+    if (curves.length > 0) {
+      // Use the first curve segment (we're fitting a single cubic bezier)
+      const curve = curves[0];
+      const [, cp1, cp2] = curve; // [start, control1, control2, end]
+
+      // Extract control points (start should be [0,0], end should be [1,1])
+      const x1 = Math.max(0, Math.min(1, cp1[0]));
+      const y1 = Math.max(0, Math.min(1, cp1[1]));
+      const x2 = Math.max(0, Math.min(1, cp2[0]));
+      const y2 = Math.max(0, Math.min(1, cp2[1]));
+
+      return `cubic-bezier(${x1.toFixed(3)},${y1.toFixed(3)},${x2.toFixed(3)},${y2.toFixed(3)})`;
+    }
+  } catch (error) {
+    console.warn('Failed to fit cubic bezier curve, falling back to linear:', error);
+  }
+
+  return 'linear';
 }
 
 export function renderPathCommandsToSvg(paths: ParsedPath[], dimensions: CanvasDimensions): string {
