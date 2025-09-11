@@ -24,6 +24,8 @@ export const isArcCommand = (command: PathCommand): command is ArcCommand => com
 export const isArcRelativeCommand = (command: PathCommand): command is ArcRelativeCommand => command[0] === 'a';
 export const isClosePathCommand = (command: PathCommand): command is ClosePathCommand => command[0] === 'Z' || command[0] === 'z';
 
+export const isCurveCommand = (command: PathCommand): command is CurveCommand => CURVE_COMMANDS.has(command[0] as CurveCommand[0]);
+
 export const pathToD = (path: PathCommand[]) => {
   let d = '';
 
@@ -192,17 +194,20 @@ const CMD_TO_GET_CURVATURE: Record<CurveCommand[0], GetCurvature> = {
   'a': arcCurvature,
 }
 
+const CURVE_COMMANDS = new Set<CurveCommand[0]>(
+  Object.keys(CMD_TO_GET_CURVATURE) as CurveCommand[0][]
+);
+
 export function getCurvature(segment: PathSegment<CurveCommand>, t: number): number {
   if (t < 0 || t > 1) {
     console.error(`Cannot calculate curvature at ${t} outside of [0, 1]. Using clamped value.`)
   }
 
-  // Clamp t to [0, 1]
   t = Math.max(0, Math.min(1, t));
 
   const cmd = segment[1][0];
 
-  if (!CMD_TO_GET_CURVATURE[cmd]) {
+  if (!isCurveCommand(segment[1])) {
     console.error(`Cannot calculate curvature for command type "${cmd}"`);
 
     return 0;
@@ -260,13 +265,6 @@ function calculateQuadraticBezierCurvature(
   const denominator = Math.pow(dx * dx + dy * dy, 1.5);
 
   return denominator > 0 ? numerator / denominator : 0;
-}
-
-function isCurveCommand(command: DrawCommand): command is CurveCommand {
-  const cmd = command[0];
-  return cmd === 'C' || cmd === 'c' || cmd === 'S' || cmd === 's' ||
-    cmd === 'Q' || cmd === 'q' || cmd === 'T' || cmd === 't' ||
-    cmd === 'A' || cmd === 'a';
 }
 
 export function getAnimationTimingFunction(segment: PathSegment): string {
