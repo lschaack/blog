@@ -175,7 +175,7 @@ export const Actions = ({ gameState, onLeaveGame, onShareError }: ActionsProps) 
 const getStatus = (state: MultiplayerGameState, playerName: string) => {
   if (state.type === 'singleplayer') {
     if (state.currentPlayer === 'AI') {
-      for (let i = state.eventLog.length - 1; i >= 0; i++) {
+      for (let i = state.eventLog.length - 1; i >= 0; i--) {
         const event = state.eventLog[i];
 
         if (event.type === 'ai_turn_failed') {

@@ -161,6 +161,7 @@ export const GET = compose(
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
+        'Accept-Encoding': 'gzip',
       },
     })
   }

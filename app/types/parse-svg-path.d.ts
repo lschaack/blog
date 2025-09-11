@@ -46,6 +46,9 @@ declare module 'parse-svg-path' {
     | ArcCommand | ArcRelativeCommand
     | ClosePathCommand;
 
+  // Union type for all path commands which result in a line being drawn
+  export type DrawCommand = Exclude<PathCommand, | MoveToCommand | MoveToRelativeCommand | ClosePathCommand>;
+
   // A parsed SVG path is an array of path commands
   export type ParsedPath = PathCommand[];
 

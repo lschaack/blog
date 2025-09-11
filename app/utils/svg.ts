@@ -1,4 +1,4 @@
-import { ArcCommand, ArcRelativeCommand, ClosePathCommand, CubicBezierCommand, CubicBezierRelativeCommand, HorizontalLineToCommand, HorizontalLineToRelativeCommand, LineToCommand, LineToRelativeCommand, MoveToCommand, MoveToRelativeCommand, ParsedPath, PathCommand, QuadraticBezierCommand, QuadraticBezierRelativeCommand, SmoothCubicBezierCommand, SmoothCubicBezierRelativeCommand, SmoothQuadraticBezierCommand, SmoothQuadraticBezierRelativeCommand, VerticalLineToCommand, VerticalLineToRelativeCommand } from "parse-svg-path";
+import { ArcCommand, ArcRelativeCommand, ClosePathCommand, CubicBezierCommand, CubicBezierRelativeCommand, DrawCommand, HorizontalLineToCommand, HorizontalLineToRelativeCommand, LineToCommand, LineToRelativeCommand, MoveToCommand, MoveToRelativeCommand, ParsedPath, PathCommand, QuadraticBezierCommand, QuadraticBezierRelativeCommand, SmoothCubicBezierCommand, SmoothCubicBezierRelativeCommand, SmoothQuadraticBezierCommand, SmoothQuadraticBezierRelativeCommand, VerticalLineToCommand, VerticalLineToRelativeCommand } from "parse-svg-path";
 
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 
@@ -23,12 +23,107 @@ export const isArcCommand = (command: PathCommand): command is ArcCommand => com
 export const isArcRelativeCommand = (command: PathCommand): command is ArcRelativeCommand => command[0] === 'a';
 export const isClosePathCommand = (command: PathCommand): command is ClosePathCommand => command[0] === 'Z' || command[0] === 'z';
 
+export const pathToD = (path: PathCommand[]) => {
+  let d = '';
+
+  for (let i = 0; i < path.length; i++) {
+    const cmd = path[i];
+
+    d += cmd.join(' ');
+
+    if (i < path.length - 1) d += ' ';
+  }
+
+  return d;
+}
+
+// utilities for breaking up paths into individual curves and lines, making it possible to
+// produce a draw animation which adjusts its speed based on the curvature of the DrawCommand
+export type PathSegment = [MoveToCommand, DrawCommand];
+export function breakUpPath(path: PathCommand[]): [MoveToCommand, DrawCommand][] {
+  const result: [MoveToCommand, DrawCommand][] = [];
+  let currentX = 0;
+  let currentY = 0;
+  let subPathStartX = 0;
+  let subPathStartY = 0;
+
+  for (const command of path) {
+    if (isMoveToCommand(command)) {
+      currentX = command[1];
+      currentY = command[2];
+      subPathStartX = currentX;
+      subPathStartY = currentY;
+    } else if (isMoveToRelativeCommand(command)) {
+      currentX += command[1];
+      currentY += command[2];
+      subPathStartX = currentX;
+      subPathStartY = currentY;
+    } else if (isClosePathCommand(command)) {
+      const moveTo: MoveToCommand = ['M', currentX, currentY];
+      const lineTo: LineToCommand = ['L', subPathStartX, subPathStartY];
+      result.push([moveTo, lineTo]);
+
+      currentX = subPathStartX;
+      currentY = subPathStartY;
+    } else {
+      const moveTo: MoveToCommand = ['M', currentX, currentY];
+      result.push([moveTo, command as DrawCommand]);
+
+      [currentX, currentY] = updateCurrentPosition(command, currentX, currentY);
+    }
+  }
+
+  return result;
+}
+
+function updateCurrentPosition(
+  command: PathCommand,
+  currentX: number,
+  currentY: number,
+): [number, number] {
+  if (isLineToCommand(command)) {
+    return [command[1], command[2]];
+  } else if (isLineToRelativeCommand(command)) {
+    return [currentX + command[1], currentY + command[2]];
+  } else if (isHorizontalLineToCommand(command)) {
+    return [command[1], currentY];
+  } else if (isHorizontalLineToRelativeCommand(command)) {
+    return [currentX + command[1], currentY];
+  } else if (isVerticalLineToCommand(command)) {
+    return [currentX, command[1]];
+  } else if (isVerticalLineToRelativeCommand(command)) {
+    return [currentX, currentY + command[1]];
+  } else if (isCubicBezierCommand(command)) {
+    return [command[5], command[6]];
+  } else if (isCubicBezierRelativeCommand(command)) {
+    return [currentX + command[5], currentY + command[6]];
+  } else if (isSmoothCubicBezierCommand(command)) {
+    return [command[3], command[4]];
+  } else if (isSmoothCubicBezierRelativeCommand(command)) {
+    return [currentX + command[3], currentY + command[4]];
+  } else if (isQuadraticBezierCommand(command)) {
+    return [command[3], command[4]];
+  } else if (isQuadraticBezierRelativeCommand(command)) {
+    return [currentX + command[3], currentY + command[4]];
+  } else if (isSmoothQuadraticBezierCommand(command)) {
+    return [command[1], command[2]];
+  } else if (isSmoothQuadraticBezierRelativeCommand(command)) {
+    return [currentX + command[1], currentY + command[2]];
+  } else if (isArcCommand(command)) {
+    return [command[6], command[7]];
+  } else if (isArcRelativeCommand(command)) {
+    return [currentX + command[6], currentY + command[7]];
+  }
+
+  return [currentX, currentY];
+}
+
 export function renderPathCommandsToSvg(paths: ParsedPath[], dimensions: CanvasDimensions): string {
   return `
 <svg xmlns="http://www.w3.org/2000/svg" width="${dimensions.width}" height="${dimensions.height}" viewBox="0 0 ${dimensions.width} ${dimensions.height}">
   <g stroke="#000" stroke-width="2" fill="none">
 ${paths
-      .map((path, index) => `    <path data-turn-number="${index + 1}" d="${path.map(([type, ...params]) => `${type} ${params.join(' ')}`).join(' ')}" />`)
+      .map((path, index) => `    <path data-turn-number="${index + 1}" d="${pathToD(path)}" />`)
       .join('\n')}
   </g>
 </svg>

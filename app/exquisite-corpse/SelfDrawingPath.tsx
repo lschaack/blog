@@ -1,12 +1,13 @@
 import { FC, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import clsx from "clsx";
-import { ParsedPath } from 'parse-svg-path';
+import { ParsedPath, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
+import { breakUpPath, pathToD } from "../utils/svg";
 
 // Custom hook for path length
 function usePathLength() {
   const pathRef = useRef<SVGPathElement>(null);
-  const [pathLength, setPathLength] = useState(0);
+  const [pathLength, setPathLength] = useState<number | null>(null);
 
   useEffect(() => {
     if (pathRef.current) {
@@ -18,24 +19,29 @@ function usePathLength() {
   return [pathRef, pathLength] as const;
 }
 
+// NOTE: Expects a single move command - if path contains multiple move commands,
+// all paths will be drawn simultaneously
 type SelfDrawingSinglePathProps = Omit<SelfDrawingPathProps, 'path'> & {
-  d: string;
+  path: PathCommand[];
   paused: boolean;
-  skip?: boolean;
   handleAnimationEnd: () => void;
+  timingFunction?: string;
 };
 const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
-  d,
+  path,
   paused,
-  skip = false,
   handleAnimationEnd,
   className,
   drawSpeed = 400,
+  timingFunction = 'ease',
 }) => {
-  const [pathRef, pathLength] = usePathLength();
+  const [pathRef, rawPathLength] = usePathLength();
+  const pathLength = rawPathLength ?? 0;
 
-  const doAnimate = pathLength && !paused;
-  const duration = skip ? 0 : pathLength / drawSpeed;
+  const doAnimate = rawPathLength !== null && !paused;
+  const duration = pathLength / drawSpeed;
+
+  const d = useMemo(() => pathToD(path), [path]);
 
   return (
     <path
@@ -50,8 +56,8 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
       style={{
         strokeDasharray: pathLength,
         strokeDashoffset: pathLength,
-        animation: doAnimate || skip
-          ? `draw ${duration}s ease forwards`
+        animation: doAnimate
+          ? `draw ${duration}s ${timingFunction} forwards`
           : 'unset',
       }}
     />
@@ -63,13 +69,11 @@ type PathAnimationEvent =
   | 'reset';
 type SelfDrawingPathProps = {
   path: ParsedPath;
-  skip?: boolean;
   className?: string;
   drawSpeed: number;
 }
 const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
   path,
-  skip = false,
   className,
   drawSpeed,
 }) => {
@@ -81,32 +85,19 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
     }
   }, 0);
 
-  const paths = useMemo(() => {
+  const pathSegments = useMemo(() => {
     dispatch('reset');
 
-    // split path into multiple lines identified by move commands
-    return path.reduce(
-      (paths, cmd) => {
-        if (cmd[0] === 'M' || cmd[0] === 'm') {
-          return [...paths, cmd.join(' ')]
-        } else {
-          return [
-            ...paths.slice(0, paths.length - 1),
-            `${paths.at(-1)!}\n${cmd.join(' ')}`
-          ];
-        }
-      },
-      [] as string[]
-    );
+    // split path into segments with estimatable curvature
+    return breakUpPath(path);
   }, [path]);
 
   return (
-    paths.map((path, index) => (
+    pathSegments.map((path, index) => (
       <SelfDrawingSinglePath
         key={`single-path-${index}`}
-        d={path}
+        path={path}
         paused={index > currentAnimationIndex}
-        skip={skip}
         handleAnimationEnd={() => dispatch('increment')}
         className={className}
         drawSpeed={drawSpeed}
@@ -136,13 +127,20 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
       className={className}
     >
       {paths.map((path, index) => (
-        <SelfDrawingPath
-          key={`path-${index}`}
-          className="stroke-2 stroke-black"
-          path={path}
-          skip={animate === 'all' ? false : index < paths.length - 1}
-          drawSpeed={drawSpeed}
-        />
+        animate === 'all' || index === paths.length - 1 ? (
+          <SelfDrawingPath
+            key={`path-${index}`}
+            className="stroke-2 stroke-black"
+            path={path}
+            drawSpeed={drawSpeed}
+          />
+        ) : (
+          <path
+            key={`path-${index}`}
+            className="stroke-2 stroke-black"
+            d={pathToD(path)}
+          />
+        )
       ))}
     </svg>
   )
