@@ -37,6 +37,10 @@ export const easeOutPowInverse = curry(
   (elbow: number, factor: number) => 1 - Math.pow(1 - factor, 1 / elbow)
 )
 
+export const easeOutRational = curry(
+  (max: number, steepness: number, t: number) => max * t / (t + steepness)
+)
+
 export const springInPlace = curry(
   (bounces: number, time: number) => (1 - time) * Math.sin(bounces * Math.PI * time)
 );

@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { ParsedPath, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 import { breakUpPath, getAnimationTimingFunction, getEndPosition, pathToD } from "../utils/svg";
+import { easeOutRational } from "../utils/easingFunctions";
 
 // Custom hook for path length
 function usePathLength() {
@@ -33,13 +34,15 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
   paused,
   handleAnimationEnd,
   className,
-  drawSpeed = 400,
+  drawSpeed: rawDrawSpeed,
   timingFunction = 'ease',
   delay = 0,
 }) => {
   const [pathRef, rawPathLength] = usePathLength();
   const pathLength = rawPathLength ?? 0;
 
+  const minDrawSpeed = rawDrawSpeed / 4;
+  const drawSpeed = easeOutRational(rawDrawSpeed - minDrawSpeed, 50, pathLength)
   const doAnimate = rawPathLength !== null && !paused;
   const duration = pathLength / drawSpeed;
 
@@ -106,7 +109,7 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
         const [, currStartX, currStartY] = pathSegments[i].segment[0];
         const distance = Math.sqrt((currStartX - prevEndX) ** 2 + (currStartY - prevEndY) ** 2);
 
-        delays.push(distance / (drawSpeed * 2));
+        delays.push(distance / (drawSpeed));
       } else {
         delays.push(0);
       }
@@ -148,7 +151,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   paths,
   animate = 'final',
   className,
-  drawSpeed = 500,
+  drawSpeed = 800,
 }) => {
   return (
     <svg
