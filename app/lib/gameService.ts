@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto';
+import { neon } from '@neondatabase/serverless';
 import { getGameEventManager, getRedisClient, SSEClient } from './redis';
 import type {
   Player,
@@ -13,6 +14,7 @@ import { GameType } from '../api/exquisite-corpse/schemas';
 export class GameService {
   private redis = getRedisClient();
   private eventManager = getGameEventManager();
+  private sql = neon(`${process.env.DATABASE_URL}`);
   private static MAX_AI_RETRIES = 3;
 
   async createGame(type: GameType): Promise<{ sessionId: string }> {
@@ -160,6 +162,17 @@ export class GameService {
     const event: GameStateUpdate = { status: 'game_update', gameState };
 
     await this.eventManager.publishEvent(sessionId, event);
+
+    if (gameState) {
+      await this.sql`
+        INSERT INTO games (uuid, game_data)
+        VALUES (${gameState.gameId}, ${gameState})
+        ON CONFLICT (uuid)
+        DO UPDATE SET
+          game_data = EXCLUDED.game_data
+        RETURNING *
+      `;
+    }
   }
 }
 
