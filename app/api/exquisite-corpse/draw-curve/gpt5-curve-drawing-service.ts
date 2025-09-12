@@ -110,6 +110,7 @@ Respond with a JSON object in this exact format:
           }
         ],
         response_format: { type: "json_object" },
+        store: false,
       });
 
       const text = response.choices[0]?.message?.content;
