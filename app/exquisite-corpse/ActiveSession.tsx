@@ -10,13 +10,15 @@ import {
   Share,
 } from "lucide-react";
 import { track } from '@vercel/analytics';
+import { motion, AnimatePresence } from 'motion/react';
 
 import { MultiplayerCurveTurnRenderer } from './MultiplayerCurveTurnRenderer';
 import { Button } from '@/app/components/Button';
-import type { CurveTurn, BaseTurn } from '@/app/types/exquisiteCorpse';
+import type { CurveTurn, BaseTurn, CanvasDimensions } from '@/app/types/exquisiteCorpse';
 import { downloadBlob } from '@/app/utils/blob';
 import { retryAI, submitTurn } from './requests';
 import { MultiplayerGameState, Player } from '../types/multiplayer';
+import { renderPathCommandsToSvg } from '../utils/svg';
 
 type PlayerStatusIconProps = {
   isCurrent: boolean;
@@ -121,50 +123,30 @@ const Players = ({ gameState, playerName }: PlayersProps) => {
 type ActionsProps = {
   gameState: MultiplayerGameState;
   onLeaveGame: () => void;
-  onShareError: (message: string) => void;
+  dimensions: CanvasDimensions;
 };
-export const Actions = ({ gameState, onLeaveGame, onShareError }: ActionsProps) => {
+export const Actions = ({ gameState, onLeaveGame, dimensions }: ActionsProps) => {
   const { sessionId } = gameState;
 
-  const handleShareSession = useCallback(async () => {
-    const message = {
-      url: `${location.protocol}//${location.host}/exquisite-corpse/join?sessionId=${sessionId}`
-    }
+  const handleDownloadSVG = useCallback(() => {
+    if (!gameState) return;
 
-    try {
-      await navigator.share(message);
-    } catch (error) {
-      if (error instanceof Error) {
-        switch (error.name) {
-          case 'AbortError': break; // this is fine
-          default: {
-            track('ShareError', { name: error.name, message: error.message });
-            navigator.clipboard.writeText(message.url);
-          }
-          case 'InvalidStateError':
-          case 'TypeError':
-          case 'DataError': {
-            onShareError('Something went wrong, copied link to clipboard')
-            break;
-          }
-          case 'NotAllowedError': {
-            onShareError('Sharing not allowed, copied link to clipboard');
-            break;
-          }
-        }
-      }
-    }
-  }, [onShareError, sessionId]);
+    // TODO: put dimensions in game state
+    const svg = renderPathCommandsToSvg(gameState.turns.map(({ path }) => path), dimensions);
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+
+    const lastTitledTurn = gameState.turns.findLast(turn => !!turn.title);
+    const title = lastTitledTurn?.title ?? `${sessionId}-${Date.now()}`;
+
+    downloadBlob(blob, `${title}.svg`);
+  }, [dimensions, gameState, sessionId]);
 
   return (
     <div className="card grow-2 flex-1 flex flex-col gap-1">
       <Button
-        label={
-          <span className="flex justify-center items-center">
-            <span>Invite&nbsp;</span>
-            <Share size={16} className="inline-block" />
-          </span>}
-        onClick={handleShareSession}
+        label="Download SVG"
+        onClick={handleDownloadSVG}
+        disabled={!gameState || gameState.turns.length === 0}
         friendly
       />
       <Button
@@ -203,7 +185,7 @@ const getStatus = (state: MultiplayerGameState, playerName: string) => {
     }
   } else {
     if (state.currentPlayer === null) {
-      return "Waiting on another player to join...";
+      return "Waiting for another player to join...";
     } else if (state.currentPlayer === playerName) {
       return "It's your turn, start drawing!";
     } else {
@@ -219,10 +201,126 @@ type GameStatusProps = {
 };
 const GameStatus = ({ gameState, playerName }: GameStatusProps) => {
   return (
-    <p className="card w-full m-auto text-center">
+    <p className="card w-full m-auto text-center font-geist-mono">
       {getStatus(gameState, playerName)}
     </p>
   );
+}
+
+type CopySessionIDButtonProps = { sessionId: string };
+const CopySessionIDButton = ({ sessionId }: CopySessionIDButtonProps) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(sessionId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1000);
+  }
+
+  return (
+    <div className="card flex items-center text-xl font-semibold gap-4">
+      <motion.button
+        className="flex items-center gap-2"
+        onClick={handleCopy}
+        whileHover={{ scale: 1.10 }}
+        transition={{ duration: 0.2 }}
+      >
+        <span className="font-geist-mono font-semibold tracking-widest text-lg" >
+          {sessionId}
+        </span>
+
+        <span>
+          <AnimatePresence mode="wait">
+            {!copied ? (
+              <motion.div
+                key="copy"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Copy />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="copied"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.2 }}
+                className="text-green-600"
+              >
+                <CopyCheck />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </span>
+      </motion.button>
+    </div>
+  )
+}
+
+type InviteButtonProps = {
+  sessionId: string;
+  onShareError: (message: string) => void;
+};
+const InviteButton = ({ sessionId, onShareError }: InviteButtonProps) => {
+  const handleShareSession = useCallback(async () => {
+    const message = {
+      url: `${location.protocol}//${location.host}/exquisite-corpse/join?sessionId=${sessionId}`
+    }
+
+    try {
+      await navigator.share(message);
+    } catch (error) {
+      if (error instanceof Error) {
+        switch (error.name) {
+          case 'AbortError': break; // this is fine
+          default: {
+            track('ShareError', { name: error.name, message: error.message });
+            navigator.clipboard.writeText(message.url);
+          }
+          case 'InvalidStateError':
+          case 'TypeError':
+          case 'DataError': {
+            onShareError('Something went wrong, copied link to clipboard')
+            break;
+          }
+          case 'NotAllowedError': {
+            onShareError('Sharing not allowed, copied link to clipboard');
+            break;
+          }
+        }
+      }
+    }
+  }, [onShareError, sessionId]);
+
+  return (
+    <div className="card flex items-center font-semibold gap-4">
+      <motion.button
+        className="flex items-center gap-2"
+        onClick={handleShareSession}
+        whileHover={{ scale: 1.10 }}
+        whileTap="tap"
+        transition={{ duration: 0.2 }}
+      >
+        <span className="font-semibold text-lg" >
+          Invite
+        </span>
+
+        <motion.div
+          key="share"
+          variants={{
+            tap: {
+              y: -6,
+            }
+          }}
+        >
+          <Share />
+        </motion.div>
+      </motion.button>
+    </div>
+  )
 }
 
 export type GameSessionProps = {
@@ -256,6 +354,7 @@ export const ActiveSession = ({
     downloadBlob(blob, `multiplayer-game-${sessionId}-${Date.now()}.json`);
   }, [gameState, sessionId]);
 
+
   // Show loading/connecting state
   // TODO: put this in its own component and check player name exists
 
@@ -270,6 +369,11 @@ export const ActiveSession = ({
 
   return (
     <div className="flex flex-col gap-4 max-w-[512px] mx-auto">
+      <div className="flex justify-between gap-4">
+        <CopySessionIDButton sessionId={sessionId} />
+        <InviteButton sessionId={sessionId} onShareError={setShareError} />
+      </div>
+
       <div className="flex flex-wrap gap-4">
         <Players
           gameState={gameState}
@@ -278,7 +382,7 @@ export const ActiveSession = ({
         <Actions
           gameState={gameState}
           onLeaveGame={handleLeaveGame}
-          onShareError={setShareError}
+          dimensions={dimensions}
         />
       </div>
 
@@ -292,12 +396,14 @@ export const ActiveSession = ({
         currentTurnIndex={gameState.turns.length}
       />
 
-      <Button
-        label="Download JSON"
-        onClick={handleDownloadJSON}
-        disabled={!gameState || gameState.turns.length === 0}
-        friendly
-      />
+      {process.env.NODE_ENV === 'development' && (
+        <Button
+          label="Download JSON"
+          onClick={handleDownloadJSON}
+          disabled={!gameState || gameState.turns.length === 0}
+          friendly
+        />
+      )}
     </div>
   );
 };
