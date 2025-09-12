@@ -2,7 +2,7 @@ import { FC, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import clsx from "clsx";
 import { ParsedPath, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
-import { breakUpPath, pathToD } from "../utils/svg";
+import { breakUpPath, getAnimationTimingFunction, pathToD } from "../utils/svg";
 
 // Custom hook for path length
 function usePathLength() {
@@ -93,16 +93,22 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
   }, [path]);
 
   return (
-    pathSegments.map((path, index) => (
-      <SelfDrawingSinglePath
-        key={`single-path-${index}`}
-        path={path}
-        paused={index > currentAnimationIndex}
-        handleAnimationEnd={() => dispatch('increment')}
-        className={className}
-        drawSpeed={drawSpeed}
-      />
-    ))
+    pathSegments.map((segment, index) => {
+      // FIXME: this absolutely shouldn't be calculated on every render
+      const timingFunction = getAnimationTimingFunction(segment);
+
+      return (
+        <SelfDrawingSinglePath
+          key={`single-path-${index}`}
+          path={segment}
+          paused={index > currentAnimationIndex}
+          handleAnimationEnd={() => dispatch('increment')}
+          className={className}
+          drawSpeed={drawSpeed}
+          timingFunction={timingFunction}
+        />
+      );
+    })
   )
 }
 
