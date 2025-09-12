@@ -2,7 +2,7 @@ import { FC, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import clsx from "clsx";
 import { ParsedPath, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
-import { breakUpPath, getAnimationTimingFunction, pathToD } from "../utils/svg";
+import { breakUpPath, getAnimationTimingFunction, getEndPosition, pathToD } from "../utils/svg";
 
 // Custom hook for path length
 function usePathLength() {
@@ -26,6 +26,7 @@ type SelfDrawingSinglePathProps = Omit<SelfDrawingPathProps, 'path'> & {
   paused: boolean;
   handleAnimationEnd: () => void;
   timingFunction?: string;
+  delay?: number;
 };
 const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
   path,
@@ -34,6 +35,7 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
   className,
   drawSpeed = 400,
   timingFunction = 'ease',
+  delay = 0,
 }) => {
   const [pathRef, rawPathLength] = usePathLength();
   const pathLength = rawPathLength ?? 0;
@@ -57,7 +59,7 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
         strokeDasharray: pathLength,
         strokeDashoffset: pathLength,
         animation: doAnimate
-          ? `draw ${duration}s ${timingFunction} forwards`
+          ? `draw ${duration}s ${timingFunction} ${delay}s forwards`
           : 'unset',
       }}
     />
@@ -92,10 +94,29 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
     return breakUpPath(path);
   }, [path]);
 
+  const delays = useMemo(() => {
+    const delays = [];
+
+    for (let i = 0; i < pathSegments.length; i++) {
+      if (i > 0) {
+        const [prevEndX, prevEndY] = getEndPosition(pathSegments[i - 1]);
+        const [, currStartX, currStartY] = pathSegments[i][0];
+        const distance = Math.sqrt((currStartX - prevEndX) ** 2 + (currStartY - prevEndY) ** 2);
+
+        delays.push(distance / (drawSpeed * 2));
+      } else {
+        delays.push(0);
+      }
+    }
+
+    return delays;
+  }, [drawSpeed, pathSegments]);
+
   return (
     pathSegments.map((segment, index) => {
       // FIXME: this absolutely shouldn't be calculated on every render
       const timingFunction = getAnimationTimingFunction(segment);
+      const delay = delays[index];
 
       return (
         <SelfDrawingSinglePath
@@ -106,6 +127,7 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
           className={className}
           drawSpeed={drawSpeed}
           timingFunction={timingFunction}
+          delay={delay}
         />
       );
     })

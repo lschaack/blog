@@ -61,12 +61,15 @@ export function breakUpPath(path: PathCommand[]): [MoveToCommand, DrawCommand][]
       subPathStartX = currentX;
       subPathStartY = currentY;
     } else if (isClosePathCommand(command)) {
-      const moveTo: MoveToCommand = ['M', currentX, currentY];
-      const lineTo: LineToCommand = ['L', subPathStartX, subPathStartY];
-      result.push([moveTo, lineTo]);
+      // avoid making segments that don't go anywhere b/c they never fire onAnimationEnd
+      if (currentX !== subPathStartX || currentY !== subPathStartY) {
+        const moveTo: MoveToCommand = ['M', currentX, currentY];
+        const lineTo: LineToCommand = ['L', subPathStartX, subPathStartY];
+        result.push([moveTo, lineTo]);
 
-      currentX = subPathStartX;
-      currentY = subPathStartY;
+        currentX = subPathStartX;
+        currentY = subPathStartY;
+      }
     } else {
       const moveTo: MoveToCommand = ['M', currentX, currentY];
       result.push([moveTo, command as DrawCommand]);
@@ -264,6 +267,14 @@ function calculateQuadraticBezierCurvature(
   const denominator = Math.pow(dx * dx + dy * dy, 1.5);
 
   return denominator > 0 ? numerator / denominator : 0;
+}
+
+export function getEndPosition(segment: PathSegment): [number, number] {
+  const [moveTo, drawCmd] = segment;
+  const startX = moveTo[1];
+  const startY = moveTo[2];
+
+  return updateCurrentPosition(drawCmd, startX, startY);
 }
 
 export function getAnimationTimingFunction(segment: PathSegment): string {
