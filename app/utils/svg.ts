@@ -277,11 +277,11 @@ export function getEndPosition(segment: PathSegment): [number, number] {
   return updateCurrentPosition(drawCmd, startX, startY);
 }
 
-export function getAnimationTimingFunction(segment: PathSegment): string {
+export function getAnimationTimingFunction(segment: PathSegment) {
   const [, drawCmd] = segment;
 
   if (!isCurveCommand(drawCmd)) {
-    return 'linear';
+    return { timing: 'linear', cost: 1.0 };
   }
 
   // represents cost of drawing a straight line and prevents division by 0
@@ -317,7 +317,12 @@ export function getAnimationTimingFunction(segment: PathSegment): string {
 
   timingFunction += ', 1 100%)';
 
-  return timingFunction;
+  const totalRelativeCost = totalCost / (costs.length * baseCost);
+
+  return {
+    timingFunction,
+    cost: totalRelativeCost,
+  };
 }
 
 export function renderPathCommandsToSvg(paths: ParsedPath[], dimensions: CanvasDimensions): string {

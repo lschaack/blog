@@ -91,7 +91,10 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
     dispatch('reset');
 
     // split path into segments with estimatable curvature
-    return breakUpPath(path);
+    return breakUpPath(path).map(segment => ({
+      segment,
+      ...getAnimationTimingFunction(segment),
+    }));
   }, [path]);
 
   const delays = useMemo(() => {
@@ -99,8 +102,8 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
 
     for (let i = 0; i < pathSegments.length; i++) {
       if (i > 0) {
-        const [prevEndX, prevEndY] = getEndPosition(pathSegments[i - 1]);
-        const [, currStartX, currStartY] = pathSegments[i][0];
+        const [prevEndX, prevEndY] = getEndPosition(pathSegments[i - 1].segment);
+        const [, currStartX, currStartY] = pathSegments[i].segment[0];
         const distance = Math.sqrt((currStartX - prevEndX) ** 2 + (currStartY - prevEndY) ** 2);
 
         delays.push(distance / (drawSpeed * 2));
@@ -113,9 +116,8 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
   }, [drawSpeed, pathSegments]);
 
   return (
-    pathSegments.map((segment, index) => {
+    pathSegments.map(({ segment, timingFunction, cost }, index) => {
       // FIXME: this absolutely shouldn't be calculated on every render
-      const timingFunction = getAnimationTimingFunction(segment);
       const delay = delays[index];
 
       return (
@@ -125,7 +127,7 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
           paused={index > currentAnimationIndex}
           handleAnimationEnd={() => dispatch('increment')}
           className={className}
-          drawSpeed={drawSpeed}
+          drawSpeed={drawSpeed / cost}
           timingFunction={timingFunction}
           delay={delay}
         />
@@ -146,7 +148,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   paths,
   animate = 'final',
   className,
-  drawSpeed = 300,
+  drawSpeed = 500,
 }) => {
   return (
     <svg
