@@ -7,6 +7,8 @@ import { bezierCurvesToParsedPath } from './lineConversion';
 import { drawParsedPath } from "./imageContext";
 import { PathCommand } from "parse-svg-path";
 
+const LINE_COLOR = '#0004a6';
+
 type SketchpadProps = {
   width: number;
   height: number;
@@ -73,7 +75,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
     if (!ctx || !dpi) return;
 
     ctx.scale(dpi, dpi);
-    ctx.strokeStyle = '#000';
+    ctx.strokeStyle = LINE_COLOR;
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -97,7 +99,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
       // Fit and draw temporary curve
       const tempCurves = fitCurvesToPoints(currentPoints.current);
       if (tempCurves.length > 0) {
-        ctx.strokeStyle = '#000';
+        ctx.strokeStyle = LINE_COLOR;
         drawParsedPath(ctx, tempCurves);
       }
     }
@@ -113,7 +115,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
     if (!ctx) return;
 
     clearCanvas(ctx, width, height);
-    ctx.strokeStyle = '#000';
+    ctx.strokeStyle = LINE_COLOR;
     lines.forEach(line => drawLine(ctx, line));
   }, [lines, isDrawing, width, height]);
 

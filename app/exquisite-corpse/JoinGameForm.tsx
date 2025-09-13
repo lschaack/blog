@@ -1,20 +1,22 @@
+"use client";
+
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+
 import { Button } from '@/app/components/Button';
 import { MAX_PLAYER_NAME_LENGTH } from '../api/exquisite-corpse/schemas';
 
 type JoinGameFormProps = {
-  onBack: () => void;
-  onGameJoined: (sessionId: string) => void;
   initPlayerName?: string;
   initSessionId?: string;
 };
 
 export const JoinGameForm = ({
-  onBack,
-  onGameJoined,
   initPlayerName = '',
   initSessionId = '',
 }: JoinGameFormProps) => {
+  const router = useRouter();
+
   const [playerName, setPlayerName] = useState(initPlayerName);
   const [sessionId, setSessionId] = useState(initSessionId);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +50,7 @@ export const JoinGameForm = ({
 
         setError(error);
       } else {
-        onGameJoined(sessionId);
+        router.push(`/exquisite-corpse/${sessionId}`);
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -110,7 +112,7 @@ export const JoinGameForm = ({
         <div className="flex gap-3">
           <Button
             label="Back"
-            onClick={onBack}
+            onClick={router.back}
             disabled={isLoading}
             className="flex-1"
           />

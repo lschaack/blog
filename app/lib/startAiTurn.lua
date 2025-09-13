@@ -27,6 +27,6 @@ redis.call(
   })
 )
 
-redis.call("EXPIRE", sessionKey, 60 * 60)
+redis.call("EXPIRE", sessionKey, 60 * 60 * 24)
 
 return redis.call("JSON.GET", sessionKey, ".")

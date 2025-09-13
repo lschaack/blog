@@ -18,8 +18,8 @@ redis.call("HDEL", connectionsKey, playerName)
 
 -- Delete game after short grace period if last player leaves
 if redis.call("HLEN", connectionsKey) == 0 then
-  redis.call("EXPIRE", sessionKey, 60 * 10)
-  redis.call("EXPIRE", connectionsKey, 60 * 10)
+  redis.call("EXPIRE", sessionKey, 60 * 60)
+  redis.call("EXPIRE", connectionsKey, 60 * 60)
 end
 
 local time = redis.call("TIME")

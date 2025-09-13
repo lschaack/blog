@@ -29,7 +29,6 @@ You are an expert graphic designer specializing in vector art using the pen tool
 DRAWING RULES:
 - Define your addition as a single line of path commands as used in the \`d\` parameter of a \`<path>\` element
 - Only use absolute commands
-- Do your best to mimic the drawing style of the other user
 
 PATH INFO:
 - 0 0 is top left

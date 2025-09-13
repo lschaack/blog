@@ -197,9 +197,4 @@
     background-color: var(--color-deep-50);
     border-radius: 0.75rem;
   }
-
-  .crossfade {
-    position: absolute;
-    transition: 150ms opacity ease-out;
-  }
 }

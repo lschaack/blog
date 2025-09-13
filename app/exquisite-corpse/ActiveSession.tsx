@@ -27,32 +27,53 @@ type PlayerStatusIconProps = {
 const PlayerStatusIcon = ({ isCurrent, isConnected }: PlayerStatusIconProps) => {
   // keep all icons mounted so they crossfade on opacity change
   return (
-    <div className="w-6 h-6 min-w-6 min-h-6 relative">
-      <CircleDot
-        className={clsx(
-          "crossfade",
-          isCurrent && isConnected ? "opacity-100" : "opacity-0"
-        )}
-      />
-      <Circle
-        className={clsx(
-          "crossfade",
-          !isCurrent && isConnected ? "opacity-100" : "opacity-0"
-        )}
-      />
-      <CircleDotDashed
-        className={clsx(
-          "crossfade",
-          isCurrent && !isConnected ? "opacity-100" : "opacity-0"
-        )}
-      />
-      <CircleDashed
-        className={clsx(
-          "crossfade",
-          !isCurrent && !isConnected ? "opacity-100" : "opacity-0"
-        )}
-      />
-    </div>
+    <AnimatePresence mode="popLayout">
+      {isCurrent ? (
+        isConnected ? (
+          <motion.div
+            key="CircleDot"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <CircleDot />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="CircleDotDashed"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <CircleDotDashed />
+          </motion.div>
+        )
+      ) : (
+        isConnected ? (
+          <motion.div
+            key="Circle"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <Circle />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="CircleDashed"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
+            <CircleDashed />
+          </motion.div>
+        )
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -262,14 +283,14 @@ const CopySessionIDButton = ({ sessionId }: CopySessionIDButtonProps) => {
 
 type InviteButtonProps = {
   sessionId: string;
-  onShareError: (message: string) => void;
 };
-const InviteButton = ({ sessionId, onShareError }: InviteButtonProps) => {
+const InviteButton = ({ sessionId }: InviteButtonProps) => {
   const handleShareSession = useCallback(async () => {
     const message = {
       url: `${location.protocol}//${location.host}/exquisite-corpse/join?sessionId=${sessionId}`
     }
 
+    // TODO: show these errors for 10s in the status panel
     try {
       await navigator.share(message);
     } catch (error) {
@@ -283,17 +304,17 @@ const InviteButton = ({ sessionId, onShareError }: InviteButtonProps) => {
           case 'InvalidStateError':
           case 'TypeError':
           case 'DataError': {
-            onShareError('Something went wrong, copied link to clipboard')
+            //onShareError('Something went wrong, copied link to clipboard')
             break;
           }
           case 'NotAllowedError': {
-            onShareError('Sharing not allowed, copied link to clipboard');
+            //onShareError('Sharing not allowed, copied link to clipboard');
             break;
           }
         }
       }
     }
-  }, [onShareError, sessionId]);
+  }, [sessionId]);
 
   return (
     <div className="card flex items-center font-semibold gap-4">
@@ -339,8 +360,6 @@ export const ActiveSession = ({
   gameState: MultiplayerGameState;
   handleLeaveGame: () => void;
 }) => {
-  const [shareError, setShareError] = useState<string | null>(null);
-
   const handleSubmitTurn = useCallback((turnData: Omit<CurveTurn, keyof BaseTurn>) => {
     return submitTurn(sessionId, turnData);
   }, [sessionId]);
@@ -371,7 +390,7 @@ export const ActiveSession = ({
     <div className="flex flex-col gap-4 max-w-[512px] mx-auto">
       <div className="flex justify-between gap-4">
         <CopySessionIDButton sessionId={sessionId} />
-        <InviteButton sessionId={sessionId} onShareError={setShareError} />
+        <InviteButton sessionId={sessionId} />
       </div>
 
       <div className="flex flex-wrap gap-4">

@@ -45,9 +45,9 @@ redis.call(
   })
 )
 
-redis.call("EXPIRE", sessionKey, 60 * 60)
-redis.call("EXPIRE", playersKey, 60 * 60)
-redis.call("EXPIRE", playerOrderKey, 60 * 60)
-redis.call("EXPIRE", connectionsKey, 60 * 60)
+redis.call("EXPIRE", sessionKey, 60 * 60 * 24)
+redis.call("EXPIRE", playersKey, 60 * 60 * 24)
+redis.call("EXPIRE", playerOrderKey, 60 * 60 * 24)
+redis.call("EXPIRE", connectionsKey, 60 * 60 * 24)
 
 return redis.call("JSON.GET", sessionKey, ".")

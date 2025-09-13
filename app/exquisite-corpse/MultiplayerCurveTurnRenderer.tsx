@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { BaseTurn, CanvasDimensions, CurveTurn } from "@/app/types/exquisiteCorpse";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
@@ -19,18 +19,23 @@ export const MultiplayerCurveTurnRenderer = ({
   readOnly = false,
   canvasDimensions,
   turns,
-  currentTurnIndex,
 }: MultiplayerCurveTurnRendererProps) => {
   const currentTurn = useCurrentTurn();
 
+  const lastTurnIndex = turns.length - 1;
+  const [currentTurnIndex, setCurrentTurnIndex] = useState(lastTurnIndex);
+  const isLatestTurn = currentTurnIndex === lastTurnIndex;
+
+  useEffect(() => setCurrentTurnIndex(turns.length - 1), [turns]);
+
   // Get display lines from completed turns up to current index
   const displayTurns = useMemo(() => {
-    return turns.slice(0, currentTurnIndex);
+    return turns.slice(0, currentTurnIndex + 1);
   }, [turns, currentTurnIndex]);
 
   // Get previous turn for display
   const prevTurn = useMemo(() => {
-    return turns[currentTurnIndex - 1];
+    return turns[currentTurnIndex];
   }, [turns, currentTurnIndex]);
 
   // Handle ending turn
@@ -51,18 +56,36 @@ export const MultiplayerCurveTurnRenderer = ({
 
   return (
     <div className="flex flex-col gap-4">
+      <div className="flex gap-2 items-center">
+        <Button
+          label="← Previous"
+          onClick={() => setCurrentTurnIndex(prev => Math.max(prev - 1, 0))}
+          disabled={currentTurnIndex <= 0}
+          className="flex-1"
+        />
+        <div className="text-center px-4">
+          Turn {currentTurnIndex + 1} of {turns.length}
+        </div>
+        <Button
+          label="Next →"
+          onClick={() => setCurrentTurnIndex(prev => Math.min(prev + 1, lastTurnIndex))}
+          disabled={currentTurnIndex >= lastTurnIndex}
+          className="flex-1"
+        />
+      </div>
+
       {/* Undo/Redo controls */}
       <div className="flex gap-2">
         <Button
           label="Undo"
           onClick={currentTurn.undo}
-          disabled={!canDraw || !currentTurn.canUndo}
+          disabled={!isLatestTurn || !canDraw || !currentTurn.canUndo}
           className="flex-1"
         />
         <Button
           label="Redo"
           onClick={currentTurn.redo}
-          disabled={!canDraw || !currentTurn.canRedo}
+          disabled={!isLatestTurn || !canDraw || !currentTurn.canRedo}
           className="flex-1"
         />
       </div>
@@ -77,7 +100,7 @@ export const MultiplayerCurveTurnRenderer = ({
         <Sketchpad
           width={canvasDimensions.width}
           height={canvasDimensions.height}
-          lines={currentTurn.lines}
+          lines={isLatestTurn ? currentTurn.lines : []}
           handleAddLine={line => {
             if (canDraw) {
               currentTurn.addLine(line);
