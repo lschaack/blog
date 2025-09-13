@@ -1,14 +1,17 @@
+"use client";
+
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/app/components/Button';
 import { CreateWithPlayerRequest, GameType, MAX_PLAYER_NAME_LENGTH } from '../api/exquisite-corpse/schemas';
 
 type CreateGameFormProps = {
   gameType: GameType;
-  onBack: () => void;
-  onGameCreated: (sessionId: string) => void;
 };
 
-export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFormProps) => {
+export const CreateGameForm = ({ gameType }: CreateGameFormProps) => {
+  const router = useRouter();
+
   const [playerName, setPlayerName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,9 +46,8 @@ export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFo
 
       const createGameData = await createGameResponse.json();
 
-      onGameCreated(createGameData.sessionId);
+      router.push(`/exquisite-corpse/${createGameData.sessionId}`);
     } catch (err) {
-      console.error('Create game error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setIsLoading(false);
@@ -92,7 +94,7 @@ export const CreateGameForm = ({ gameType, onBack, onGameCreated }: CreateGameFo
         <div className="flex gap-3">
           <Button
             label="Back"
-            onClick={onBack}
+            onClick={router.back}
             disabled={isLoading}
             className="flex-1"
           />
