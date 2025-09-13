@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from 'motion/react';
+
 import { BaseTurn, CanvasDimensions, CurveTurn } from "@/app/types/exquisiteCorpse";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
@@ -117,28 +119,31 @@ export const MultiplayerCurveTurnRenderer = ({
         disabled={!canEndTurn}
       />
 
-      {/* Previous turn info */}
-      {prevTurn && (
-        <div className="card space-y-2">
-          {prevTurn.title && (
-            <h2 className="font-semibold font-geist-mono text-xl [font-variant:all-small-caps]">{prevTurn.title}</h2>
-          )}
-          {prevTurn.interpretation && (
-            <div className="text-gray-600 font-geist-mono">
-              &ldquo;{prevTurn.interpretation}&rdquo;
-            </div>
-          )}
-          {prevTurn.reasoning && (
-            <div className="text-gray-500 font-geist-mono text-sm italic">
-              &ldquo;{prevTurn.reasoning}&rdquo;
-            </div>
-          )}
-          {prevTurn.image && (
-            // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
-            <img src={ensureStartsWith(prevTurn.image, 'data:image/png;base64,')} />
-          )}
-        </div>
-      )}
+      <AnimatePresence>
+        {/* Previous turn info */}
+        {/* TODO: add presence animation */}
+        {prevTurn?.interpretation && (
+          <motion.div className="card space-y-2" >
+            {prevTurn.title && (
+              <h2 className="font-semibold font-geist-mono text-xl [font-variant:all-small-caps]">{prevTurn.title}</h2>
+            )}
+            {prevTurn.interpretation && (
+              <div className="text-gray-600 font-geist-mono">
+                &ldquo;{prevTurn.interpretation}&rdquo;
+              </div>
+            )}
+            {prevTurn.reasoning && (
+              <div className="text-gray-500 font-geist-mono text-sm italic">
+                &ldquo;{prevTurn.reasoning}&rdquo;
+              </div>
+            )}
+            {prevTurn.image && (
+              // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+              <img src={ensureStartsWith(prevTurn.image, 'data:image/png;base64,')} />
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

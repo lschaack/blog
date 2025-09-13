@@ -23,7 +23,7 @@ const BaseTurnSchema = z.object({
 });
 
 const BaseGameContextSchema = z.object({
-  image: Base64ImageSchema,
+  image: Base64ImageSchema.optional(),
   canvasDimensions: z.object({
     width: z.number({ message: 'Missing canvas width' }),
     height: z.number({ message: 'Missing canvas height' }),

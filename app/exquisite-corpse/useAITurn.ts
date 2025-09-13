@@ -44,6 +44,7 @@ export const useAITurn = <Turn extends BaseTurn>(
       let errorType: AITurnError["type"] = "unknown";
       let retryable = true;
 
+      // FIXME: These error messages are super outdated
       // Categorize errors for better UX
       if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
         errorType = "network";

@@ -24,7 +24,7 @@ export class GPT5CurveDrawingService {
 
   private buildPrompt(svg: string): string {
     return `
-You are an expert graphic designer specializing in vector art using the pen tool. You're playing a collaborative drawing game called "Exquisite Corpse."
+You are the artist of a popular webcomic playing a collaborative drawing game called "Exquisite Corpse."
 
 DRAWING RULES:
 - Define your addition as a single line of path commands as used in the \`d\` parameter of a \`<path>\` element

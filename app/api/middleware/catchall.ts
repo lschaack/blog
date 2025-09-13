@@ -6,7 +6,6 @@ export const withCatchallErrorHandler: Middleware = (handler) => {
     try {
       return await handler(request, ctx);
     } catch (error) {
-      console.log('CAUGHT by withCatchallErrorHandler')
       console.error('Unknown error. Freaking out.');
 
       if (error instanceof Error) {
