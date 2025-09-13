@@ -244,7 +244,7 @@ const CopySessionIDButton = ({ sessionId }: CopySessionIDButtonProps) => {
         className="flex items-center gap-2"
         onClick={handleCopy}
         whileHover={{ scale: 1.10 }}
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.1 }}
       >
         <span className="font-geist-mono font-semibold tracking-widest text-lg" >
           {sessionId}
@@ -258,7 +258,7 @@ const CopySessionIDButton = ({ sessionId }: CopySessionIDButtonProps) => {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.1 }}
               >
                 <Copy />
               </motion.div>
@@ -268,7 +268,7 @@ const CopySessionIDButton = ({ sessionId }: CopySessionIDButtonProps) => {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.1 }}
                 className="text-green-600"
               >
                 <CopyCheck />
@@ -323,7 +323,7 @@ const InviteButton = ({ sessionId }: InviteButtonProps) => {
         onClick={handleShareSession}
         whileHover={{ scale: 1.10 }}
         whileTap="tap"
-        transition={{ duration: 0.2 }}
+        transition={{ duration: 0.1 }}
       >
         <span className="font-semibold text-lg" >
           Invite
