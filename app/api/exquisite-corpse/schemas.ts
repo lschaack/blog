@@ -10,20 +10,19 @@ export const MAX_PLAYER_NAME_LENGTH = 24;
 
 const Base64ImageSchema = z.string()
   .startsWith(BASE64_PNG_PREFIX, 'Image missing base64 prefix')
-  .regex(/^[A-Za-z0-9+/]*={0,2}$/, '')
+  .regex(/^data:image\/png;base64,(?:[A-Za-z0-9+/]*)={0,2}$/, '')
   .min(BASE64_MIN_CHARS, 'Missing image data');
 
 const BaseTurnSchema = z.object({
-  author: z.enum(['user', 'AI'], {
-    message: 'Turn author must be either "user" or "AI"',
-  }),
+  author: z
+    .string()
+    .min(1, 'Missing turn author'),
   timestamp: z
     .string({ message: 'Missing turn timestamp' })
     .datetime({ message: 'Turn timestamp must be an ISO datetime' }),
 });
 
 const BaseGameContextSchema = z.object({
-  image: Base64ImageSchema.optional(),
   canvasDimensions: z.object({
     width: z.number({ message: 'Missing canvas width' }),
     height: z.number({ message: 'Missing canvas height' }),
@@ -91,9 +90,16 @@ export const ImageTurnSchema = BaseTurnSchema.extend({
 });
 
 export const CurveGameContextSchema = createGameContextSchema(CurveTurnSchema);
+
+export type CurveGameContext = z.infer<typeof CurveGameContextSchema>;
+
 // NOTE: There is an ImageTurnSchema representing complete image turns, but
 // we shouldn't be sending every image to the backend on every turn
-export const ImageGameContextSchema = createGameContextSchema(BaseTurnSchema);
+export const ImageGameContextSchema = createGameContextSchema(BaseTurnSchema).merge(z.object({
+  image: Base64ImageSchema
+}));
+
+export type ImageGameContext = z.infer<typeof ImageGameContextSchema>;
 
 export const CreateGameRequestSchema = z.object({
   gameType: z.union([z.literal("multiplayer"), z.literal("singleplayer")], {

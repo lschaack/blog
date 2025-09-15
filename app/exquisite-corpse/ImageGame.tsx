@@ -1,7 +1,8 @@
-import { CanvasDimensions, ImageGeminiFlashPreviewTurn, GameContext, RenderPNG } from '@/app/types/exquisiteCorpse';
+import { CanvasDimensions, ImageGeminiFlashPreviewTurn, RenderPNG } from '@/app/types/exquisiteCorpse';
 import { ImageTurnRenderer } from './ImageTurnRenderer';
 import { getGeminiService } from "./geminiAI";
 import { Game, GameProps } from "./Game";
+import { ImageGameContext } from '../api/exquisite-corpse/schemas';
 
 const getAIImageTurn = async (
   history: ImageGeminiFlashPreviewTurn[],
@@ -33,7 +34,7 @@ const getAIImageTurn = async (
   }
 
   // Create game context with just the image context
-  const gameContext: GameContext<Omit<ImageGeminiFlashPreviewTurn, 'image'>> = {
+  const gameContext: ImageGameContext = {
     image: baseImage,
     canvasDimensions: dimensions,
     history: history.map(({ author, timestamp, interpretation }) => ({

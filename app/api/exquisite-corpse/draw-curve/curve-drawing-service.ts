@@ -4,7 +4,8 @@ import { renderPathCommandsToSvg } from "@/app/utils/svg";
 import { GoogleGenAI, Modality } from "@google/genai";
 import { z } from "zod";
 import { jsonrepair } from 'jsonrepair';
-import { RawPathSchema } from "../schemas";
+import { BASE64_PNG_PREFIX, RawPathSchema } from "../schemas";
+import sharp from "sharp";
 
 const AICurveResponseSchema = z.object({
   interpretation: z.string().min(1, "Interpretation cannot be empty"),
@@ -71,9 +72,14 @@ Respond with a JSON object in this exact format:
     try {
       const prompt = this.buildPrompt(context);
 
-      // Convert base64 image to proper format for Gemini
-      const imageData = context.image.replace('data:image/png;base64,', '');
-      const imageSize = getBase64FileSizeMb(imageData);
+      const svg = renderPathCommandsToSvg(context.history.map(turn => turn.path), context.canvasDimensions);
+      const png = await sharp(Buffer.from(svg, 'utf-8'))
+        .flatten({ background: '#ffffff' })
+        .png()
+        .toBuffer();
+
+      const base64 = `${BASE64_PNG_PREFIX}${png.toString('base64')}`;
+      const imageSize = getBase64FileSizeMb(base64);
 
       if (imageSize > CurveDrawingService.MAX_IMG_SIZE_MB) {
         throw new Error(`Image size ${imageSize}mb is greater than the max ${CurveDrawingService.MAX_IMG_SIZE_MB}mb`);
@@ -81,7 +87,7 @@ Respond with a JSON object in this exact format:
 
       const imagePart = {
         inlineData: {
-          data: imageData,
+          data: base64,
           mimeType: "image/png"
         }
       };

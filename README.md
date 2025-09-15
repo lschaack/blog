@@ -5,9 +5,13 @@ Just a quick warning - this is a personal project I created to explore things th
 ## Stack
 
 Built with Typescript and Next.js
+
 Styled with Tailwind
+
 Queried with Apollo
+
 Queries typed by graphql-codegen
+
 Content delivered from the Contentful GraphQL API
 
 ## Setup
