@@ -1,5 +1,4 @@
 import { randomUUID } from 'crypto';
-import { neon } from '@neondatabase/serverless';
 import { getGameEventManager, getRedisClient, SSEClient } from './redis';
 import type {
   Player,
@@ -10,11 +9,12 @@ import { generateAICurveTurn } from '@/app/lib/aiTurnService';
 import type { CurveTurn, Line } from '@/app/types/exquisiteCorpse';
 import { generateSessionId } from '../exquisite-corpse/sessionId';
 import { GameType } from '../api/exquisite-corpse/schemas';
+import { prisma } from './prisma';
+import { loadEnvConfig } from '@next/env'
 
 export class GameService {
   private redis = getRedisClient();
   private eventManager = getGameEventManager();
-  private sql = neon(`${process.env.DATABASE_URL}`);
   private static MAX_AI_RETRIES = 3;
 
   async createGame(type: GameType): Promise<{ sessionId: string }> {
@@ -164,14 +164,16 @@ export class GameService {
     await this.eventManager.publishEvent(sessionId, event);
 
     if (gameState) {
-      await this.sql`
-        INSERT INTO games (uuid, game_data)
-        VALUES (${gameState.gameId}, ${gameState})
-        ON CONFLICT (uuid)
-        DO UPDATE SET
-          game_data = EXCLUDED.game_data
-        RETURNING *
-      `;
+      await prisma.exquisiteCorpseGame.upsert({
+        where: { uuid: gameState.gameId },
+        update: {
+          data: gameState,
+        },
+        create: {
+          uuid: gameState.gameId,
+          data: gameState,
+        }
+      });
     }
   }
 }
