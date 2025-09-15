@@ -10,7 +10,6 @@ import type { CurveTurn, Line } from '@/app/types/exquisiteCorpse';
 import { generateSessionId } from '../exquisite-corpse/sessionId';
 import { GameType } from '../api/exquisite-corpse/schemas';
 import { prisma } from './prisma';
-import { loadEnvConfig } from '@next/env'
 
 export class GameService {
   private redis = getRedisClient();
