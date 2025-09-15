@@ -14,8 +14,3 @@ Styled with Tailwind
 Queried with Apollo
 Queries typed by graphql-codegen
 Content delivered from the Contentful GraphQL API
-
-## Environment notes
-
-A public content delivery API key is provided to deliver the same content available on the production deployment. No preview or management keys are provided.
-No Gemini API key is provided, so any service using `GEMINI_API_KEY` will be broken unless one is provided in `.env.local`.
