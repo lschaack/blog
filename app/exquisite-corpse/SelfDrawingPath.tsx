@@ -91,8 +91,6 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
   }, 0);
 
   const pathSegments = useMemo(() => {
-    dispatch('reset');
-
     // split path into segments with estimatable curvature
     return breakUpPath(path).map(segment => ({
       segment,
@@ -100,6 +98,8 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
     }));
   }, [path]);
 
+  // NOTE: can't add inter-line effects (like a base delay) b/c breakUpPath removes
+  // distinction between move/draw commands since every segment starts with a move
   const delays = useMemo(() => {
     const delays = [];
 
@@ -120,7 +120,6 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
 
   return (
     pathSegments.map(({ segment, timingFunction, cost }, index) => {
-      // FIXME: this absolutely shouldn't be calculated on every render
       const delay = delays[index];
 
       return (

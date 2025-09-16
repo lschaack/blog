@@ -286,7 +286,7 @@ export function getAnimationTimingFunction(segment: PathSegment) {
 
   // represents cost of drawing a straight line and prevents division by 0
   const baseCost = 1.0;
-  const curvatureCost = 10.0;
+  const curvatureCost = 5.0;
   const nSections = 5;
 
   const sectionWidth = 1 / nSections;
