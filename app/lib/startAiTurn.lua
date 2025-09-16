@@ -6,10 +6,23 @@ elseif cjson.decode(redis.call("JSON.GET", sessionKey, ".currentPlayer")) ~= "AI
   return redis.error_reply("CONFLICT AI isn't current player")
 end
 
-local lastEvent = redis.pcall("JSON.GET", sessionKey, ".eventLog[-1].event").ok
+local eventLogRes = redis.pcall("JSON.GET", sessionKey, ".eventLog")
 
-if lastEvent == "ai_turn_started" then
-  return redis.error_reply("CONFLICT AI turn already in progress")
+if eventLogRes.err then
+  return redis.error_reply("ERR Failed to process event logs for validation")
+else
+  local eventLog = cjson.decode(eventLogRes)
+
+  -- look for last turn ended event to avoid concurrent AI turns
+  for i = #eventLog, 1, -1 do
+    local log = eventLog[i]
+
+    if log.event == "turn_ended" then
+      break
+    elseif log.event == "ai_turn_started" then
+      return redis.error_reply("CONFLICT AI turn already in progress")
+    end
+  end
 end
 
 local time = redis.call("TIME")

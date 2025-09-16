@@ -21,22 +21,27 @@ elseif redis.call("HGET", playersKey, playerName) ~= false then
   return redis.error_reply("CONFLICT Player already in game")
 end
 
-redis.call("RPUSH", playerOrderKey, playerName)
 local currentPlayer = cjson.decode(redis.call("JSON.GET", sessionKey, ".currentPlayer"))
-if currentPlayer == cjson.null then
-  if gameType == "singleplayer" then
-    currentPlayer = playerName
-  elseif nPlayers > 0 then -- this is the second player to join
-    currentPlayer = redis.call("LMOVE", playerOrderKey, playerOrderKey, "LEFT", "RIGHT")
 
-    -- edge case where player takes a turn, then all other players leave,
-    -- then another player joins - in that case we need to rotate one more time
-    -- since otherwise the player who stayed in would go twice
-    if currentPlayer == redis.pcall("JSON.GET", sessionKey, ".turns[-1].author").ok then
+if gameType == "singleplayer" then
+  redis.call("RPUSH", playerOrderKey, playerName)
+
+  if currentPlayer == cjson.null then
+    currentPlayer = playerName
+  end
+else
+  redis.call("LMOVE", playerOrderKey, playerOrderKey, "RIGHT", "LEFT")
+  redis.call("RPUSH", playerOrderKey, playerName)
+  local expectedCurrentPlayer = redis.call("LMOVE", playerOrderKey, playerOrderKey, "LEFT", "RIGHT")
+
+  if currentPlayer == cjson.null then
+    local prevAuthorRes = redis.pcall("JSON.GET", sessionKey, ".turns[-1].author")
+
+    if not prevAuthorRes.err and expectedCurrentPlayer == cjson.decode(prevAuthorRes) then
       currentPlayer = redis.call("LMOVE", playerOrderKey, playerOrderKey, "LEFT", "RIGHT")
+    else
+      currentPlayer = expectedCurrentPlayer
     end
-  else
-    currentPlayer = nil
   end
 end
 

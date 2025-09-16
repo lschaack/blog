@@ -101,11 +101,19 @@ export class GameService {
   }
 
   async startAITurn(sessionId: string): Promise<void> {
-    const gameState = await this.redis.startAiTurn(sessionId);
+    try {
+      const gameState = await this.redis.startAiTurn(sessionId);
 
-    this.processAITurnBackground(sessionId, gameState);
+      this.processAITurnBackground(sessionId, gameState);
 
-    await this.publishGameState(sessionId, gameState);
+      await this.publishGameState(sessionId, gameState);
+    } catch (error) {
+      console.error('Failed to start AI turn');
+
+      if (error instanceof Error) {
+        console.error(error.message);
+      }
+    }
   }
 
   private async getAITurn(gameState: MultiplayerGameState) {

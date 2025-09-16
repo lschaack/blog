@@ -13,6 +13,7 @@ export type SSEConnection = {
 const createSSEConnection = (
   sessionId: string,
   handleGameUpdate: (dispatch: (prevState: MultiplayerGameState | null) => MultiplayerGameState) => void,
+  handleError: (message: string) => void,
 ) => {
   return new Promise<EventSource>((resolve, reject) => {
     const url = new URL(
@@ -50,7 +51,7 @@ const createSSEConnection = (
       }
     });
 
-    customEventSource.addEventListener('error', (errorEvent) => {
+    customEventSource.onerror = (errorEvent) => {
       let errorMessage = 'Something went wrong enough that I can\'t actually tell you what it is';
 
       // see if there's a custom message from a predictable error state
@@ -64,8 +65,9 @@ const createSSEConnection = (
 
       customEventSource.close();
 
-      reject(errorMessage);
-    });
+      reject(errorMessage); // the promise has likely already resolved anyway
+      handleError(errorMessage);
+    };
 
     customEventSource.onmessage = (event) => {
       try {
@@ -117,7 +119,14 @@ export const useSSEConnection = (
     }
 
     try {
-      const eventSource = await createSSEConnection(sessionId, setGameState);
+      const eventSource = await createSSEConnection(
+        sessionId,
+        setGameState,
+        errorMessage => {
+          setConnectionState('error');
+          setError(errorMessage);
+        }
+      );
 
       if (!isAutoReconnect) {
         setConnectionState('connected');
