@@ -3,7 +3,8 @@ import clsx from "clsx";
 import { ParsedPath, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 import { breakUpPath, getAnimationTimingFunction, getEndPosition, pathToD } from "../utils/svg";
-import { easeOutRational } from "../utils/easingFunctions";
+
+const PEN_LIFT_COST_S = 0.075;
 
 // Custom hook for path length
 function usePathLength() {
@@ -34,17 +35,15 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
   paused,
   handleAnimationEnd,
   className,
-  drawSpeed: rawDrawSpeed,
+  drawSpeed,
   timingFunction = 'ease',
   delay = 0,
 }) => {
   const [pathRef, rawPathLength] = usePathLength();
   const pathLength = rawPathLength ?? 0;
 
-  const minDrawSpeed = rawDrawSpeed / 4;
-  const drawSpeed = easeOutRational(rawDrawSpeed - minDrawSpeed, 50, pathLength)
   const doAnimate = rawPathLength !== null && !paused;
-  const duration = pathLength / drawSpeed;
+  const rawDuration = pathLength / drawSpeed;
 
   const d = useMemo(() => pathToD(path), [path]);
 
@@ -62,7 +61,7 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
         strokeDasharray: pathLength,
         strokeDashoffset: pathLength,
         animation: doAnimate
-          ? `draw ${duration}s ${timingFunction} ${delay}s forwards`
+          ? `draw ${rawDuration}s ${timingFunction} ${delay}s forwards`
           : 'unset',
       }}
     />
@@ -98,8 +97,6 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
     }));
   }, [path]);
 
-  // NOTE: can't add inter-line effects (like a base delay) b/c breakUpPath removes
-  // distinction between move/draw commands since every segment starts with a move
   const delays = useMemo(() => {
     const delays = [];
 
@@ -109,7 +106,9 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
         const [, currStartX, currStartY] = pathSegments[i].segment[0];
         const distance = Math.sqrt((currStartX - prevEndX) ** 2 + (currStartY - prevEndY) ** 2);
 
-        delays.push(distance / (drawSpeed));
+        const penLiftCost = distance > 0 ? PEN_LIFT_COST_S : 0;
+
+        delays.push(penLiftCost + distance / drawSpeed);
       } else {
         delays.push(0);
       }

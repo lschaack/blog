@@ -1,6 +1,7 @@
 import { ArcCommand, ArcRelativeCommand, ClosePathCommand, CubicBezierCommand, CubicBezierRelativeCommand, CurveCommand, DrawCommand, HorizontalLineToCommand, HorizontalLineToRelativeCommand, LineToCommand, LineToRelativeCommand, MoveToCommand, MoveToRelativeCommand, ParsedPath, PathCommand, QuadraticBezierCommand, QuadraticBezierRelativeCommand, SmoothCubicBezierCommand, SmoothCubicBezierRelativeCommand, SmoothQuadraticBezierCommand, SmoothQuadraticBezierRelativeCommand, VerticalLineToCommand, VerticalLineToRelativeCommand } from "parse-svg-path";
 
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
+import { easeOutRational, easeOutSine } from "./easingFunctions";
 
 // Type guard functions for path commands
 export const isMoveToCommand = (command: PathCommand): command is MoveToCommand => command[0] === 'M';
@@ -286,7 +287,8 @@ export function getAnimationTimingFunction(segment: PathSegment) {
 
   // represents cost of drawing a straight line and prevents division by 0
   const baseCost = 1.0;
-  const curvatureCost = 5.0;
+  // unweighted curvature is on [0,1]
+  const curvatureWeight = 10.0;
   const nSections = 5;
 
   const sectionWidth = 1 / nSections;
@@ -298,7 +300,10 @@ export function getAnimationTimingFunction(segment: PathSegment) {
 
   for (let i = 0; i < nSections; i++) {
     const samplePoint = sectionStart + halfSectionWidth;
-    const cost = baseCost + curvatureCost * getCurvature(segment as PathSegment<CurveCommand>, samplePoint);
+    // TODO: experiment with different easing curves
+    const easedCurvature = easeOutSine(0.8, getCurvature(segment as PathSegment<CurveCommand>, samplePoint));
+    const curvatureCost = curvatureWeight * easedCurvature;
+    const cost = baseCost + curvatureCost;
     costs.push(cost);
     totalCost += cost;
     sectionStart += sectionWidth;

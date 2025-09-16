@@ -43,10 +43,10 @@ GAME STATE:
 ${svg}
 
 STRATEGY:
-- Come up with an idea to draw
+- Identify the existing elements of the composition
+- Imagine a new element to draw
 - Decide where it should go on the image
-- Connect the point on the image to the corresponding path in the svg
-- Use that path to double-check that your addition is correctly positioned
+- Use nearby paths to position and orient your new element
 
 TASK:
 Describe what you think the sketch represents or is becoming, draw on top of it to add your contribution to the collaborative artwork, and describe why you chose to add this specific element and how it brings your interpretation to life
