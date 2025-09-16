@@ -18,7 +18,7 @@ end
 local nPlayers = redis.call("HLEN", playersKey)
 
 local currentPlayer = cjson.decode(redis.call("JSON.GET", sessionKey, ".currentPlayer"))
-if nPlayers <= 2 then -- no longer enough players in the game
+if nPlayers <= 2 and currentPlayer ~= "AI" then -- no longer enough players in the game
   currentPlayer = nil
 elseif playerName == currentPlayer then
   currentPlayer = redis.call("LMOVE", playerOrderKey, playerOrderKey, "LEFT", "RIGHT")
