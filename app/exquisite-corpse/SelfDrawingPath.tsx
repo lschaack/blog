@@ -24,16 +24,14 @@ function usePathLength() {
 // all paths will be drawn simultaneously
 type SelfDrawingSinglePathProps = Omit<SelfDrawingPathProps, 'path'> & {
   path: PathCommand[];
-  waiting?: boolean;
-  finished?: boolean;
+  paused: boolean;
   handleAnimationEnd: () => void;
   timingFunction?: string;
   delay?: number;
 };
 const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
   path,
-  waiting = false,
-  finished = false,
+  paused,
   handleAnimationEnd,
   className,
   drawSpeed: rawDrawSpeed,
@@ -45,7 +43,7 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
 
   const minDrawSpeed = rawDrawSpeed / 4;
   const drawSpeed = easeOutRational(rawDrawSpeed - minDrawSpeed, 50, pathLength)
-  const doAnimate = rawPathLength !== null && !waiting;
+  const doAnimate = rawPathLength !== null && !paused;
   const duration = pathLength / drawSpeed;
 
   const d = useMemo(() => pathToD(path), [path]);
@@ -62,7 +60,7 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
       onAnimationEnd={handleAnimationEnd}
       style={{
         strokeDasharray: pathLength,
-        strokeDashoffset: finished ? 0 : pathLength,
+        strokeDashoffset: pathLength,
         animation: doAnimate
           ? `draw ${duration}s ${timingFunction} ${delay}s forwards`
           : 'unset',
@@ -122,14 +120,14 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
 
   return (
     pathSegments.map(({ segment, timingFunction, cost }, index) => {
+      // FIXME: this absolutely shouldn't be calculated on every render
       const delay = delays[index];
 
       return (
         <SelfDrawingSinglePath
           key={`single-path-${index}`}
           path={segment}
-          waiting={index > currentAnimationIndex}
-          finished={index < currentAnimationIndex}
+          paused={index > currentAnimationIndex}
           handleAnimationEnd={() => dispatch('increment')}
           className={className}
           drawSpeed={drawSpeed / cost}
@@ -161,22 +159,22 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
       viewBox={`0 0 ${width} ${height}`}
       className={className}
     >
-      <g stroke="#000" strokeWidth={2} strokeLinecap="round" fill="none">
-        {paths.map((path, index) => (
-          animate === 'all' || index === paths.length - 1 ? (
-            <SelfDrawingPath
-              key={`path-${index}`}
-              path={path}
-              drawSpeed={drawSpeed}
-            />
-          ) : (
-            <path
-              key={`path-${index}`}
-              d={pathToD(path)}
-            />
-          )
-        ))}
-      </g>
+      {paths.map((path, index) => (
+        animate === 'all' || index === paths.length - 1 ? (
+          <SelfDrawingPath
+            key={`path-${index}`}
+            className="stroke-2 stroke-black"
+            path={path}
+            drawSpeed={drawSpeed}
+          />
+        ) : (
+          <path
+            key={`path-${index}`}
+            className="stroke-2 stroke-black"
+            d={pathToD(path)}
+          />
+        )
+      ))}
     </svg>
   )
 }
