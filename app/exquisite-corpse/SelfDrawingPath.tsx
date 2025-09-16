@@ -61,9 +61,7 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
       style={{
         strokeDasharray: pathLength,
         strokeDashoffset: pathLength,
-        animation: doAnimate
-          ? `draw ${duration}s ${timingFunction} ${delay}s forwards`
-          : 'unset',
+        animation: `draw ${duration}s ${timingFunction} ${doAnimate ? delay : `-${delay}`}s forwards ${doAnimate ? '' : 'paused'}`.trim(),
       }}
     />
   );
