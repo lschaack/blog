@@ -31,8 +31,8 @@ export const MultiplayerCurveTurnRenderer = ({
   useEffect(() => setCurrentTurnIndex(turns.length - 1), [turns]);
 
   // Get display lines from completed turns up to current index
-  const displayTurns = useMemo(() => {
-    return turns.slice(0, currentTurnIndex + 1);
+  const displayPaths = useMemo(() => {
+    return turns.slice(0, currentTurnIndex + 1).map(({ path }) => path);
   }, [turns, currentTurnIndex]);
 
   // Get previous turn for display
@@ -95,7 +95,7 @@ export const MultiplayerCurveTurnRenderer = ({
       {/* Sketchpad */}
       <div className="relative">
         <SelfDrawingSketch
-          paths={displayTurns.map(({ path }) => path)}
+          paths={displayPaths}
           dimensions={canvasDimensions}
           className="absolute inset-0 fill-none pointer-events-none"
         />

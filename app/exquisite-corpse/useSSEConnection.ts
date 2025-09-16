@@ -10,143 +10,156 @@ export type SSEConnection = {
   reconnect: () => void;
 };
 
+const createSSEConnection = (
+  sessionId: string,
+  handleGameUpdate: (dispatch: (prevState: MultiplayerGameState | null) => MultiplayerGameState) => void,
+) => {
+  return new Promise<EventSource>((resolve, reject) => {
+    const url = new URL(
+      `/api/exquisite-corpse/games/${sessionId}/connect`,
+      window.location.origin
+    );
+
+    const customEventSource = new EventSource(url.toString());
+
+    customEventSource.onopen = () => {
+      console.log('SSE connection opened');
+
+      resolve(customEventSource);
+    };
+
+    customEventSource.addEventListener('game_update', (event: MessageEvent<string>) => {
+      try {
+        const { gameState: nextGameState } = JSON.parse(event.data);
+
+        handleGameUpdate(prevGameState => {
+          const prevLastEvent = prevGameState?.eventLog.at(-1);
+          const nextLastEvent = nextGameState?.eventLog.at(-1);
+
+          const prevTimestamp = prevLastEvent?.timestamp ?? -1;
+          const nextTimestamp = nextLastEvent?.timestamp ?? 0;
+
+          if (!prevLastEvent || nextTimestamp > prevTimestamp) {
+            return nextGameState;
+          } else {
+            return prevGameState;
+          }
+        });
+      } catch (error) {
+        throw new Error(`Failed to parse game state ${event.data}: ${error}`);
+      }
+    });
+
+    customEventSource.addEventListener('error', (errorEvent) => {
+      let errorMessage = 'Something went wrong enough that I can\'t actually tell you what it is';
+
+      // see if there's a custom message from a predictable error state
+      if ((errorEvent as MessageEvent).data) {
+        try {
+          const parsed = JSON.parse((errorEvent as MessageEvent).data);
+
+          if (parsed.message) errorMessage = parsed.message;
+        } finally { }
+      }
+
+      customEventSource.close();
+
+      reject(errorMessage);
+    });
+
+    customEventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+
+        if (data.type === 'heartbeat' || data.type === 'connected') {
+          return;
+        } else {
+          console.warn(`Received event with unknown type "${data.type}"`)
+        }
+      } catch (err) {
+        console.error('Failed to parse SSE message:', err);
+      }
+    };
+  });
+}
+
 export const useSSEConnection = (
-  sessionId: string | null,
+  sessionId: string,
 ): SSEConnection => {
   const [connectionState, setConnectionState] = useState<SSEConnectionState>('disconnected');
   const [error, setError] = useState<string | null>(null);
   const [gameState, setGameState] = useState<MultiplayerGameState | null>(null);
 
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const eventSourceRef = useRef<EventSource>(null);
+  const timeoutIdRef = useRef<NodeJS.Timeout>(null);
 
   const cleanup = useCallback(() => {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
+
+    if (timeoutIdRef.current) {
+      clearTimeout(timeoutIdRef.current);
     }
   }, []);
 
-  const connect = useCallback(() => {
-    if (!sessionId) {
-      setConnectionState('disconnected');
-      return;
-    }
-
+  const _connect = useCallback(async (isAutoReconnect = false) => {
     if (eventSourceRef.current) {
       cleanup();
     }
 
-    setConnectionState('connecting');
-    setError(null);
+    // autoreconnect only happens on top of an existing connection and shouldn't
+    // cause a render, so avoid updating status when keeping connection open
+    if (!isAutoReconnect) {
+      setConnectionState('connecting');
+      setError(null);
+    }
 
     try {
-      const url = new URL(
-        `/api/exquisite-corpse/games/${sessionId}/connect`,
-        window.location.origin
-      );
+      const eventSource = await createSSEConnection(sessionId, setGameState);
 
-      const customEventSource = new EventSource(url.toString());
-      eventSourceRef.current = customEventSource;
-
-      customEventSource.onopen = () => {
-        console.log('SSE connection opened');
+      if (!isAutoReconnect) {
         setConnectionState('connected');
         setError(null);
-      };
+      }
 
-      customEventSource.addEventListener('game_update', (event: MessageEvent<string>) => {
-        try {
-          const { gameState: nextGameState } = JSON.parse(event.data);
-
-          setGameState(prevGameState => {
-            const prevLastEvent = prevGameState?.eventLog.at(-1);
-            const nextLastEvent = nextGameState?.eventLog.at(-1);
-
-            const prevTimestamp = prevLastEvent?.timestamp ?? -1;
-            const nextTimestamp = nextLastEvent?.timestamp ?? 0;
-
-            if (!prevLastEvent || nextTimestamp > prevTimestamp) {
-              return nextGameState;
-            } else {
-              return prevGameState;
-            }
-          });
-        } catch (error) {
-          throw new Error(`Failed to parse game state ${event.data}: ${error}`);
-        }
-      });
-
-      customEventSource.addEventListener('error', (errorEvent) => {
-        setConnectionState('error');
-
-        // see if there's a custom message from a predictable error state
-        // FIXME: add handler for application/json errors
-        if ((errorEvent as MessageEvent).data) {
-          try {
-            const parsed = JSON.parse((errorEvent as MessageEvent).data);
-
-            if (parsed.message) {
-              setError(parsed.message);
-              customEventSource.close();
-
-              return;
-            }
-          } finally {
-            // swallow error - not sure what this is but assuming it's unrecoverable
-          }
-        }
-
-        setError('Something went wrong enough that I can\'t actually tell you what it is');
-
-        customEventSource.close();
-      });
-
-      customEventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          if (data.type === 'heartbeat' || data.type === 'connected') {
-            return;
-          } else {
-            console.warn(`Received event with unknown type "${data.type}"`)
-          }
-        } catch (err) {
-          console.error('Failed to parse SSE message:', err);
-        }
-      };
-
+      return eventSource;
     } catch (err) {
       console.error('Failed to create SSE connection:', err);
+
       setConnectionState('error');
-      setError('Failed to connect');
+
+      if (typeof err === 'string') {
+        setError(err);
+      } else {
+        setError('Failed to connect');
+      }
+
+      return null;
     }
   }, [sessionId, cleanup]);
 
-  // Initial connection and game state fetch
-  useEffect(() => {
-    if (sessionId) {
-      connect();
-    } else {
-      cleanup();
-      setConnectionState('disconnected');
-      setGameState(null);
-    }
+  // NOTE: try to reconnect 30s before the connection closes automatically
+  // https://vercel.com/docs/functions/limitations#max-duration
+  const connectWithAutoRefresh = useCallback(async (isAutoReconnect = false) => {
+    try {
+      const eventSource = await _connect(isAutoReconnect);
 
-    return cleanup;
-  }, [sessionId, connect, cleanup]);
+      if (eventSource) {
+        eventSourceRef.current?.close();
+        eventSourceRef.current = eventSource;
 
-  // Cleanup on unmount and handle beforeunload
+        // TODO: ^^^ switch to Pusher or similar
+        timeoutIdRef.current = setTimeout(() => connectWithAutoRefresh(true), 1000 * 60 * 4.5);
+      }
+    } finally { } // _connect handles error messages
+  }, [_connect]);
+
+  // Try to notify server of disconnect when page is unloading
   useEffect(() => {
     const handleBeforeUnload = () => {
-      // Try to notify server of disconnect when page is unloading
-      if (sessionId) {
-        navigator.sendBeacon(`/api/exquisite-corpse/games/${sessionId}/disconnect`);
-      }
+      navigator.sendBeacon(`/api/exquisite-corpse/games/${sessionId}/disconnect`);
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
@@ -157,10 +170,17 @@ export const useSSEConnection = (
     };
   }, [cleanup, sessionId]);
 
+  // Initial connection and game state fetch
+  useEffect(() => {
+    connectWithAutoRefresh();
+
+    return cleanup;
+  }, [cleanup, connectWithAutoRefresh]);
+
   const reconnect = useCallback(() => {
     cleanup();
-    if (sessionId) connect();
-  }, [sessionId, connect, cleanup]);
+    connectWithAutoRefresh();
+  }, [cleanup, connectWithAutoRefresh]);
 
   return {
     connectionState,
