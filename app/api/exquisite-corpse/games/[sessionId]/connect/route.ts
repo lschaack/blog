@@ -6,7 +6,6 @@ import { compose } from '@/app/api/middleware/compose';
 import { GameParams } from '../../../schemas';
 import { CUSTOM_REPLY_ERROR_TYPE } from '@/app/types/exquisiteCorpse';
 import { ReplyError } from 'ioredis';
-import { withRequiredCookies } from '@/app/api/middleware/cookies';
 import { cookies } from 'next/headers';
 import { ONE_DAY_S } from '@/app/utils/time';
 import { GameStateUpdate } from '@/app/types/multiplayer';
@@ -61,7 +60,6 @@ const getConnectionErrorMessage = (error: unknown, playerName: string) => {
 }
 
 export const GET = compose(
-  withRequiredCookies('playerName', 'playerToken'),
   withCatchallErrorHandler,
   withRedisErrorHandler,
 )(
@@ -73,7 +71,10 @@ export const GET = compose(
     }
   ) => {
     const { sessionId } = await ctx.params;
-    const { cookies: { playerName, playerToken } } = ctx;
+    const cookieStore = await cookies();
+
+    const playerName = cookieStore.get('playerName')?.value;
+    const playerToken = cookieStore.get('playerToken')?.value;
 
     if (!playerName || !playerToken) {
       return getCrashAndBurnStream({
