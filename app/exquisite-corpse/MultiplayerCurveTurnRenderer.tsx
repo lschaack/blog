@@ -135,6 +135,11 @@ export const MultiplayerCurveTurnRenderer = ({
               &ldquo;{prevTurn.reasoning}&rdquo;
             </div>
           )}
+          {prevTurn.thoughts && (
+            <div className="text-gray-500 font-geist-mono text-sm italic">
+              &ldquo;{prevTurn.thoughts}&rdquo;
+            </div>
+          )}
           {prevTurn.image && (
             // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
             <img src={ensureStartsWith(prevTurn.image, 'data:image/png;base64,')} />

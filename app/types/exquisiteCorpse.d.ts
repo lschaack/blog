@@ -20,6 +20,7 @@ export type CurveTurn = BaseTurn & {
   path: Line;
   interpretation?: string; // AI's interpretation of what the drawing represents
   reasoning?: string; // AI's reasoning for adding their line
+  thoughts?: string; // AI's thoughts about the game
   image?: string;
   title?: string;
 };
@@ -83,7 +84,8 @@ export type AIImageResponseGeminiFlashPreview = {
 export type AICurveResponse = {
   interpretation: string;
   path: ParsedPath;
-  reasoning: string;
+  reasoning?: string;
+  thoughts?: string;
   image?: string;
   title: string;
 };

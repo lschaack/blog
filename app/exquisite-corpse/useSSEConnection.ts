@@ -115,12 +115,11 @@ export const useSSEConnection = (
 
     // autoreconnect only happens on top of an existing connection and shouldn't
     // cause a render, so avoid updating status when keeping connection open
-    if (!isAutoReconnect) {
-      setConnectionState('connecting');
-      setError(null);
-    }
+    if (!isAutoReconnect) setConnectionState('connecting');
 
     try {
+      setError(null);
+
       const eventSource = await createSSEConnection(
         sessionId,
         setGameState,
@@ -130,10 +129,7 @@ export const useSSEConnection = (
         }
       );
 
-      if (!isAutoReconnect) {
-        setConnectionState('connected');
-        setError(null);
-      }
+      if (!isAutoReconnect) setConnectionState('connected');
 
       return eventSource;
     } catch (err) {

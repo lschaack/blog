@@ -43,7 +43,32 @@ export function validatePipelineResult<T = NonNullable<PipelineResult>>(
 // where status is an http response code
 // and domainCode is the code for the specific issue resulting in that status
 // These are defined and documented in CONNECTION_ERROR_CODES
-export const REPLY_ERROR_SPLITTER = /^ERR_(?<code>(?<status>\d{3})(?<domainCode>\d{3}))\s+(?<message>.*)$/;
+export const CUSTOM_REPLY_ERROR_SPLITTER = /^ERR_(?<code>(?<status>\d{3})(?<domainCode>\d{3}))\s+(?<message>.*)$/;
+export const createConnectionError = (error: typeof ReplyError): {
+  error: ConnectionError,
+  status: number
+} => {
+  const match = CUSTOM_REPLY_ERROR_SPLITTER.exec((error as Error).message);
+
+  if (match) {
+    const { code: rawCode, status: rawStatus, message } = match.groups ?? {};
+
+    const code = parseInt(rawCode) as ConnectionError['code'];
+    const status = parseInt(rawStatus);
+
+    if (!isNaN(status) && !isNaN(code)) {
+      return {
+        error: { code, message },
+        status,
+      };
+    }
+  }
+
+  return {
+    error: DEFAULT_CONNECTION_ERROR,
+    status: 500,
+  };
+}
 export const withRedisErrorHandler: Middleware = handler => {
   return async (request, ctx) => {
     try {
@@ -52,25 +77,11 @@ export const withRedisErrorHandler: Middleware = handler => {
       if (error instanceof ReplyError) {
         console.error(error);
 
-        const match = REPLY_ERROR_SPLITTER.exec((error as Error).message);
-
-        if (match) {
-          const { code: rawCode, status: rawStatus, message } = match.groups ?? {};
-
-          const code = parseInt(rawCode);
-          const status = parseInt(rawStatus);
-
-          if (!isNaN(status) && !isNaN(code)) {
-            return NextResponse.json(
-              { error: { code, message } as ConnectionError },
-              { status }
-            );
-          }
-        }
+        const { error: connectionError, status } = createConnectionError(error);
 
         return NextResponse.json(
-          { error: DEFAULT_CONNECTION_ERROR },
-          { status: 500 }
+          { error: connectionError },
+          { status }
         );
       } else if (error instanceof RedisPipelineError) {
         console.group(error.message);

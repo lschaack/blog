@@ -101,6 +101,13 @@ class GameEventManager {
   }
 
   async unsubscribeFromGame(sessionId: string, connectionToken: string) {
+    const client = this.clients.get(connectionToken);
+    if (client) {
+      try {
+        client.cleanup();
+      } catch { }
+    }
+
     this.clients.delete(connectionToken);
     this.connections.get(sessionId)?.delete(connectionToken);
   }

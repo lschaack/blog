@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getGameService } from '@/app/lib/gameService';
 import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
-import { REPLY_ERROR_SPLITTER, withRedisErrorHandler } from '@/app/api/middleware/redis';
+import { createConnectionError, withRedisErrorHandler } from '@/app/api/middleware/redis';
 import { compose } from '@/app/api/middleware/compose';
 import { GameParams } from '../../../schemas';
-import { CUSTOM_REPLY_ERROR_TYPE } from '@/app/types/exquisiteCorpse';
 import { ReplyError } from 'ioredis';
 import { cookies } from 'next/headers';
 import { ONE_DAY_S } from '@/app/utils/time';
 import { GameStateUpdate } from '@/app/types/multiplayer';
-import { ConnectionError } from '@/app/lib/connectionError';
+import { ConnectionError, DEFAULT_CONNECTION_ERROR } from '@/app/lib/connectionError';
 
 // NOTE: Can't use traditional errors w/SSE, but we can use a stream which sends
 // a single error event before immediately closing itself
@@ -35,40 +34,21 @@ const getCrashAndBurnStream = (connectionError: ConnectionError) => {
 
 const getConnectionError = (error: unknown, playerName: string): ConnectionError => {
   if (error instanceof ReplyError) {
+    const { error: connectionError } = createConnectionError(error);
+
     // improve error message if I have a good idea of what caused it
-    const { type, message } = (
-      REPLY_ERROR_SPLITTER.exec((error as Error).message)?.groups ?? {}
-    ) as { type?: CUSTOM_REPLY_ERROR_TYPE, message?: string };
-
-    if (type === 'FORBIDDEN') {
-      return {
-        code: 403001,
-        message: `Cannot verify that you are actually ${playerName}. Use the join game flow!`
-      }
-    } else if (type === 'NOT_FOUND') {
-      if (message?.startsWith('Player')) {
-        return {
-          code: 404002,
-          message: `Player "${playerName}" is not in the game. Use the join game flow!`,
-        }
-      } else {
-        return {
-          code: 404001,
-          message: 'This game does not exist or has been cleaned up. Try making a new one!',
-        }
-      }
-    } else if (type === 'CONFLICT') {
-      return {
-        code: 409001,
-        message: `A player with the name "${playerName}" is already in the game.`,
-      }
+    if (connectionError.code === 403001) {
+      connectionError.message = `Cannot verify that you are actually ${playerName}. Use the join game flow!`;
+    } else if (connectionError.code === 404001) {
+      connectionError.message = 'This game does not exist or has been cleaned up. Try making a new one!';
+    } else if (connectionError.code === 404002) {
+      connectionError.message = `Player "${playerName}" is not in the game. Use the join game flow!`;
     }
+
+    return connectionError;
   }
 
-  return {
-    code: 500001,
-    message: 'Not sure what went wrong, but I\'m impressed that you managed to encounter this message!',
-  }
+  else return DEFAULT_CONNECTION_ERROR;
 }
 
 export const GET = compose(
@@ -160,6 +140,8 @@ export const GET = compose(
             `event: game_update\ndata: ${JSON.stringify(initialGameStateEvent)}\n\n`
           ));
         } catch (error) {
+          console.log(error);
+
           const connectionError = getConnectionError(error, playerName);
           const errorEvent = `event: error\ndata: ${JSON.stringify(connectionError)}\n\n`;
 

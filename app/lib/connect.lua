@@ -15,8 +15,6 @@ elseif foundPlayerToken == false then
   return redis.error_reply("ERR_404002 Player not in game")
 elseif foundPlayerToken ~= playerToken then
   return redis.error_reply("ERR_403001 Incorrect or missing token")
-elseif redis.call("HGET", connectionsKey, playerPath) ~= false then
-  return redis.error_reply("ERR_409004 Player already connected")
 end
 
 local time = redis.call("TIME")
