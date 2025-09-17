@@ -1,7 +1,7 @@
 import { ArcCommand, ArcRelativeCommand, ClosePathCommand, CubicBezierCommand, CubicBezierRelativeCommand, CurveCommand, DrawCommand, HorizontalLineToCommand, HorizontalLineToRelativeCommand, LineToCommand, LineToRelativeCommand, MoveToCommand, MoveToRelativeCommand, ParsedPath, PathCommand, QuadraticBezierCommand, QuadraticBezierRelativeCommand, SmoothCubicBezierCommand, SmoothCubicBezierRelativeCommand, SmoothQuadraticBezierCommand, SmoothQuadraticBezierRelativeCommand, VerticalLineToCommand, VerticalLineToRelativeCommand } from "parse-svg-path";
 
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
-import { easeOutRational, easeOutSine } from "./easingFunctions";
+import { easeOutSine } from "./easingFunctions";
 
 // Type guard functions for path commands
 export const isMoveToCommand = (command: PathCommand): command is MoveToCommand => command[0] === 'M';

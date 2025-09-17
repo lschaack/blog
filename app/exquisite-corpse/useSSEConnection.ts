@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { MultiplayerGameState } from '@/app/types/multiplayer';
+import { CONNECTION_ERROR_CODES, ConnectionError, DEFAULT_CONNECTION_ERROR } from '../lib/connectionError';
 
 type SSEConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
 export type SSEConnection = {
   connectionState: SSEConnectionState;
-  error: string | null;
+  error: ConnectionError | null;
   gameState: MultiplayerGameState | null;
   reconnect: () => void;
 };
@@ -13,7 +14,7 @@ export type SSEConnection = {
 const createSSEConnection = (
   sessionId: string,
   handleGameUpdate: (dispatch: (prevState: MultiplayerGameState | null) => MultiplayerGameState) => void,
-  handleError: (message: string) => void,
+  handleError: (message: ConnectionError) => void,
 ) => {
   return new Promise<EventSource>((resolve, reject) => {
     const url = new URL(
@@ -52,21 +53,22 @@ const createSSEConnection = (
     });
 
     customEventSource.onerror = (errorEvent) => {
-      let errorMessage = 'Something went wrong enough that I can\'t actually tell you what it is';
+      let error = DEFAULT_CONNECTION_ERROR;
 
       // see if there's a custom message from a predictable error state
       if ((errorEvent as MessageEvent).data) {
         try {
           const parsed = JSON.parse((errorEvent as MessageEvent).data);
 
-          if (parsed.message) errorMessage = parsed.message;
-        } finally { }
+          if (parsed.message && parsed.code) {
+            error = parsed;
+          }
+        } catch { }
       }
 
+      reject(error); // the promise has likely already resolved anyway
+      handleError(error);
       customEventSource.close();
-
-      reject(errorMessage); // the promise has likely already resolved anyway
-      handleError(errorMessage);
     };
 
     customEventSource.onmessage = (event) => {
@@ -89,7 +91,7 @@ export const useSSEConnection = (
   sessionId: string,
 ): SSEConnection => {
   const [connectionState, setConnectionState] = useState<SSEConnectionState>('disconnected');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ConnectionError | null>(null);
   const [gameState, setGameState] = useState<MultiplayerGameState | null>(null);
 
   const eventSourceRef = useRef<EventSource>(null);
@@ -122,9 +124,9 @@ export const useSSEConnection = (
       const eventSource = await createSSEConnection(
         sessionId,
         setGameState,
-        errorMessage => {
+        error => {
           setConnectionState('error');
-          setError(errorMessage);
+          setError(error);
         }
       );
 
@@ -139,10 +141,10 @@ export const useSSEConnection = (
 
       setConnectionState('error');
 
-      if (typeof err === 'string') {
-        setError(err);
+      if (err && !!CONNECTION_ERROR_CODES[(err as ConnectionError).code]) {
+        setError(err as ConnectionError);
       } else {
-        setError('Failed to connect');
+        setError(DEFAULT_CONNECTION_ERROR);
       }
 
       return null;

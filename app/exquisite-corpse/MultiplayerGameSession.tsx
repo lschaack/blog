@@ -4,9 +4,9 @@ import { useCallback } from 'react';
 import { useRouter } from "next/navigation";
 
 import { useSSEConnection } from './useSSEConnection';
-import { Button } from '@/app/components/Button';
 import { leaveGame } from './requests';
 import { ActiveSession, GameSessionProps } from './ActiveSession';
+import { ConnectionErrorRecovery } from './ConnectionErrorRecovery';
 
 export const MultiplayerGameSession = ({
   sessionId,
@@ -17,48 +17,36 @@ export const MultiplayerGameSession = ({
   const {
     connectionState,
     gameState,
-    reconnect,
-    error: connectionError,
+    error,
   } = SSEConnection;
 
   const router = useRouter();
 
   const handleLeaveGame = useCallback(() => {
-    leaveGame(sessionId);
+    // dunno why this would fail, but nothing much to do about it
+    leaveGame(sessionId).catch();
 
     router.push('/exquisite-corpse');
   }, [sessionId, router]);
 
-  // FIXME: !playerName error message
-  if (connectionState !== 'connected' || !gameState || !playerName) {
-    return (
-      <div className="flex flex-col gap-4 max-w-[512px] mx-auto p-6">
-        <div className="card text-center">
-          <div className="font-semibold text-2xl [font-variant:all-small-caps]">
-            {connectionState}
-          </div>
-          {connectionError && (
-            <div className="text-red-600 font-semibold font-geist-mono mt-2 max-w-[30ch]">
-              {connectionError}
-            </div>
-          )}
-        </div>
-
-        {connectionError && (
-          <Button
-            label="Reconnect"
-            onClick={reconnect}
-            className="w-full"
-          />
-        )}
-
-        <Button
-          label="Return to Lobby"
-          onClick={handleLeaveGame}
-          className="w-full"
+  if (connectionState !== 'connected' || !gameState) {
+    if (error) {
+      return (
+        <ConnectionErrorRecovery
+          error={error}
+          // TODO: not too much I can do here, but there's definitely something...
+          updateError={() => undefined}
+          sessionId={sessionId}
+          playerName={playerName}
         />
-      </div>
-    );
+      );
+    } else {
+      return (
+        <div className="font-semibold text-2xl [font-variant:all-small-caps]">
+          {connectionState}
+        </div>
+      );
+    }
   } else {
     return (
       <ActiveSession

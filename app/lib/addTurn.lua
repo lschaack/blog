@@ -7,17 +7,17 @@ local playerName = ARGV[2]
 local playerToken = ARGV[3]
 
 if redis.call("EXISTS", sessionKey) == 0 then
-  return redis.error_reply("NOT_FOUND Session does not exist")
+  return redis.error_reply("ERR_404001 Session does not exist")
 elseif redis.call("HGET", playersKey, playerName) ~= playerToken then
-  return redis.error_reply("FORBIDDEN Incorrect player token")
+  return redis.error_reply("ERR_403001 Incorrect player token")
 elseif redis.call("LLEN", playerOrderKey) <= 1 then
-  return redis.error_reply("FORBIDDEN At least two players are required")
+  return redis.error_reply("ERR_403004 At least two players are required")
 end
 
 local currentPlayer = cjson.decode(redis.call("JSON.GET", sessionKey, ".currentPlayer"))
 
 if playerName ~= currentPlayer then
-  return redis.error_reply("CONFLICT Not current player")
+  return redis.error_reply("ERR_403005 Not current player")
 end
 
 local time = redis.call("TIME")

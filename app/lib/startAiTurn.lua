@@ -1,15 +1,15 @@
 local sessionKey = KEYS[1]
 
 if redis.call("EXISTS", sessionKey) == 0 then
-  return redis.error_reply("NOT_FOUND Session does not exist")
+  return redis.error_reply("ERR_404001 Session does not exist")
 elseif cjson.decode(redis.call("JSON.GET", sessionKey, ".currentPlayer")) ~= "AI" then
-  return redis.error_reply("CONFLICT AI isn't current player")
+  return redis.error_reply("ERR_403005 AI isn't current player")
 end
 
 local eventLogRes = redis.pcall("JSON.GET", sessionKey, ".eventLog")
 
 if eventLogRes.err then
-  return redis.error_reply("ERR Failed to process event logs for validation")
+  return redis.error_reply("ERR_500002 Failed to process event logs for validation")
 else
   local eventLog = cjson.decode(eventLogRes)
 
@@ -20,7 +20,7 @@ else
     if log.event == "turn_ended" then
       break
     elseif log.event == "ai_turn_started" then
-      return redis.error_reply("CONFLICT AI turn already in progress")
+      return redis.error_reply("ERR_403006 AI turn already in progress")
     end
   end
 end

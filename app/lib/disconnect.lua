@@ -7,11 +7,11 @@ local playerPath = ".players." .. playerName
 local foundConnectionToken = redis.call("HGET", connectionsKey, playerName)
 
 if redis.call("EXISTS", sessionKey) == 0 then
-  return redis.error_reply("NOT_FOUND Session does not exist")
+  return redis.error_reply("ERR_404001 Session does not exist")
 elseif foundConnectionToken == false then
-  return redis.error_reply("NOT_FOUND Player not connected")
+  return redis.error_reply("ERR_409005 Player not connected")
 elseif foundConnectionToken ~= connectionToken then
-  return redis.error_reply("FORBIDDEN Incorrect or missing token")
+  return redis.error_reply("ERR_403001 Incorrect or missing token")
 end
 
 redis.call("HDEL", connectionsKey, playerName)

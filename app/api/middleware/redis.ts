@@ -1,4 +1,4 @@
-import { CUSTOM_REPLY_ERROR_TYPE } from "@/app/types/exquisiteCorpse";
+import { ConnectionError, DEFAULT_CONNECTION_ERROR } from "@/app/lib/connectionError";
 import { Middleware } from "@/app/types/middleware";
 import { ReplyError } from "ioredis";
 import { NextResponse } from "next/server";
@@ -37,7 +37,13 @@ export function validatePipelineResult<T = NonNullable<PipelineResult>>(
   return transform(result);
 }
 
-export const REPLY_ERROR_SPLITTER = /^(?<type>\S+)\s+(?<message>.*)$/;
+// Custom reply errors look like
+// {code} {message}
+// where code is a six-digit int like {status}{domainCode}
+// where status is an http response code
+// and domainCode is the code for the specific issue resulting in that status
+// These are defined and documented in CONNECTION_ERROR_CODES
+export const REPLY_ERROR_SPLITTER = /^ERR_(?<code>(?<status>\d{3})(?<domainCode>\d{3}))\s+(?<message>.*)$/;
 export const withRedisErrorHandler: Middleware = handler => {
   return async (request, ctx) => {
     try {
@@ -46,26 +52,26 @@ export const withRedisErrorHandler: Middleware = handler => {
       if (error instanceof ReplyError) {
         console.error(error);
 
-        const { type, message } = REPLY_ERROR_SPLITTER.exec((error as Error).message)?.groups ?? {};
+        const match = REPLY_ERROR_SPLITTER.exec((error as Error).message);
 
-        switch (type as CUSTOM_REPLY_ERROR_TYPE) {
-          case 'FORBIDDEN': return NextResponse.json(
-            { error: message },
-            { status: 403 }
-          );
-          case 'NOT_FOUND': return NextResponse.json(
-            { error: message },
-            { status: 404 }
-          );
-          case 'CONFLICT': return NextResponse.json(
-            { error: message },
-            { status: 409 }
-          );
-          default: return NextResponse.json(
-            { error: 'An unknown error occurred' },
-            { status: 500 }
-          );
+        if (match) {
+          const { code: rawCode, status: rawStatus, message } = match.groups ?? {};
+
+          const code = parseInt(rawCode);
+          const status = parseInt(rawStatus);
+
+          if (!isNaN(status) && !isNaN(code)) {
+            return NextResponse.json(
+              { error: { code, message } as ConnectionError },
+              { status }
+            );
+          }
         }
+
+        return NextResponse.json(
+          { error: DEFAULT_CONNECTION_ERROR },
+          { status: 500 }
+        );
       } else if (error instanceof RedisPipelineError) {
         console.group(error.message);
 

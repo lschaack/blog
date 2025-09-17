@@ -27,11 +27,27 @@ export const POST = compose(
     const existingPlayerName = cookieStore.get('playerName');
 
     if (existingPlayerName) {
-      // FIXME: on the frontend, show "leave" and "reconnect as {playerName}"
-      return NextResponse.json(
-        { error: 'Please leave the game before rejoining' },
-        { status: 409 },
-      );
+      if (existingPlayerName.value === playerName) {
+        return NextResponse.json(
+          {
+            error: {
+              code: 409002,
+              message: 'Looks like you\'re already in the game!'
+            }
+          },
+          { status: 409 },
+        );
+      } else {
+        return NextResponse.json(
+          {
+            error: {
+              code: 409003,
+              message: 'Looks like you\'re already in the game!'
+            }
+          },
+          { status: 409 },
+        );
+      }
     }
 
     const playerToken = crypto.randomUUID();

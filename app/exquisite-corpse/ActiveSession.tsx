@@ -346,7 +346,7 @@ const InviteButton = ({ sessionId }: InviteButtonProps) => {
 
 export type GameSessionProps = {
   sessionId: string;
-  playerName?: string;
+  playerName: string;
   dimensions: { width: number; height: number };
 };
 export const ActiveSession = ({

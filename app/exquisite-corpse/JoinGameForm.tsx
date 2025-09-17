@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 
 import { Button } from '@/app/components/Button';
 import { MAX_PLAYER_NAME_LENGTH } from '../api/exquisite-corpse/schemas';
+import { ConnectionError, extractConnectionError } from '../lib/connectionError';
+import { ConnectionErrorRecovery } from './ConnectionErrorRecovery';
+import { joinGame } from './requests';
 
 type JoinGameFormProps = {
   initPlayerName?: string;
@@ -20,51 +23,54 @@ export const JoinGameForm = ({
   const [playerName, setPlayerName] = useState(initPlayerName);
   const [sessionId, setSessionId] = useState(initSessionId);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [connectionError, setConnectionError] = useState<ConnectionError | null>();
 
   const handleJoinGame = async () => {
     if (!playerName) {
-      setError('Please enter your name');
+      setValidationError('Please enter your name');
       return;
     }
 
     if (!sessionId || sessionId.length !== 5) {
-      setError('Please enter a valid 5-character game ID');
+      setValidationError('Please enter a valid 5-character game ID');
       return;
     }
 
     setIsLoading(true);
-    setError(null);
+    setValidationError(null);
 
     try {
-      const joinResponse = await fetch(`/api/exquisite-corpse/games/${sessionId}/join`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ playerName: playerName }),
-      });
+      const joinResponse = await joinGame(sessionId, playerName);
 
       if (!joinResponse.ok) {
-        const { error } = await joinResponse.json();
-
-        setError(error);
+        setConnectionError(await extractConnectionError(joinResponse));
+        setIsLoading(false);
       } else {
         router.push(`/exquisite-corpse/${sessionId}`);
       }
     } catch (error) {
       if (error instanceof Error) {
-        setError(error.message);
+        setValidationError(error.message);
       } else {
-        setError('Something went wrong');
+        setValidationError('Something went wrong');
       }
-    } finally {
+
       setIsLoading(false);
     }
+
+    // don't set loading to false on success b/c still waiting on router push
   };
 
-  return (
-    <div className="flex flex-col gap-6 max-w-md mx-auto p-6">
+  return connectionError ? (
+    <ConnectionErrorRecovery
+      error={connectionError}
+      updateError={setConnectionError}
+      sessionId={sessionId}
+      playerName={playerName}
+    />
+  ) : (
+    <div className="flex flex-col gap-6 max-w-md mx-auto">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2">Join Game</h1>
         <p className="text-gray-600">Enter the 5-character game ID</p>
@@ -103,9 +109,9 @@ export const JoinGameForm = ({
           />
         </div>
 
-        {error && (
+        {validationError && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-700 text-sm">{error}</p>
+            <p className="text-red-700 text-sm">{validationError}</p>
           </div>
         )}
 

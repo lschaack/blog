@@ -111,7 +111,7 @@ class GameStateManager {
 
   private scriptsLoaded: Promise<boolean>;
 
-  private static ONE_HOUR = 60 * 60;
+  private static ONE_DAY = 60 * 60 * 24;
 
   // JSON representation of game state
   private static getSessionKey(sessionId: string) {
@@ -208,15 +208,15 @@ class GameStateManager {
     const pipeline = this.redis
       .pipeline()
       .call('JSON.SET', sessionKey, '.', JSON.stringify(gameState), 'NX')
-      .expire(sessionKey, GameStateManager.ONE_HOUR);
+      .expire(sessionKey, GameStateManager.ONE_DAY);
 
     if (gameState.type === 'singleplayer') {
       // create player token for AI
       pipeline
         .call('HSET', playersKey, 'AI', crypto.randomUUID())
-        .expire(playersKey, GameStateManager.ONE_HOUR)
+        .expire(playersKey, GameStateManager.ONE_DAY)
         .call('LPUSH', playerOrderKey, 'AI')
-        .expire(playerOrderKey, GameStateManager.ONE_HOUR);
+        .expire(playerOrderKey, GameStateManager.ONE_DAY);
     }
 
     const result = await pipeline.exec();
@@ -409,7 +409,7 @@ class GameStateManager {
   async setAIRetryCount(sessionId: string, count: number): Promise<void> {
     await this.redis.setex(
       GameStateManager.getAiRetriesKey(sessionId),
-      GameStateManager.ONE_HOUR,
+      GameStateManager.ONE_DAY,
       count.toString()
     );
   }

@@ -9,14 +9,15 @@ import { ReplyError } from 'ioredis';
 import { cookies } from 'next/headers';
 import { ONE_DAY_S } from '@/app/utils/time';
 import { GameStateUpdate } from '@/app/types/multiplayer';
+import { ConnectionError } from '@/app/lib/connectionError';
 
 // NOTE: Can't use traditional errors w/SSE, but we can use a stream which sends
 // a single error event before immediately closing itself
-const getCrashAndBurnStream = (errorEventData: { message: string }) => {
+const getCrashAndBurnStream = (connectionError: ConnectionError) => {
   return new NextResponse(
     new ReadableStream({
       start(controller) {
-        const errorEvent = `event: error\ndata: ${JSON.stringify(errorEventData)}\n\n`;
+        const errorEvent = `event: error\ndata: ${JSON.stringify(connectionError)}\n\n`;
 
         controller.enqueue(new TextEncoder().encode(errorEvent));
         controller.close();
@@ -32,9 +33,7 @@ const getCrashAndBurnStream = (errorEventData: { message: string }) => {
   );
 }
 
-const getConnectionErrorMessage = (error: unknown, playerName: string) => {
-  let errorMessage = 'Something went terribly wrong.';
-
+const getConnectionError = (error: unknown, playerName: string): ConnectionError => {
   if (error instanceof ReplyError) {
     // improve error message if I have a good idea of what caused it
     const { type, message } = (
@@ -42,21 +41,34 @@ const getConnectionErrorMessage = (error: unknown, playerName: string) => {
     ) as { type?: CUSTOM_REPLY_ERROR_TYPE, message?: string };
 
     if (type === 'FORBIDDEN') {
-      errorMessage = `Cannot verify that you are actually ${playerName}. Use the join game flow!`;
+      return {
+        code: 403001,
+        message: `Cannot verify that you are actually ${playerName}. Use the join game flow!`
+      }
     } else if (type === 'NOT_FOUND') {
       if (message?.startsWith('Player')) {
-        errorMessage = `Player "${playerName}" is not in the game. Use the join game flow!`;
+        return {
+          code: 404002,
+          message: `Player "${playerName}" is not in the game. Use the join game flow!`,
+        }
       } else {
-        errorMessage = 'This game does not exist or has been cleaned up. Try making a new one!';
+        return {
+          code: 404001,
+          message: 'This game does not exist or has been cleaned up. Try making a new one!',
+        }
       }
     } else if (type === 'CONFLICT') {
-      errorMessage = `A player with the name "${playerName}" is already in the game.`;
-    } else {
-      errorMessage = 'Not sure what went wrong, but I\'m impressed that you managed to encounter this message!';
+      return {
+        code: 409001,
+        message: `A player with the name "${playerName}" is already in the game.`,
+      }
     }
   }
 
-  return errorMessage;
+  return {
+    code: 500001,
+    message: 'Not sure what went wrong, but I\'m impressed that you managed to encounter this message!',
+  }
 }
 
 export const GET = compose(
@@ -78,6 +90,7 @@ export const GET = compose(
 
     if (!playerName || !playerToken) {
       return getCrashAndBurnStream({
+        code: 403002,
         message: 'Missing player info, use the join game flow!'
       });
     }
@@ -147,8 +160,8 @@ export const GET = compose(
             `event: game_update\ndata: ${JSON.stringify(initialGameStateEvent)}\n\n`
           ));
         } catch (error) {
-          const message = getConnectionErrorMessage(error, playerName);
-          const errorEvent = `event: error\ndata: ${JSON.stringify({ message })}\n\n`;
+          const connectionError = getConnectionError(error, playerName);
+          const errorEvent = `event: error\ndata: ${JSON.stringify(connectionError)}\n\n`;
 
           controller.enqueue(encoder.encode(errorEvent));
 

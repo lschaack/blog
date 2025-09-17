@@ -19,7 +19,7 @@ export function GameTypeSelector() {
   }, [router, searchParams]);
 
   return (
-    <div className="flex flex-col gap-6 mx-auto p-6">
+    <div className="flex flex-col gap-6 mx-auto">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2">Exquisite Corpse</h1>
         <p className="text-gray-600">Choose how you want to play</p>

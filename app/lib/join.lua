@@ -9,16 +9,16 @@ local playerToken = ARGV[3]
 local playerPath = ".players." .. playerName
 
 if redis.call("EXISTS", sessionKey) == 0 then
-  return redis.error_reply("NOT_FOUND Session does not exist")
+  return redis.error_reply("ERR_404001 Session does not exist")
 end
 
 local gameType = cjson.decode(redis.call("JSON.GET", sessionKey, ".type"))
 local nPlayers = redis.call("HLEN", playersKey)
 
 if gameType == "singleplayer" and nPlayers >= 2 or nPlayers >= 8 then
-  return redis.error_reply("FORBIDDEN Game is full")
+  return redis.error_reply("ERR_403003 Game is full")
 elseif redis.call("HGET", playersKey, playerName) ~= false then
-  return redis.error_reply("CONFLICT Player already in game")
+  return redis.error_reply("ERR_409001 Player already in game")
 end
 
 local currentPlayer = cjson.decode(redis.call("JSON.GET", sessionKey, ".currentPlayer"))

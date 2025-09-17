@@ -6,9 +6,8 @@ import { Button } from '../components/Button';
 export default function ExquisiteCorpsePage() {
   const router = useRouter();
 
-  // TODO: make these actual links with button styles
   return (
-    <div className="flex flex-col gap-6 max-w-md mx-auto p-6">
+    <div className="flex flex-col gap-6 max-w-md mx-auto">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2">Exquisite Corpse</h1>
         <p className="text-gray-600">Choose how you want to play</p>

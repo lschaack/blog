@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { motion, AnimatePresence } from 'motion/react';
 
 import { BaseTurn, CanvasDimensions, CurveTurn } from "@/app/types/exquisiteCorpse";
 import { useCurrentTurn } from "./useCurrentTurn";
@@ -58,14 +57,14 @@ export const MultiplayerCurveTurnRenderer = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-2 items-center">
+      <div className="flex gap-4 items-center">
         <Button
           label="← Previous"
           onClick={() => setCurrentTurnIndex(prev => Math.max(prev - 1, 0))}
           disabled={currentTurnIndex <= 0}
           className="flex-1"
         />
-        <div className="text-center px-4">
+        <div className="grow-1 text-center">
           Turn {currentTurnIndex + 1} of {turns.length}
         </div>
         <Button
@@ -119,31 +118,29 @@ export const MultiplayerCurveTurnRenderer = ({
         disabled={!canEndTurn}
       />
 
-      <AnimatePresence>
-        {/* Previous turn info */}
-        {/* TODO: add presence animation */}
-        {prevTurn?.interpretation && (
-          <motion.div className="card space-y-2" >
-            {prevTurn.title && (
-              <h2 className="font-semibold font-geist-mono text-xl [font-variant:all-small-caps]">{prevTurn.title}</h2>
-            )}
-            {prevTurn.interpretation && (
-              <div className="text-gray-600 font-geist-mono">
-                &ldquo;{prevTurn.interpretation}&rdquo;
-              </div>
-            )}
-            {prevTurn.reasoning && (
-              <div className="text-gray-500 font-geist-mono text-sm italic">
-                &ldquo;{prevTurn.reasoning}&rdquo;
-              </div>
-            )}
-            {prevTurn.image && (
-              // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
-              <img src={ensureStartsWith(prevTurn.image, 'data:image/png;base64,')} />
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Previous turn info */}
+      {/* TODO: add presence animation, tricky b/c/o layout shift w/current design */}
+      {prevTurn?.interpretation && (
+        <div className="card space-y-2">
+          {prevTurn.title && (
+            <h2 className="font-semibold font-geist-mono text-xl [font-variant:all-small-caps]">{prevTurn.title}</h2>
+          )}
+          {prevTurn.interpretation && (
+            <div className="text-gray-600 font-geist-mono">
+              &ldquo;{prevTurn.interpretation}&rdquo;
+            </div>
+          )}
+          {prevTurn.reasoning && (
+            <div className="text-gray-500 font-geist-mono text-sm italic">
+              &ldquo;{prevTurn.reasoning}&rdquo;
+            </div>
+          )}
+          {prevTurn.image && (
+            // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+            <img src={ensureStartsWith(prevTurn.image, 'data:image/png;base64,')} />
+          )}
+        </div>
+      )}
     </div>
   );
 };

@@ -49,13 +49,14 @@ export const CreateGameForm = ({ gameType }: CreateGameFormProps) => {
       router.push(`/exquisite-corpse/${createGameData.sessionId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
       setIsLoading(false);
     }
+
+    // don't set loading to false on success b/c still waiting on router push
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-md mx-auto p-6">
+    <div className="flex flex-col gap-6 max-w-md mx-auto">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2">
           Create {gameType === 'singleplayer' ? 'AI' : 'Multiplayer'} Game
