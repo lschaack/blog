@@ -22,7 +22,9 @@ const RecoveryOptions: FC<ConnectionErrorRecoveryProps> = ({
     case 403001:
     case 403002:
     case 404002: {
-      const params = new URLSearchParams({ sessionId, playerName });
+      const params = new URLSearchParams({ sessionId });
+
+      if (playerName) params.append('playerName', playerName);
 
       return (
         <Button
