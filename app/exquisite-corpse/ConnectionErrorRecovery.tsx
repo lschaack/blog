@@ -92,7 +92,12 @@ const RecoveryOptions: FC<ConnectionErrorRecoveryProps> = ({
     }
     case 500001:
     default: {
-      return null; // irrecoverable
+      return (
+        <Button
+          label="Reconnect"
+          onClick={reconnect}
+        />
+      );
     }
   }
 }
