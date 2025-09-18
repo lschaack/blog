@@ -278,6 +278,42 @@ export function getEndPosition(segment: PathSegment): [number, number] {
   return updateCurrentPosition(drawCmd, startX, startY);
 }
 
+// represents cost of drawing a straight line and prevents division by 0
+const BASE_DRAW_COST = 1.0;
+// unweighted curvature is on [0, Infinity] but practically never exceeding [0, 10]
+const CURVATURE_WEIGHT = 10.0;
+// TODO: experiment w/4 vs 5 sections
+const N_SECTIONS = 4;
+const SECTION_WIDTH = 1 / N_SECTIONS;
+const HALF_SECTION_WIDTH = SECTION_WIDTH / 2;
+
+export function getSegmentCost(segment: PathSegment) {
+  const [, drawCmd] = segment;
+
+  if (!isCurveCommand(drawCmd)) {
+    return { costs: [BASE_DRAW_COST], totalCost: BASE_DRAW_COST };
+  }
+
+  let sectionStart = 0;
+  let totalCost = 0;
+  const costs: number[] = [];
+
+  for (let i = 0; i < N_SECTIONS; i++) {
+    const samplePoint = sectionStart + HALF_SECTION_WIDTH;
+    const rawCurvature = getCurvature(segment as PathSegment<CurveCommand>, samplePoint);
+    const easedCurvature = easeOutRational(10, 5, rawCurvature);
+    const curvatureCost = CURVATURE_WEIGHT * easedCurvature;
+    const cost = BASE_DRAW_COST + curvatureCost;
+
+    costs.push(cost);
+
+    totalCost += cost;
+    sectionStart += HALF_SECTION_WIDTH;
+  }
+
+  return { costs, totalCost };
+}
+
 export function getAnimationTimingFunction(segment: PathSegment) {
   const [, drawCmd] = segment;
 
@@ -285,29 +321,7 @@ export function getAnimationTimingFunction(segment: PathSegment) {
     return { timing: 'linear', cost: 1.0 };
   }
 
-  // represents cost of drawing a straight line and prevents division by 0
-  const baseCost = 1.0;
-  // unweighted curvature is on [0, Infinity] but practically never exceeding [0, 10]
-  const curvatureWeight = 10.0;
-  const nSections = 5;
-
-  const sectionWidth = 1 / nSections;
-  const halfSectionWidth = sectionWidth / 2;
-
-  let sectionStart = 0;
-  let totalCost = 0;
-  const costs: number[] = [];
-
-  for (let i = 0; i < nSections; i++) {
-    const samplePoint = sectionStart + halfSectionWidth;
-    const rawCurvature = getCurvature(segment as PathSegment<CurveCommand>, samplePoint);
-    const easedCurvature = easeOutRational(10, 5, rawCurvature);
-    const curvatureCost = curvatureWeight * easedCurvature;
-    const cost = baseCost + curvatureCost;
-    costs.push(cost);
-    totalCost += cost;
-    sectionStart += sectionWidth;
-  }
+  const { costs, totalCost } = getSegmentCost(segment);
 
   let cumulativeRelativeCost = 0;
   let progress = 0;
@@ -315,14 +329,14 @@ export function getAnimationTimingFunction(segment: PathSegment) {
 
   for (let i = 0; i < costs.length - 1; i++) {
     cumulativeRelativeCost += costs[i] / totalCost;
-    progress += sectionWidth;
+    progress += SECTION_WIDTH;
 
     timingFunction += `, ${progress} ${Math.round(cumulativeRelativeCost * 100)}%`;
   }
 
   timingFunction += ', 1 100%)';
 
-  const totalRelativeCost = totalCost / (costs.length * baseCost);
+  const totalRelativeCost = totalCost / (costs.length * BASE_DRAW_COST);
 
   return {
     timingFunction,
