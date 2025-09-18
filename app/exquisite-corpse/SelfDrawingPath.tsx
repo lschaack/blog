@@ -164,7 +164,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   paths,
   animate = 'final',
   className,
-  drawSpeed = 800,
+  drawSpeed = 600,
 }) => {
   return (
     <svg
