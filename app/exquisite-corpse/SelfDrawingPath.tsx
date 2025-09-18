@@ -5,7 +5,7 @@ import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 import { breakUpPath, getAnimationTimingFunction, pathToD, getSeparation, getDirectionChange } from "../utils/svg";
 
 const PEN_LIFT_COST_S = 0.075;
-const DIRECTION_CHANGE_COST_S = 0.1;
+const DIRECTION_CHANGE_COST_S = 0.05;
 
 // Custom hook for path length
 function usePathLength() {
