@@ -2,9 +2,10 @@ import { FC, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import clsx from "clsx";
 import { ParsedPath, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
-import { breakUpPath, getAnimationTimingFunction, getEndPosition, pathToD } from "../utils/svg";
+import { breakUpPath, getAnimationTimingFunction, pathToD, getSeparation, getDirectionChange } from "../utils/svg";
 
 const PEN_LIFT_COST_S = 0.075;
+const DIRECTION_CHANGE_COST_S = 0.1;
 
 // Custom hook for path length
 function usePathLength() {
@@ -89,38 +90,52 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
     }
   }, 0);
 
-  const pathSegments = useMemo(() => {
+  const segmentData = useMemo(() => {
     // split path into segments with estimatable curvature
-    return breakUpPath(path).map(segment => ({
-      segment,
-      ...getAnimationTimingFunction(segment),
-    }));
-  }, [path]);
+    const segments = breakUpPath(path);
+    const segmentData = [];
 
-  const delays = useMemo(() => {
-    const delays = [];
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+      const animationTimingFunction = getAnimationTimingFunction(segment);
 
-    for (let i = 0; i < pathSegments.length; i++) {
       if (i > 0) {
-        const [prevEndX, prevEndY] = getEndPosition(pathSegments[i - 1].segment);
-        const [, currStartX, currStartY] = pathSegments[i].segment[0];
-        const distance = Math.sqrt((currStartX - prevEndX) ** 2 + (currStartY - prevEndY) ** 2);
+        const prevSegment = segments[i - 1];
 
-        const penLiftCost = distance > 0 ? PEN_LIFT_COST_S : 0;
+        const separation = getSeparation(prevSegment, segment);
+        const directionChange = getDirectionChange(prevSegment, segment);
 
-        delays.push(penLiftCost + distance / drawSpeed);
+        const didLiftPen = Number(separation > 0);
+        const didNotLiftPen = 1 - didLiftPen;
+
+        const penLiftCost = didLiftPen * PEN_LIFT_COST_S;
+        const directionChangeCost = didNotLiftPen * DIRECTION_CHANGE_COST_S * directionChange;
+
+        const delay = penLiftCost + directionChangeCost + separation / (drawSpeed * 2);
+
+        segmentData.push({
+          segment,
+          delay,
+          animationTimingFunction,
+        })
       } else {
-        delays.push(0);
+        segmentData.push({
+          segment,
+          delay: 0,
+          animationTimingFunction,
+        })
       }
     }
 
-    return delays;
-  }, [drawSpeed, pathSegments]);
+    return segmentData;
+  }, [drawSpeed, path]);
 
   return (
-    pathSegments.map(({ segment, timingFunction, cost }, index) => {
-      const delay = delays[index];
-
+    segmentData.map(({
+      segment,
+      delay,
+      animationTimingFunction: { timingFunction, cost }
+    }, index) => {
       return (
         <SelfDrawingSinglePath
           key={`single-path-${index}`}

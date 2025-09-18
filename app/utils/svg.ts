@@ -2,6 +2,7 @@ import { ArcCommand, ArcRelativeCommand, ClosePathCommand, CubicBezierCommand, C
 
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 import { easeOutRational } from "./easingFunctions";
+import { dotProduct } from "./vector";
 
 // Type guard functions for path commands
 export const isMoveToCommand = (command: PathCommand): command is MoveToCommand => command[0] === 'M';
@@ -80,6 +81,23 @@ export function breakUpPath(path: PathCommand[]): [MoveToCommand, DrawCommand][]
   }
 
   return result;
+}
+
+export function getSeparation(from: PathSegment, to: PathSegment) {
+  const [fromX, fromY] = getEndPosition(from);
+  const [, toX, toY] = to[0];
+  const separation = Math.sqrt((toX - fromX) ** 2 + (toY - fromY) ** 2);
+
+  return separation;
+}
+
+export function getDirectionChange(from: PathSegment, to: PathSegment) {
+  const prevDirection = getSegmentDirection(from, 1);
+  const currDirection = getSegmentDirection(to, 0);
+  // 0 same direction, 0.5 orthogonal, 1 opposite
+  const directionChange = -(dotProduct(prevDirection, currDirection) - 1) / 2;
+
+  return directionChange;
 }
 
 function updateCurrentPosition(
@@ -278,6 +296,145 @@ export function getEndPosition(segment: PathSegment): [number, number] {
   return updateCurrentPosition(drawCmd, startX, startY);
 }
 
+type GetSegmentDirection = (segment: PathSegment, t: number) => [number, number];
+const linearDirection: GetSegmentDirection = (segment) => {
+  const [moveTo] = segment;
+  const startX = moveTo[1];
+  const startY = moveTo[2];
+  const [endX, endY] = getEndPosition(segment);
+
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const length = Math.sqrt(dx * dx + dy * dy);
+
+  return length > 0 ? [dx / length, dy / length] : [1, 0];
+};
+
+const arcDirection: GetSegmentDirection = (segment, t) => {
+  const [, drawCmd] = segment as PathSegment<ArcCommand | ArcRelativeCommand>;
+
+  // A rx ry x-axis-rotation large-arc-flag sweep-flag x y
+  const sweepFlag = drawCmd[5];
+
+  // Calculate tangent direction (perpendicular to radius)
+  const angle = t * Math.PI * (sweepFlag ? 1 : -1);
+  const tangentX = -Math.sin(angle);
+  const tangentY = Math.cos(angle);
+
+  return [tangentX, tangentY];
+};
+
+const CMD_TO_GET_DIRECTION: Record<CurveCommand[0], GetSegmentDirection> = {
+  'C': ([[, startX, startY], drawCmd], t) => {
+    // C x1 y1 x2 y2 x y - absolute cubic bezier
+    const [, x1, y1, x2, y2, x, y] = drawCmd as CubicBezierCommand;
+
+    return calculateCubicBezierDirection(startX, startY, x1, y1, x2, y2, x, y, t);
+  },
+  'c': ([[, startX, startY], drawCmd], t) => {
+    // c dx1 dy1 dx2 dy2 dx dy - relative cubic bezier
+    const [, dx1, dy1, dx2, dy2, dx, dy] = drawCmd as CubicBezierRelativeCommand;
+
+    return calculateCubicBezierDirection(
+      startX, startY,
+      startX + dx1, startY + dy1,
+      startX + dx2, startY + dy2,
+      startX + dx, startY + dy,
+      t
+    );
+  },
+  'S': ([[, startX, startY], drawCmd], t) => {
+    // S x2 y2 x y - smooth cubic bezier (control point is reflection of previous)
+    // For simplicity, treating as quadratic-like curve
+    const [, x2, y2, x, y] = drawCmd as SmoothCubicBezierCommand;
+
+    return calculateQuadraticBezierDirection(startX, startY, x2, y2, x, y, t);
+  },
+  's': ([[, startX, startY], drawCmd], t) => {
+    const [, dx2, dy2, dx, dy] = drawCmd as SmoothCubicBezierRelativeCommand;
+
+    return calculateQuadraticBezierDirection(
+      startX, startY,
+      startX + dx2, startY + dy2,
+      startX + dx, startY + dy,
+      t
+    );
+  },
+  'Q': ([[, startX, startY], drawCmd], t) => {
+    // Q x1 y1 x y - absolute quadratic bezier
+    const [, x1, y1, x, y] = drawCmd as QuadraticBezierCommand;
+
+    return calculateQuadraticBezierDirection(startX, startY, x1, y1, x, y, t);
+  },
+  'q': ([[, startX, startY], drawCmd], t) => {
+    // q dx1 dy1 dx dy - relative quadratic bezier
+    const [, dx1, dy1, dx, dy] = drawCmd as QuadraticBezierRelativeCommand;
+
+    return calculateQuadraticBezierDirection(
+      startX, startY,
+      startX + dx1, startY + dy1,
+      startX + dx, startY + dy,
+      t
+    );
+  },
+  'T': linearDirection,
+  't': linearDirection,
+  'A': arcDirection,
+  'a': arcDirection,
+};
+
+export function getSegmentDirection(segment: PathSegment, t: number): [number, number] {
+  if (t < 0 || t > 1) {
+    console.error(`Cannot calculate direction at ${t} outside of [0, 1]. Using clamped value.`);
+  }
+
+  t = Math.max(0, Math.min(1, t));
+
+  const [, drawCmd] = segment;
+
+  if (!isCurveCommand(drawCmd)) {
+    return linearDirection(segment, t);
+  }
+
+  return CMD_TO_GET_DIRECTION[drawCmd[0]](segment, t);
+}
+
+function calculateCubicBezierDirection(
+  x0: number, y0: number,  // start point
+  x1: number, y1: number,  // first control point
+  x2: number, y2: number,  // second control point
+  x3: number, y3: number,  // end point
+  t: number
+): [number, number] {
+  // First derivative (tangent vector)
+  const dx = 3 * (1 - t) * (1 - t) * (x1 - x0) +
+    6 * (1 - t) * t * (x2 - x1) +
+    3 * t * t * (x3 - x2);
+
+  const dy = 3 * (1 - t) * (1 - t) * (y1 - y0) +
+    6 * (1 - t) * t * (y2 - y1) +
+    3 * t * t * (y3 - y2);
+
+  // Normalize to get direction
+  const length = Math.sqrt(dx * dx + dy * dy);
+  return length > 0 ? [dx / length, dy / length] : [1, 0];
+}
+
+function calculateQuadraticBezierDirection(
+  x0: number, y0: number,  // start point
+  x1: number, y1: number,  // control point
+  x2: number, y2: number,  // end point
+  t: number
+): [number, number] {
+  // First derivative (tangent vector)
+  const dx = 2 * (1 - t) * (x1 - x0) + 2 * t * (x2 - x1);
+  const dy = 2 * (1 - t) * (y1 - y0) + 2 * t * (y2 - y1);
+
+  // Normalize to get direction
+  const length = Math.sqrt(dx * dx + dy * dy);
+  return length > 0 ? [dx / length, dy / length] : [1, 0];
+}
+
 // represents cost of drawing a straight line and prevents division by 0
 const BASE_DRAW_COST = 1.0;
 // unweighted curvature is on [0, Infinity] but practically never exceeding [0, 10]
@@ -318,7 +475,7 @@ export function getAnimationTimingFunction(segment: PathSegment) {
   const [, drawCmd] = segment;
 
   if (!isCurveCommand(drawCmd)) {
-    return { timing: 'linear', cost: 1.0 };
+    return { timingFunction: 'linear', cost: 1.0 };
   }
 
   const { costs, totalCost } = getSegmentCost(segment);
