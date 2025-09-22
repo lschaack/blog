@@ -172,12 +172,12 @@ export class GameService {
 
     if (gameState) {
       await prisma.exquisiteCorpseGame.upsert({
-        where: { uuid: gameState.gameId },
+        where: { id: gameState.gameId },
         update: {
           data: gameState,
         },
         create: {
-          uuid: gameState.gameId,
+          id: gameState.gameId,
           data: gameState,
         }
       });

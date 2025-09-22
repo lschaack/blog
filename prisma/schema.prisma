@@ -8,11 +8,10 @@ datasource db {
 }
 
 model ExquisiteCorpseGame {
-  id        Int      @id @default(autoincrement())
-  uuid      String   @unique @map("uuid") @db.Uuid
+  id        String   @id @default(uuid()) @db.Uuid
   data      Json     @map("data") @db.JsonB
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("exquisite_corpse_games")
   @@index([data], type: Gin)
