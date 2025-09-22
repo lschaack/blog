@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model ExquisiteCorpseGame {
   id        String   @id @default(uuid()) @db.Uuid
   data      Json     @map("data") @db.JsonB
@@ -17,3 +22,12 @@ model ExquisiteCorpseGame {
   @@index([data], type: Gin)
 }
 
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
