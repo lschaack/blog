@@ -1,10 +1,12 @@
+"use client";
+
 import { FC, ReactNode } from 'react';
 import clsx from 'clsx';
 import { motion } from 'motion/react';
 
 type BaseButtonProps = {
   label: ReactNode;
-  onClick: () => void;
+  onClick?: () => void;
   className?: string;
   disabled?: boolean;
   friendly?: boolean;

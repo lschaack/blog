@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "analyze": "ANALYZE=true next build",
     "codegen": "npx graphql-codegen --config codegen.ts",
-    "db:migrate": "npx prisma migrate dev"
+    "db:migrate-dev": "npx prisma migrate dev",
+    "db:migrate-prod": "npx prisma migrate deploy"
   },
   "dependencies": {
     "@apollo/client": "^3.13.4",
@@ -42,6 +43,7 @@
     "material-symbols": "^0.29.0",
     "motion": "^12.23.12",
     "next": "^15.2.1",
+    "next-auth": "^5.0.0-beta.29",
     "openai": "^5.12.2",
     "parse-svg-path": "^0.1.2",
     "react": "^19.0.0",
