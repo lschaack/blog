@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { Button } from '@/app/components/Button';
 import { joinGame, leaveGame } from './requests';
 import { ConnectionError, DEFAULT_CONNECTION_ERROR, extractConnectionError } from '../lib/connectionError';
+import { ErrorCard } from '../components/ErrorCard';
 
 const RecoveryOptions: FC<ConnectionErrorRecoveryProps> = ({
   error,
@@ -119,14 +120,7 @@ export const ConnectionErrorRecovery: FC<ConnectionErrorRecoveryProps> = ({
 
   return (
     <div className="flex flex-col gap-4 max-w-[512px]">
-      <div className="card text-center">
-        <div className="font-semibold text-2xl [font-variant:all-small-caps]">
-          Error
-        </div>
-        <div className="text-red-600 font-semibold font-geist-mono mt-2 max-w-[30ch]">
-          {error.message}
-        </div>
-      </div>
+      <ErrorCard error={error} />
 
       <RecoveryOptions
         error={error}
