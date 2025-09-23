@@ -8,4 +8,4 @@ export const prisma =
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
 
-export { UserRole } from "@prisma/client";
+export { UserRole, Prisma } from "@prisma/client";

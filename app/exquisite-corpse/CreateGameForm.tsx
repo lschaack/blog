@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/app/components/Button';
-import { CreateWithPlayerRequest, GameType, MAX_PLAYER_NAME_LENGTH } from '../api/exquisite-corpse/schemas';
+import { CreateWithPlayerRequest, DEFAULT_DIMENSIONS, GameType, MAX_PLAYER_NAME_LENGTH } from '../api/exquisite-corpse/schemas';
 
 type CreateGameFormProps = {
   gameType: GameType;
@@ -29,6 +29,7 @@ export const CreateGameForm = ({ gameType }: CreateGameFormProps) => {
       const request: CreateWithPlayerRequest = {
         gameType,
         playerName,
+        dimensions: DEFAULT_DIMENSIONS,
       };
 
       const createGameResponse = await fetch('/api/exquisite-corpse/games/create-with-player', {

@@ -13,6 +13,7 @@ type SketchpadProps = {
   width: number;
   height: number;
   lines: Line[];
+  readOnly?: boolean;
   handleAddLine: (line: Line) => void;
 }
 
@@ -61,7 +62,7 @@ const fitCurvesToPoints = (points: Point[], maxError: number = 50): Line => {
 //     - render all lines to the canvas, including the newly-fit temporary curve
 // - user mouses up
 //   - fit the line and commit the resulting curve
-export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddLine }) => {
+export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, readOnly = false, handleAddLine }) => {
   const [dpi, setDpi] = useState<number>(1);
   useEffect(() => setDpi(window.devicePixelRatio || 1), []);
 
@@ -229,9 +230,10 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, handleAddL
       className="ring-2 ring-deep-500"
       style={{
         touchAction: 'none',
-        cursor: 'crosshair',
+        cursor: readOnly ? 'not-allowed' : 'crosshair',
         width,
         maxWidth: '100%',
+        pointerEvents: readOnly ? 'none' : 'unset'
       }}
     />
   );

@@ -501,9 +501,9 @@ export function getAnimationTimingFunction(segment: PathSegment) {
   };
 }
 
-export function renderPathCommandsToSvg(paths: ParsedPath[], dimensions: CanvasDimensions): string {
+export function renderPathCommandsToSvg(paths: ParsedPath[], dimensions: CanvasDimensions, scale = 1): string {
   return `
-<svg xmlns="http://www.w3.org/2000/svg" width="${dimensions.width}" height="${dimensions.height}" viewBox="0 0 ${dimensions.width} ${dimensions.height}">
+<svg xmlns="http://www.w3.org/2000/svg" width="${dimensions.width * scale}" height="${dimensions.height * scale}" viewBox="0 0 ${dimensions.width} ${dimensions.height}">
   <g stroke="#000" stroke-width="2" stroke-linecap="round" fill="none">
 ${paths
       .map((path, index) => `    <path data-turn-number="${index + 1}" d="${pathToD(path)}" />`)

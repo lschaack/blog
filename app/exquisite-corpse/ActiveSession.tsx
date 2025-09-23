@@ -144,23 +144,22 @@ const Players = ({ gameState, playerName }: PlayersProps) => {
 type ActionsProps = {
   gameState: MultiplayerGameState;
   onLeaveGame: () => void;
-  dimensions: CanvasDimensions;
 };
-export const Actions = ({ gameState, onLeaveGame, dimensions }: ActionsProps) => {
+export const Actions = ({ gameState, onLeaveGame }: ActionsProps) => {
   const { sessionId } = gameState;
 
   const handleDownloadSVG = useCallback(() => {
     if (!gameState) return;
 
     // TODO: put dimensions in game state
-    const svg = renderPathCommandsToSvg(gameState.turns.map(({ path }) => path), dimensions);
+    const svg = renderPathCommandsToSvg(gameState.turns.map(({ path }) => path), gameState.dimensions);
     const blob = new Blob([svg], { type: 'image/svg+xml' });
 
     const lastTitledTurn = gameState.turns.findLast(turn => !!turn.title);
     const title = lastTitledTurn?.title ?? `${sessionId}-${Date.now()}`;
 
     downloadBlob(blob, `${title}.svg`);
-  }, [dimensions, gameState, sessionId]);
+  }, [gameState, sessionId]);
 
   return (
     <div className="card grow-2 flex-1 flex flex-col gap-1">
@@ -347,12 +346,10 @@ const InviteButton = ({ sessionId }: InviteButtonProps) => {
 export type GameSessionProps = {
   sessionId: string;
   playerName: string;
-  dimensions: { width: number; height: number };
 };
 export const ActiveSession = ({
   sessionId,
   playerName,
-  dimensions,
   gameState,
   handleLeaveGame,
 }: GameSessionProps & {
@@ -387,7 +384,7 @@ export const ActiveSession = ({
   const isCurrentPlayer = playerName === gameState.currentPlayer;
 
   return (
-    <div className="flex flex-col gap-4 max-w-[512px] mx-auto">
+    <div className="flex flex-col gap-4 max-w-xl mx-auto">
       <div className="flex justify-between gap-4">
         <CopySessionIDButton sessionId={sessionId} />
         <InviteButton sessionId={sessionId} />
@@ -401,7 +398,6 @@ export const ActiveSession = ({
         <Actions
           gameState={gameState}
           onLeaveGame={handleLeaveGame}
-          dimensions={dimensions}
         />
       </div>
 
@@ -410,9 +406,8 @@ export const ActiveSession = ({
       <MultiplayerCurveTurnRenderer
         handleEndTurn={handleSubmitTurn}
         readOnly={!isCurrentPlayer}
-        canvasDimensions={dimensions}
+        canvasDimensions={gameState.dimensions}
         turns={gameState.turns}
-        currentTurnIndex={gameState.turns.length}
       />
 
       {process.env.NODE_ENV === 'development' && (

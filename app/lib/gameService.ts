@@ -6,7 +6,7 @@ import type {
   MultiplayerGameState,
 } from '@/app/types/multiplayer';
 import { generateAICurveTurn } from '@/app/lib/aiTurnService';
-import type { CurveTurn, Line } from '@/app/types/exquisiteCorpse';
+import type { CanvasDimensions, CurveTurn, Line } from '@/app/types/exquisiteCorpse';
 import { generateSessionId } from '../exquisite-corpse/sessionId';
 import { GameType } from '../api/exquisite-corpse/schemas';
 import { prisma } from './prisma';
@@ -16,7 +16,7 @@ export class GameService {
   private eventManager = getGameEventManager();
   private static MAX_AI_RETRIES = 3;
 
-  async createGame(type: GameType): Promise<{ sessionId: string }> {
+  async createGame(type: GameType, dimensions: CanvasDimensions): Promise<{ sessionId: string }> {
     const sessionId = generateSessionId();
     const gameId = randomUUID();
 
@@ -32,6 +32,7 @@ export class GameService {
       sessionId,
       gameId,
       type,
+      dimensions,
       turns: [],
       eventLog: [{
         type: 'game_created',

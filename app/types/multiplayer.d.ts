@@ -1,4 +1,4 @@
-import type { CurveTurn } from './exquisiteCorpse';
+import type { CanvasDimensions, CurveTurn } from './exquisiteCorpse';
 
 export type Player = {
   name: string;
@@ -24,6 +24,7 @@ type GameEvent = {
 export type MultiplayerGameState = {
   sessionId: string;
   gameId: string;
+  dimensions: CanvasDimensions;
   type: GameType;
   players: Record<string, Player>; // map from player name to Player
   currentPlayer: string | null;

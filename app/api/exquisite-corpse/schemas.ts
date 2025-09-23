@@ -8,6 +8,8 @@ const BASE64_MIN_CHARS = 32;
 
 export const MAX_PLAYER_NAME_LENGTH = 24;
 
+export const DEFAULT_DIMENSIONS = { width: 512, height: 512 };
+
 const Base64ImageSchema = z.string()
   .startsWith(BASE64_PNG_PREFIX, 'Image missing base64 prefix')
   .regex(/^data:image\/png;base64,(?:[A-Za-z0-9+/]*)={0,2}$/, '')
@@ -22,11 +24,15 @@ const BaseTurnSchema = z.object({
     .datetime({ message: 'Turn timestamp must be an ISO datetime' }),
 });
 
+const CanvasDimensionsSchema = z.object({
+  width: z.number({ message: 'Missing canvas width' }),
+  height: z.number({ message: 'Missing canvas height' }),
+});
+
+export type CanvasDimensions = z.infer<typeof CanvasDimensionsSchema>;
+
 const BaseGameContextSchema = z.object({
-  canvasDimensions: z.object({
-    width: z.number({ message: 'Missing canvas width' }),
-    height: z.number({ message: 'Missing canvas height' }),
-  }),
+  canvasDimensions: CanvasDimensionsSchema,
 }, {
   message: 'Missing game context',
 });
@@ -105,6 +111,7 @@ export const CreateGameRequestSchema = z.object({
   gameType: z.union([z.literal("multiplayer"), z.literal("singleplayer")], {
     message: "Invalid gameType. Must be \"multiplayer\" or \"singleplayer\""
   }),
+  dimensions: CanvasDimensionsSchema,
 });
 export type CreateGameRequest = z.infer<typeof CreateGameRequestSchema>;
 export type GameType = CreateGameRequest['gameType'];

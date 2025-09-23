@@ -20,11 +20,11 @@ export const POST = compose(
       validatedBody: Promise<CreateWithPlayerRequest>
     }
   ) => {
-    const { gameType, playerName } = await ctx.validatedBody;
+    const { gameType, playerName, dimensions } = await ctx.validatedBody;
     const playerToken = crypto.randomUUID();
     const gameService = getGameService();
 
-    const { sessionId } = await gameService.createGame(gameType);
+    const { sessionId } = await gameService.createGame(gameType, dimensions);
 
     await gameService.join(sessionId, playerName, playerToken);
     await setPlayerCookies(sessionId, playerName, playerToken);

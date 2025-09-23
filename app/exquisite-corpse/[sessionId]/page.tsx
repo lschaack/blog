@@ -13,13 +13,11 @@ export default async function GameSessionPage({
   const cookieStore = await cookies();
 
   const playerNameCookie = cookieStore.get('clientPlayerName')!;
-  const dimensions = { width: 512, height: 512 };
 
   return (
     <MultiplayerGameSession
       sessionId={sessionId}
       playerName={playerNameParam ?? playerNameCookie?.value}
-      dimensions={dimensions}
     />
   );
 }

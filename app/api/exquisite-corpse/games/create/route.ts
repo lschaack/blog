@@ -19,9 +19,9 @@ export const POST = compose(
       validatedBody: Promise<CreateGameRequest>
     }
   ) => {
-    const { gameType } = await ctx.validatedBody;
+    const { gameType, dimensions } = await ctx.validatedBody;
 
-    const result = await getGameService().createGame(gameType);
+    const result = await getGameService().createGame(gameType, dimensions);
 
     return NextResponse.json(result);
   }

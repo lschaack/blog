@@ -12,7 +12,6 @@ type MultiplayerCurveTurnRendererProps = {
   readOnly?: boolean;
   canvasDimensions: CanvasDimensions;
   turns: CurveTurn[];
-  currentTurnIndex: number;
 };
 
 export const MultiplayerCurveTurnRenderer = ({
@@ -92,7 +91,10 @@ export const MultiplayerCurveTurnRenderer = ({
       </div>
 
       {/* Sketchpad */}
-      <div className="relative">
+      <div
+        className="relative"
+        style={{ maxWidth: canvasDimensions.width, maxHeight: canvasDimensions.height }}
+      >
         <SelfDrawingSketch
           paths={displayPaths}
           dimensions={canvasDimensions}
@@ -102,6 +104,7 @@ export const MultiplayerCurveTurnRenderer = ({
           width={canvasDimensions.width}
           height={canvasDimensions.height}
           lines={isLatestTurn ? currentTurn.lines : []}
+          readOnly={readOnly}
           handleAddLine={line => {
             if (canDraw) {
               currentTurn.addLine(line);
@@ -121,7 +124,7 @@ export const MultiplayerCurveTurnRenderer = ({
       {/* Previous turn info */}
       {/* TODO: add presence animation, tricky b/c/o layout shift w/current design */}
       {prevTurn?.interpretation && (
-        <div className="card space-y-2">
+        <div className="card space-y-2" style={{ maxWidth: canvasDimensions.width }}>
           {prevTurn.title && (
             <h2 className="font-semibold font-geist-mono text-xl [font-variant:all-small-caps]">{prevTurn.title}</h2>
           )}

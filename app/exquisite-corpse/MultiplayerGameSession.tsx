@@ -11,7 +11,6 @@ import { ConnectionErrorRecovery } from './ConnectionErrorRecovery';
 export const MultiplayerGameSession = ({
   sessionId,
   playerName,
-  dimensions,
 }: GameSessionProps) => {
   const SSEConnection = useSSEConnection(sessionId);
   const {
@@ -52,7 +51,6 @@ export const MultiplayerGameSession = ({
       <ActiveSession
         sessionId={sessionId}
         playerName={playerName}
-        dimensions={dimensions}
         gameState={gameState}
         handleLeaveGame={handleLeaveGame}
       />
