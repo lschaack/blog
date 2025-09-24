@@ -31,3 +31,33 @@ model User {
 
   @@map("users")
 }
+
+model ExquisiteCorpseTrainingExample {
+  id                String                              @id @default(uuid()) @db.Uuid
+  paths             Json                                @db.JsonB
+  sketchDescription String                              @map("sketch_description")
+  turnDescription   String                              @map("turn_description")
+  createdAt         DateTime                            @default(now()) @map("created_at")
+  updatedAt         DateTime                            @updatedAt @map("updated_at")
+  tags              ExquisiteCorpseTrainingExampleTag[]
+
+  @@map("exquisite_corpse_training_examples")
+}
+
+model ExquisiteCorpseTag {
+  id       String                              @id @default(uuid()) @db.Uuid
+  name     String                              @unique
+  examples ExquisiteCorpseTrainingExampleTag[]
+
+  @@map("exquisite_corpse_tags")
+}
+
+model ExquisiteCorpseTrainingExampleTag {
+  exampleId String                         @map("example_id") @db.Uuid
+  tagId     String                         @map("tag_id") @db.Uuid
+  example   ExquisiteCorpseTrainingExample @relation(fields: [exampleId], references: [id], onDelete: Cascade)
+  tag       ExquisiteCorpseTag             @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([exampleId, tagId])
+  @@map("exquisite_corpse_training_example_tags")
+}
