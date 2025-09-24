@@ -34,7 +34,7 @@ else
   redis.call("RPUSH", playerOrderKey, playerName)
   local expectedCurrentPlayer = redis.call("LMOVE", playerOrderKey, playerOrderKey, "LEFT", "RIGHT")
 
-  if currentPlayer == cjson.null then
+  if currentPlayer == cjson.null and nPlayers > 0 then
     local prevAuthorRes = redis.pcall("JSON.GET", sessionKey, ".turns[-1].author")
 
     if not prevAuthorRes.err and expectedCurrentPlayer == cjson.decode(prevAuthorRes) then
