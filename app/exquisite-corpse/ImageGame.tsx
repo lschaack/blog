@@ -1,8 +1,9 @@
-import { CanvasDimensions, ImageGeminiFlashPreviewTurn, RenderPNG } from '@/app/types/exquisiteCorpse';
-import { ImageTurnRenderer } from './ImageTurnRenderer';
+import { BaseTurn, CanvasDimensions, ImageGeminiFlashPreviewTurn, Path, RenderPNG } from '@/app/types/exquisiteCorpse';
+import { ImageTurnMetaRenderer, ImageTurnRenderer } from './ImageTurnRenderer';
 import { getGeminiService } from "./geminiAI";
 import { Game, GameProps } from "./Game";
 import { ImageGameContext } from '../api/exquisite-corpse/schemas';
+import { renderLinesToBase64 } from './imageContext';
 
 const getAIImageTurn = async (
   history: ImageGeminiFlashPreviewTurn[],
@@ -64,11 +65,32 @@ const renderImageTurnPNG: RenderPNG<ImageGeminiFlashPreviewTurn> = (history, ind
 }
 
 export const ImageGame = ({ dimensions }: Pick<GameProps<ImageGeminiFlashPreviewTurn>, 'dimensions'>) => {
+  const getTurnFromPath = async (path: Path, turns: ImageGeminiFlashPreviewTurn[]) => {
+    try {
+      const backgroundImage = turns.findLast(turn => !!turn.image)?.image;
+
+      const imageData = await renderLinesToBase64(
+        [path],
+        dimensions.width,
+        dimensions.height,
+        backgroundImage,
+      );
+
+      return {
+        image: imageData
+      } as Omit<ImageGeminiFlashPreviewTurn, keyof BaseTurn>;
+    } catch (error) {
+      console.error('Failed to render turn to image:', error);
+    }
+  }
+
   return (
     <Game<ImageGeminiFlashPreviewTurn>
-      CurrentTurn={ImageTurnRenderer}
-      renderPNG={renderImageTurnPNG}
+      TurnRenderer={ImageTurnRenderer}
+      TurnMetaRenderer={ImageTurnMetaRenderer}
+      getTurnFromPath={getTurnFromPath}
       dimensions={dimensions}
+      renderPNG={renderImageTurnPNG}
       getAITurn={history => getAIImageTurn(history, dimensions)}
     />
   )

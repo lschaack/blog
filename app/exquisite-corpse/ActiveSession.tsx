@@ -12,13 +12,15 @@ import {
 import { track } from '@vercel/analytics';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { MultiplayerCurveTurnRenderer } from './MultiplayerCurveTurnRenderer';
 import { Button } from '@/app/components/Button';
-import type { CurveTurn, BaseTurn, CanvasDimensions } from '@/app/types/exquisiteCorpse';
+import type { CurveTurn, BaseTurn } from '@/app/types/exquisiteCorpse';
 import { downloadBlob } from '@/app/utils/blob';
 import { retryAI, submitTurn } from './requests';
 import { MultiplayerGameState, Player } from '../types/multiplayer';
 import { renderPathCommandsToSvg } from '../utils/svg';
+import { TurnManager } from './TurnManager';
+import { CoiveToinRendera } from './CurveTurnRenderer';
+import { CurveTurnMetaRenderer } from './CurveTurnMetaRenderer';
 
 type PlayerStatusIconProps = {
   isCurrent: boolean;
@@ -357,6 +359,7 @@ export const ActiveSession = ({
   gameState: MultiplayerGameState;
   handleLeaveGame: () => void;
 }) => {
+  console.log('gameState', gameState)
   const handleSubmitTurn = useCallback((turnData: Omit<CurveTurn, keyof BaseTurn>) => {
     return submitTurn(sessionId, turnData);
   }, [sessionId]);
@@ -403,11 +406,13 @@ export const ActiveSession = ({
 
       <GameStatus gameState={gameState} playerName={playerName} />
 
-      <MultiplayerCurveTurnRenderer
-        handleEndTurn={handleSubmitTurn}
+      <TurnManager<CurveTurn>
+        handleAddPath={path => handleSubmitTurn({ path })}
         readOnly={!isCurrentPlayer}
-        canvasDimensions={gameState.dimensions}
+        dimensions={gameState.dimensions}
         turns={gameState.turns}
+        TurnRenderer={CoiveToinRendera}
+        TurnMetaRenderer={CurveTurnMetaRenderer}
       />
 
       {process.env.NODE_ENV === 'development' && (

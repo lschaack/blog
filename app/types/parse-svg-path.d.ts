@@ -60,9 +60,9 @@ declare module 'parse-svg-path' {
   >;
 
   // A parsed SVG path is an array of path commands
-  export type ParsedPath = PathCommand[];
+  export type Path = PathCommand[];
 
   // Main parse function - default export
-  declare function parse(path: string): ParsedPath;
+  declare function parse(path: string): Path;
   export default parse;
 }

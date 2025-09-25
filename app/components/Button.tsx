@@ -11,6 +11,7 @@ type BaseButtonProps = {
   disabled?: boolean;
   friendly?: boolean;
   danger?: boolean;
+  ariaLabel?: string;
 }
 
 type RegularButtonProps = BaseButtonProps & {
@@ -30,9 +31,18 @@ type DangerButtonProps = BaseButtonProps & {
 
 type ButtonProps = RegularButtonProps | FriendlyButtonProps | DangerButtonProps;
 
-export const Button: FC<ButtonProps> = ({ label, onClick, className, disabled = false, danger = false, friendly = false }) => {
+export const Button: FC<ButtonProps> = ({
+  label,
+  ariaLabel,
+  onClick,
+  className,
+  disabled = false,
+  danger = false,
+  friendly = false,
+}) => {
   return (
     <motion.button
+      aria-label={ariaLabel}
       onClick={onClick}
       className={clsx(
         className,

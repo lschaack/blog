@@ -1,6 +1,6 @@
 import { FC, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import clsx from "clsx";
-import { ParsedPath, PathCommand } from 'parse-svg-path';
+import { Path, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 import { breakUpPath, getAnimationTimingFunction, pathToD, getSeparation, getDirectionChange } from "../utils/svg";
 
@@ -73,7 +73,7 @@ type PathAnimationEvent =
   | 'increment'
   | 'reset';
 type SelfDrawingPathProps = {
-  path: ParsedPath;
+  path: Path;
   className?: string;
   drawSpeed: number;
 }
@@ -154,7 +154,7 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
 
 type SelfDrawingSketchProps = {
   dimensions: CanvasDimensions;
-  paths: ParsedPath[];
+  paths: Path[];
   animate?: 'all' | 'final';
   className?: string;
   drawSpeed?: number;

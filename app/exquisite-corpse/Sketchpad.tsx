@@ -2,9 +2,9 @@ import { FC, useEffect, useRef, useState, useCallback } from "react";
 import fitCurve from 'fit-curve';
 
 import { useAnimationFrames } from '@/app/hooks/useAnimationFrames';
-import { BezierCurve, Line, Point } from "@/app/types/exquisiteCorpse";
-import { bezierCurvesToParsedPath } from './lineConversion';
-import { drawParsedPath } from "./imageContext";
+import { BezierCurve, Path, Point } from "@/app/types/exquisiteCorpse";
+import { bezierCurvesToPath } from './lineConversion';
+import { drawPath } from "./imageContext";
 import { PathCommand } from "parse-svg-path";
 
 const LINE_COLOR = '#0004a6';
@@ -12,9 +12,9 @@ const LINE_COLOR = '#0004a6';
 type SketchpadProps = {
   width: number;
   height: number;
-  lines: Line[];
+  lines: Path[];
   readOnly?: boolean;
-  handleAddLine: (line: Line) => void;
+  handleAddLine: (line: Path) => void;
 }
 
 // Canvas drawing utilities
@@ -22,9 +22,9 @@ const clearCanvas = (ctx: CanvasRenderingContext2D, width: number, height: numbe
   ctx.clearRect(0, 0, width, height);
 };
 
-const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {
-  // Line is now ParsedPath format
-  drawParsedPath(ctx, line);
+const drawLine = (ctx: CanvasRenderingContext2D, line: Path) => {
+  // Line is now Path format
+  drawPath(ctx, line);
 };
 
 const drawRawPoints = (ctx: CanvasRenderingContext2D, points: Point[]) => {
@@ -39,19 +39,18 @@ const drawRawPoints = (ctx: CanvasRenderingContext2D, points: Point[]) => {
 };
 
 // Curve fitting logic
-const fitCurvesToPoints = (points: Point[], maxError: number = 50): Line => {
+const fitCurvesToPoints = (points: Point[], maxError: number = 50): Path => {
   if (points.length < 2) return [];
 
   try {
     const curves = fitCurve(points, maxError) as BezierCurve[];
     // Convert to parsed path format
-    return bezierCurvesToParsedPath(curves);
+    return bezierCurvesToPath(curves);
   } catch (error) {
     console.warn('Curve fitting failed:', error);
     return [];
   }
 };
-
 
 // Flow:
 // - user mouses down
@@ -101,7 +100,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, readOnly =
       const tempCurves = fitCurvesToPoints(currentPoints.current);
       if (tempCurves.length > 0) {
         ctx.strokeStyle = LINE_COLOR;
-        drawParsedPath(ctx, tempCurves);
+        drawPath(ctx, tempCurves);
       }
     }
   }, [isDrawing, lines, width, height]);

@@ -1,11 +1,11 @@
 import { PathCommand } from "parse-svg-path";
 
-import { Line } from "@/app/types/exquisiteCorpse";
+import { Path } from "@/app/types/exquisiteCorpse";
 import { isClosePathCommand, isCubicBezierCommand, isCubicBezierRelativeCommand, isLineToCommand, isLineToRelativeCommand, isMoveToCommand, isMoveToRelativeCommand, isQuadraticBezierCommand, isQuadraticBezierRelativeCommand } from "@/app/utils/svg";
 import { ensureStartsWith } from "@/app/utils/string";
 
 // New function to draw parsed path commands
-export const drawParsedPath = (ctx: CanvasRenderingContext2D, path: PathCommand[]) => {
+export const drawPath = (ctx: CanvasRenderingContext2D, path: PathCommand[]) => {
   ctx.beginPath();
 
   for (const command of path) {
@@ -34,9 +34,9 @@ export const drawParsedPath = (ctx: CanvasRenderingContext2D, path: PathCommand[
   ctx.stroke();
 };
 
-const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {
+const drawLine = (ctx: CanvasRenderingContext2D, line: Path) => {
   // Line is now ParsedPath format
-  drawParsedPath(ctx, line);
+  drawPath(ctx, line);
 };
 
 /**
@@ -47,7 +47,7 @@ const drawLine = (ctx: CanvasRenderingContext2D, line: Line) => {
  * @returns Promise resolving to base64-encoded PNG string
  */
 export const renderLinesToBase64 = async (
-  lines: Line[],
+  lines: Path[],
   width: number,
   height: number,
   backgroundImage?: string

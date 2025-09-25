@@ -6,7 +6,7 @@ import type {
   MultiplayerGameState,
 } from '@/app/types/multiplayer';
 import { generateAICurveTurn } from '@/app/lib/aiTurnService';
-import type { CanvasDimensions, CurveTurn, Line } from '@/app/types/exquisiteCorpse';
+import type { CanvasDimensions, CurveTurn, Path } from '@/app/types/exquisiteCorpse';
 import { generateSessionId } from '../exquisite-corpse/sessionId';
 import { GameType } from '../api/exquisite-corpse/schemas';
 import { prisma } from './prisma';
@@ -80,7 +80,7 @@ export class GameService {
     await this.publishGameState(sessionId, gameState);
   }
 
-  async submitTurn(sessionId: string, playerName: string, playerToken: string, path: Line): Promise<void> {
+  async submitTurn(sessionId: string, playerName: string, playerToken: string, path: Path): Promise<void> {
     const turn: CurveTurn = {
       path,
       author: playerName,

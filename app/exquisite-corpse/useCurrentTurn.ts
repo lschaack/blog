@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Line } from "@/app/types/exquisiteCorpse";
+import { Path } from "@/app/types/exquisiteCorpse";
 import { useHistory } from "./useUndoRedo";
 
 export const useCurrentTurn = () => {
@@ -11,17 +11,17 @@ export const useCurrentTurn = () => {
     clear: resetCurrentTurn,
     canUndo,
     canRedo,
-  } = useHistory<Line[]>([]);
+  } = useHistory<Path[]>([]);
 
   // Restore current line from JSON
-  const restoreCurrentLine = useCallback((newCurrentLine: Line[]) => {
+  const restoreCurrentLine = useCallback((newCurrentLine: Path[]) => {
     resetCurrentTurn();
     if (newCurrentLine.length > 0) {
       setLines(newCurrentLine);
     }
   }, [resetCurrentTurn, setLines]);
 
-  const addLine = (newLine: Line) => {
+  const addLine = (newLine: Path) => {
     setLines([...lines, newLine])
   }
 

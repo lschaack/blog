@@ -76,6 +76,7 @@ class GameEventManager {
           try {
             const data = `event: game_update\ndata: ${JSON.stringify(event)}\n\n`;
 
+            // FIXME: this is failing, these are only coming from the actual connect route
             client.controller.enqueue(this.encoder.encode(data));
           } catch {
             console.error('Failed to send event to client, closing connection');

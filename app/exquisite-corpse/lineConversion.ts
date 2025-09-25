@@ -1,5 +1,5 @@
-import { BezierCurve, CanvasDimensions, Line, Point } from '@/app/types/exquisiteCorpse';
-import { ParsedPath, PathCommand } from 'parse-svg-path';
+import { BezierCurve, CanvasDimensions, Point } from '@/app/types/exquisiteCorpse';
+import { Path, PathCommand } from 'parse-svg-path';
 
 // Utility functions for converting between formats
 
@@ -22,11 +22,11 @@ export const bezierCurveToPathCommands = (curve: BezierCurve, isFirst: boolean =
 };
 
 /**
- * Converts array of BezierCurves to ParsedPath
+ * Converts array of BezierCurves to Path
  * @param curves Array of BezierCurves
- * @returns ParsedPath with path commands
+ * @returns Path with path commands
  */
-export const bezierCurvesToParsedPath = (curves: BezierCurve[]): ParsedPath => {
+export const bezierCurvesToPath = (curves: BezierCurve[]): Path => {
   if (curves.length === 0) return [];
 
   const commands: PathCommand[] = [];
@@ -39,11 +39,11 @@ export const bezierCurvesToParsedPath = (curves: BezierCurve[]): ParsedPath => {
 };
 
 /**
- * Converts ParsedPath back to BezierCurve array for backward compatibility
- * @param path ParsedPath to convert
+ * Converts Path back to BezierCurve array for backward compatibility
+ * @param path Path to convert
  * @returns Array of BezierCurves
  */
-export const parsedPathToBezierCurves = (path: ParsedPath): BezierCurve[] => {
+export const parsedPathToBezierCurves = (path: Path): BezierCurve[] => {
   const curves: BezierCurve[] = [];
   let currentPos: Point = [0, 0];
 
@@ -141,67 +141,4 @@ export const smoothAIPoints = (points: Point[], windowSize: number = 3): Point[]
 
   smoothed.push(points[points.length - 1]); // Keep last point unchanged
   return smoothed;
-};
-
-/**
- * FIXME: Do thorough zod validation on the backend and trust api responses
- * Validates that a line has reasonable characteristics for drawing
- * @param line Line to validate (ParsedPath format)
- * @returns boolean indicating if line is valid
- */
-export const validateGeneratedLine = (line: Line): boolean => {
-  if (!Array.isArray(line) || line.length === 0) return false;
-
-  // Check each path command in the line
-  for (const command of line) {
-    if (!Array.isArray(command) || command.length < 1) return false;
-
-    const [commandType, ...params] = command;
-    if (typeof commandType !== 'string') return false;
-
-    // Validate parameters based on command type
-    switch (commandType) {
-      case 'M':
-      case 'm':
-      case 'L':
-      case 'l':
-      case 'T':
-      case 't':
-        if (params.length !== 2) return false;
-        break;
-      case 'H':
-      case 'h':
-      case 'V':
-      case 'v':
-        if (params.length !== 1) return false;
-        break;
-      case 'C':
-      case 'c':
-        if (params.length !== 6) return false;
-        break;
-      case 'S':
-      case 's':
-      case 'Q':
-      case 'q':
-        if (params.length !== 4) return false;
-        break;
-      case 'A':
-      case 'a':
-        if (params.length !== 7) return false;
-        break;
-      case 'Z':
-      case 'z':
-        if (params.length !== 0) return false;
-        break;
-      default:
-        return false;
-    }
-
-    // Check that all parameters are finite numbers
-    for (const param of params) {
-      if (typeof param !== 'number' || !Number.isFinite(param)) return false;
-    }
-  }
-
-  return true;
 };

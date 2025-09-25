@@ -1,11 +1,10 @@
 import type { ComponentType } from "react";
-import type { ParsedPath } from "parse-svg-path";
+export type { Path } from "parse-svg-path";
 
 export type Point = [number, number];
 
 // Legacy types for backward compatibility during transition
 export type BezierCurve = [Point, Point, Point, Point]; // [p1, cp1, cp2, p2]
-export type Line = ParsedPath;
 
 export type CanvasDimensions = CanvasDimensions;
 
@@ -17,7 +16,7 @@ export type BaseTurn = {
 
 // Turn variant with Line-based drawing
 export type CurveTurn = BaseTurn & {
-  path: Line;
+  path: Path;
   interpretation?: string; // AI's interpretation of what the drawing represents
   reasoning?: string; // AI's reasoning for adding their line
   thoughts?: string; // AI's thoughts about the game
@@ -67,7 +66,8 @@ export type TurnRendererProps<Turn extends BaseTurn> = {
   readOnly?: boolean;
 }
 
-export type TurnRenderer<Turn extends BaseTurn> = ComponentType<TurnRendererProps<Turn>>;
+export type TurnRenderer<Turn extends BaseTurn> = ComponentType<{ turns: Turn[]; dimensions: CanvasDimensions; }>;
+export type TurnMetaRenderer<Turn extends BaseTurn> = ComponentType<{ turn: Turn; dimensions: CanvasDimensions; }>;
 
 export type GameContext<Turn extends BaseTurn> = {
   canvasDimensions: CanvasDimensions;
@@ -83,7 +83,7 @@ export type AIImageResponseGeminiFlashPreview = {
 
 export type AICurveResponse = {
   interpretation: string;
-  path: ParsedPath;
+  path: Path;
   reasoning?: string;
   thoughts?: string;
   image?: string;

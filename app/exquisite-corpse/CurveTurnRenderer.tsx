@@ -1,12 +1,23 @@
 import { useCallback, useMemo } from "react";
 import { useGameContext } from "./GameContext";
-import { BaseTurn, CanvasDimensions, CurveTurn } from "@/app/types/exquisiteCorpse";
+import { BaseTurn, CanvasDimensions, CurveTurn, TurnRenderer } from "@/app/types/exquisiteCorpse";
 import { isViewingCurrentTurn, isUserTurn, getDisplayTurns, getPreviousTurn, isAuthorAI, isAuthorUser, getPreviousTurnNumber } from "./gameReducer";
 import { useCurrentTurn } from "./useCurrentTurn";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { ensureStartsWith } from "@/app/utils/string";
 import { SelfDrawingSketch } from "./SelfDrawingPath";
+import { Redo, Undo } from "lucide-react";
+
+export const CoiveToinRendera: TurnRenderer<CurveTurn> = ({ turns, dimensions }) => {
+  return (
+    <SelfDrawingSketch
+      paths={turns.map(({ path }) => path)}
+      dimensions={dimensions}
+      className="absolute inset-0 fill-none pointer-events-none"
+    />
+  );
+}
 
 type CurveTurnRendererProps = {
   handleEndTurn: (turnData: Omit<CurveTurn, keyof BaseTurn>) => void;
@@ -49,13 +60,15 @@ export const CurveTurnRenderer = ({
       {/* Undo/Redo controls */}
       <div className="flex gap-2">
         <Button
-          label="Undo"
+          label={<Undo />}
+          ariaLabel="Undo latest line"
           onClick={currentTurn.undo}
           disabled={!canDraw || !currentTurn.canUndo}
           className="flex-1"
         />
         <Button
-          label="Redo"
+          label={<Redo />}
+          ariaLabel="Redo latest line"
           onClick={currentTurn.redo}
           disabled={!canDraw || !currentTurn.canRedo}
           className="flex-1"

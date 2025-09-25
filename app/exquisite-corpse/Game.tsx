@@ -1,17 +1,20 @@
 import { useEffect } from "react";
 
-import { BaseTurn, CanvasDimensions, RenderPNG, TurnRenderer } from '@/app/types/exquisiteCorpse';
+import { BaseTurn, CanvasDimensions, RenderPNG, TurnMetaRenderer, TurnRenderer } from '@/app/types/exquisiteCorpse';
 import { GameProvider, useGameContext } from './GameContext';
 import { GameStatus } from './GameStatus';
-import { TurnHistory } from './TurnHistory';
 import { ExportUtilities } from './ExportUtilities';
 import { StateEditor } from './StateEditor';
 import { useAITurn } from './useAITurn';
 import { getDisplayTurns, isAITurn, isViewingCurrentTurn } from './gameReducer';
 import { Button } from "@/app/components/Button";
+import { TurnManager } from "./TurnManager";
+import { Path } from "parse-svg-path";
 
 export type GameProps<Turn extends BaseTurn> = {
-  CurrentTurn: TurnRenderer<Turn>;
+  TurnRenderer: TurnRenderer<Turn>;
+  TurnMetaRenderer: TurnMetaRenderer<Turn>;
+  getTurnFromPath: (path: Path, turns: Turn[]) => Promise<Omit<Turn, keyof BaseTurn> | undefined>;
   renderPNG: RenderPNG<Turn>;
   getAITurn: (history: Turn[]) => Promise<Omit<Turn, keyof BaseTurn>>;
   dimensions: CanvasDimensions;
@@ -20,7 +23,15 @@ export type GameProps<Turn extends BaseTurn> = {
 const isDev = process.env.NODE_ENV === "development";
 
 // Internal game component that uses the context
-const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, renderPNG, getAITurn, dimensions }: GameProps<Turn>) => {
+// FIXME: remove dispatches related to current turn
+const GameInternal = <Turn extends BaseTurn>({
+  TurnRenderer,
+  TurnMetaRenderer,
+  getTurnFromPath,
+  renderPNG,
+  getAITurn,
+  dimensions
+}: GameProps<Turn>) => {
   const gameState = useGameContext<Turn>();
   const aiTurn = useAITurn<Turn>(getAITurn);
 
@@ -70,12 +81,21 @@ const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, renderPNG, getAITurn
         aiProgress={aiTurn.progress}
       />
 
-      <TurnHistory />
+      <TurnManager
+        handleAddPath={async (path, turns) => {
+          const newTurn = await getTurnFromPath(path, turns);
 
-      <CurrentTurn
-        handleEndTurn={handleEndTurn}
+          if (newTurn) {
+            handleEndTurn(newTurn);
+          } else {
+            console.error('Failed to create new turn from path')
+          }
+        }}
         readOnly={aiTurn.isProcessing}
-        canvasDimensions={dimensions}
+        dimensions={dimensions}
+        turns={gameState.turns}
+        TurnRenderer={TurnRenderer}
+        TurnMetaRenderer={TurnMetaRenderer}
       />
 
       <Button
@@ -92,15 +112,10 @@ const GameInternal = <Turn extends BaseTurn>({ CurrentTurn, renderPNG, getAITurn
   );
 };
 
-export const Game = <Turn extends BaseTurn>({ CurrentTurn, renderPNG, getAITurn, dimensions }: GameProps<Turn>) => {
+export const Game = <Turn extends BaseTurn>(props: GameProps<Turn>) => {
   return (
     <GameProvider<Turn>>
-      <GameInternal
-        CurrentTurn={CurrentTurn}
-        renderPNG={renderPNG}
-        getAITurn={getAITurn}
-        dimensions={dimensions}
-      />
+      <GameInternal {...props} />
     </GameProvider>
   );
 };
