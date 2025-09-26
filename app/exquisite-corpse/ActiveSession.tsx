@@ -359,7 +359,6 @@ export const ActiveSession = ({
   gameState: MultiplayerGameState;
   handleLeaveGame: () => void;
 }) => {
-  console.log('gameState', gameState)
   const handleSubmitTurn = useCallback((turnData: Omit<CurveTurn, keyof BaseTurn>) => {
     return submitTurn(sessionId, turnData);
   }, [sessionId]);
