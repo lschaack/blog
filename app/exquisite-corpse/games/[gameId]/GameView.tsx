@@ -3,7 +3,7 @@
 import { MultiplayerGameState } from '@/app/types/multiplayer';
 import { TurnManager } from '../../TurnManager';
 import { CurveTurn } from '@/app/types/exquisiteCorpse';
-import { CoiveToinRendera } from '../../CurveTurnRenderer';
+import { CurveTurnRenderer } from '../../CurveTurnRenderer';
 import { CurveTurnMetaRenderer } from '../../CurveTurnMetaRenderer';
 
 type GameViewProps = {
@@ -15,7 +15,7 @@ export function GameView({ gameData }: GameViewProps) {
       handleAddPath={() => undefined}
       dimensions={gameData.dimensions}
       turns={gameData.turns}
-      TurnRenderer={CoiveToinRendera}
+      TurnRenderer={CurveTurnRenderer}
       TurnMetaRenderer={CurveTurnMetaRenderer}
       readOnly
     />
