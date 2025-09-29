@@ -19,7 +19,7 @@ import { retryAI, submitTurn } from './requests';
 import { MultiplayerGameState, Player } from '../types/multiplayer';
 import { renderPathCommandsToSvg } from '../utils/svg';
 import { TurnManager } from './TurnManager';
-import { CoiveToinRendera } from './CurveTurnRenderer';
+import { CurveTurnRenderer } from './CurveTurnRenderer';
 import { CurveTurnMetaRenderer } from './CurveTurnMetaRenderer';
 
 type PlayerStatusIconProps = {
@@ -410,7 +410,7 @@ export const ActiveSession = ({
         readOnly={!isCurrentPlayer}
         dimensions={gameState.dimensions}
         turns={gameState.turns}
-        TurnRenderer={CoiveToinRendera}
+        TurnRenderer={CurveTurnRenderer}
         TurnMetaRenderer={CurveTurnMetaRenderer}
       />
 
