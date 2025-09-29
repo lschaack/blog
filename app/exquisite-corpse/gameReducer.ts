@@ -52,29 +52,6 @@ export const gameReducer = <T extends BaseTurn>(
       };
     }
 
-    case "increment_current_turn": {
-      const maxIndex = state.turns.length;
-      const newIndex = Math.min(state.currentTurnIndex + 1, maxIndex);
-
-      return {
-        ...state,
-        currentTurnIndex: newIndex,
-        isFirstTurn: newIndex === 0,
-        isLastTurn: newIndex === maxIndex,
-      };
-    }
-
-    case "decrement_current_turn": {
-      const newIndex = Math.max(state.currentTurnIndex - 1, 0);
-
-      return {
-        ...state,
-        currentTurnIndex: newIndex,
-        isFirstTurn: newIndex === 0,
-        isLastTurn: newIndex === state.turns.length,
-      };
-    }
-
     case "restore": {
       const newCurrentTurnIndex = Math.min(action.payload.turns.length, action.payload.turns.length);
 
