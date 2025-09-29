@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { getGameService } from '@/app/lib/gameService';
+import { getExquisiteCorpseSessionService } from '@/app/lib/exquisiteCorpseSessionService';
 import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
 import { withRedisErrorHandler } from '@/app/api/middleware/redis';
 import { withZodRequestValidation } from '@/app/api/middleware/zod';
@@ -22,7 +22,7 @@ export const POST = compose(
   ) => {
     const { gameType, playerName, dimensions } = await ctx.validatedBody;
     const playerToken = crypto.randomUUID();
-    const gameService = getGameService();
+    const gameService = getExquisiteCorpseSessionService();
 
     const { sessionId } = await gameService.createGame(gameType, dimensions);
 

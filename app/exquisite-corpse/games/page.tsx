@@ -11,8 +11,8 @@ export default async function WithAdminView({
 
   return (
     <AdminView>
-      <GameBrowser page={page} />
+      <GameBrowser page={page} perPage={12} />
     </AdminView>
-  )
+  );
 }
 

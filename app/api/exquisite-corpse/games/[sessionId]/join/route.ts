@@ -3,7 +3,7 @@ import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
 import { withRedisErrorHandler } from '@/app/api/middleware/redis';
 import { compose } from '@/app/api/middleware/compose';
 import { GameParams, JoinGameRequest, JoinGameRequestSchema } from '../../../schemas';
-import { getGameService } from '@/app/lib/gameService';
+import { getExquisiteCorpseSessionService } from '@/app/lib/exquisiteCorpseSessionService';
 import { withZodRequestValidation } from '@/app/api/middleware/zod';
 import { setPlayerCookies } from '../cookies';
 import { cookies } from 'next/headers';
@@ -52,7 +52,7 @@ export const POST = compose(
 
     const playerToken = crypto.randomUUID();
 
-    await getGameService().join(sessionId, playerName, playerToken);
+    await getExquisiteCorpseSessionService().join(sessionId, playerName, playerToken);
 
     await setPlayerCookies(sessionId, playerName, playerToken);
 

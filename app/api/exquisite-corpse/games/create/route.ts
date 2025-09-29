@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { getGameService } from '@/app/lib/gameService';
+import { getExquisiteCorpseSessionService } from '@/app/lib/exquisiteCorpseSessionService';
 import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
 import { withRedisErrorHandler } from '@/app/api/middleware/redis';
 import { withZodRequestValidation } from '@/app/api/middleware/zod';
@@ -21,7 +21,7 @@ export const POST = compose(
   ) => {
     const { gameType, dimensions } = await ctx.validatedBody;
 
-    const result = await getGameService().createGame(gameType, dimensions);
+    const result = await getExquisiteCorpseSessionService().createGame(gameType, dimensions);
 
     return NextResponse.json(result);
   }

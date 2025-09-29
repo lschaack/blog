@@ -1,10 +1,11 @@
 import Link from "next/link";
 
-import { prisma, Prisma } from "@/app/lib/prisma";
 import { MultiplayerGameState } from "@/app/types/multiplayer";
 import { GameCard } from "./GameCard";
 import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from "lucide-react";
 import clsx from "clsx";
+import { getGameService } from "@/app/lib/gameService";
+import { toLimitOffset } from "@/app/utils/pagination";
 
 type PageNavProps = {
   page: number;
@@ -46,42 +47,17 @@ function PageNav({ page, totalPages }: PageNavProps) {
 
 type GameBrowserProps = {
   page: number;
-  perPage?: number;
+  perPage: number;
 }
-export async function GameBrowser({
-  page,
-  perPage: perPage = 2,
-}: GameBrowserProps) {
-  const [pageData, totalCount] = await Promise.all([
-    prisma.exquisiteCorpseGame.findMany({
-      where: {
-        data: {
-          path: ['turns', '0'],
-          not: Prisma.JsonNull,
-        }
-      },
-      take: perPage,
-      skip: (Math.max(page - 1, 0) * perPage),
-      orderBy: {
-        createdAt: 'desc',
-      }
-    }),
-    prisma.exquisiteCorpseGame.count({
-      where: {
-        data: {
-          path: ['turns', '0'],
-          not: Prisma.JsonNull,
-        }
-      }
-    }),
-  ]);
+export async function GameBrowser(requestedPage: GameBrowserProps) {
+  const { limit, offset } = toLimitOffset(requestedPage);
 
-  const totalPages = Math.ceil(totalCount / perPage);
+  const { items: games, total: totalPages } = await getGameService().getGames(limit, offset);
 
   return (
     <div className="flex flex-col gap-4">
       <PageNav
-        page={page}
+        page={requestedPage.page}
         totalPages={totalPages}
       />
 
@@ -91,15 +67,15 @@ export async function GameBrowser({
           "sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         )}
       >
-        {(pageData.map(game => (
+        {games.map(game => (
           <li key={game.id}>
             <GameCard gameData={game.data as MultiplayerGameState} />
           </li>
-        )))}
+        ))}
       </ul>
 
       <PageNav
-        page={page}
+        page={requestedPage.page}
         totalPages={totalPages}
       />
     </div>
