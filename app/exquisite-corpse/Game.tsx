@@ -6,7 +6,7 @@ import { GameStatus } from './GameStatus';
 import { ExportUtilities } from './ExportUtilities';
 import { StateEditor } from './StateEditor';
 import { useAITurn } from './useAITurn';
-import { getDisplayTurns, isAITurn, isViewingCurrentTurn } from './gameReducer';
+import { isAITurn } from './gameReducer';
 import { Button } from "@/app/components/Button";
 import { TurnManager } from "./TurnManager";
 import { Path } from "parse-svg-path";
@@ -23,7 +23,6 @@ export type GameProps<Turn extends BaseTurn> = {
 const isDev = process.env.NODE_ENV === "development";
 
 // Internal game component that uses the context
-// FIXME: remove dispatches related to current turn
 const GameInternal = <Turn extends BaseTurn>({
   TurnRenderer,
   TurnMetaRenderer,
@@ -42,10 +41,9 @@ const GameInternal = <Turn extends BaseTurn>({
       // 1. It's AI's turn (user just finished)
       // 2. AI is not already processing
       // 3. We're viewing the current turn
-      if (isAITurn(gameState) && !aiTurn.isProcessing && !aiTurn.hasError && isViewingCurrentTurn(gameState)) {
+      if (isAITurn(gameState) && !aiTurn.isProcessing && !aiTurn.hasError) {
         try {
-          const displayTurns = getDisplayTurns(gameState);
-          const payload = await aiTurn.processAITurn(displayTurns);
+          const payload = await aiTurn.processAITurn(gameState.turns);
 
           // Dispatch AI turn
           gameState.dispatch({

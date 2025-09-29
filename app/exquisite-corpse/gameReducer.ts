@@ -72,55 +72,12 @@ export const gameReducer = <T extends BaseTurn>(
   }
 };
 
-// Helper functions for game state queries
-export const getDisplayTurns = <T extends BaseTurn>(state: GameState<T>): T[] => {
-  return state.turns.slice(0, state.currentTurnIndex);
-};
-
-export const getCurrentTurnNumber = <T extends BaseTurn>(state: GameState<T>): number => {
-  return state.currentTurnIndex + 1;
-};
-
-export const getPreviousTurnNumber = <T extends BaseTurn>(state: GameState<T>): number => {
-  return state.currentTurnIndex;
-};
-
-export const getPreviousTurn = <T extends BaseTurn>(state: GameState<T>) => {
-  return state.turns[state.currentTurnIndex - 1]
-}
-
-export const getTotalTurns = <T extends BaseTurn>(state: GameState<T>): number => {
-  return state.turns.length + 1;
-};
-
-export const isViewingCurrentTurn = <T extends BaseTurn>(state: GameState<T>): boolean => {
-  return state.currentTurnIndex === state.turns.length;
-};
-
-export const canGoToPrevious = <T extends BaseTurn>(state: GameState<T>): boolean => {
-  return state.currentTurnIndex > 0;
-};
-
-export const canGoToNext = <T extends BaseTurn>(state: GameState<T>): boolean => {
-  return state.currentTurnIndex < state.turns.length;
-};
-
 export const getLastTurn = <T extends BaseTurn>(state: GameState<T>): T | undefined => {
   return state.turns[state.turns.length - 1];
 };
 
-// Helper functions to determine turn author types
 export const isAuthorAI = (author: string): boolean => {
   return author === "AI";
-};
-
-export const isAuthorUser = (author: string, currentUserId?: string): boolean => {
-  if (currentUserId) {
-    // In multiplayer, check if author matches current user ID
-    return author === currentUserId;
-  }
-  // In single-player, check if author is "user"
-  return author === "user";
 };
 
 export const isUserTurn = <T extends BaseTurn>(state: GameState<T>): boolean => {
@@ -135,8 +92,3 @@ export const isAITurn = <T extends BaseTurn>(state: GameState<T>): boolean => {
   return Boolean(lastTurn && !isAuthorAI(lastTurn.author));
 };
 
-export const isLastTurnAI = <T extends BaseTurn>(state: GameState<T>): boolean => {
-  const prevTurn = getPreviousTurn(state);
-
-  return Boolean(prevTurn && isAuthorAI(prevTurn.author));
-}
