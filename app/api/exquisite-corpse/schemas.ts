@@ -141,3 +141,10 @@ export const PaginationRequestSchema = z.object({
   perPage: z.number().max(100),
 });
 export type PaginationRequest = z.infer<typeof PaginationRequestSchema>;
+
+export const TrainingExampleSchema = z.object({
+  paths: z.array(PathSchema), // the last path is the addition
+  sketchDescription: z.string().min(1, 'Missing sketch description'),
+  turnDescription: z.string().min(1, 'Missing turn description'),
+  tags: z.array(z.string()), // name field of ExquisiteCorpseTag
+})
