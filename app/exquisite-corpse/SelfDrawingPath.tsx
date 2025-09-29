@@ -172,22 +172,22 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
       viewBox={`0 0 ${width} ${height}`}
       className={className}
     >
-      {paths.map((path, index) => (
-        animate === 'all' || index === paths.length - 1 ? (
-          <SelfDrawingPath
-            key={`path-${index}`}
-            className="stroke-2 stroke-black"
-            path={path}
-            drawSpeed={drawSpeed}
-          />
-        ) : (
-          <path
-            key={`path-${index}`}
-            className="stroke-2 stroke-black"
-            d={pathToD(path)}
-          />
-        )
-      ))}
+      <g strokeLinecap="round" strokeWidth={2} stroke="#000">
+        {paths.map((path, index) => (
+          animate === 'all' || index === paths.length - 1 ? (
+            <SelfDrawingPath
+              key={`path-${index}`}
+              path={path}
+              drawSpeed={drawSpeed}
+            />
+          ) : (
+            <path
+              key={`path-${index}`}
+              d={pathToD(path)}
+            />
+          )
+        ))}
+      </g>
     </svg>
   )
 }
