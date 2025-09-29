@@ -1,8 +1,10 @@
 import AdminView from "@/app/components/AdminView";
+import { TrainingInterface } from "../TrainingInterface";
 
-export function Train() {
+export default function Train() {
   return (
     <AdminView>
+      <TrainingInterface />
     </AdminView>
   );
 }

@@ -11,7 +11,7 @@ type TurnManagerProps<Turn extends BaseTurn> = {
   dimensions: CanvasDimensions;
   turns: Turn[];
   TurnRenderer: TurnRenderer<Turn>;
-  TurnMetaRenderer: TurnMetaRenderer<Turn>;
+  TurnMetaRenderer?: TurnMetaRenderer<Turn>;
 };
 
 export const TurnManager = <Turn extends BaseTurn>({
@@ -44,7 +44,7 @@ export const TurnManager = <Turn extends BaseTurn>({
     return turns.slice(0, currentTurnIndex + 1);
   }, [turns, currentTurnIndex]);
 
-  const prevTurn = useMemo(() => {
+  const currentTurn = useMemo(() => {
     return turns[currentTurnIndex];
   }, [turns, currentTurnIndex]);
 
@@ -125,9 +125,9 @@ export const TurnManager = <Turn extends BaseTurn>({
         disabled={!canAddPath}
       />
 
-      {prevTurn && (
+      {currentTurn && TurnMetaRenderer && (
         <TurnMetaRenderer
-          turn={prevTurn}
+          turn={currentTurn}
           dimensions={dimensions}
         />
       )}

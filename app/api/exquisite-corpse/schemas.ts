@@ -135,3 +135,9 @@ export type JoinGameRequest = z.infer<typeof JoinGameRequestSchema>;
 
 export const CreateWithPlayerRequestSchema = CreateGameRequestSchema.merge(JoinGameRequestSchema);
 export type CreateWithPlayerRequest = z.infer<typeof CreateWithPlayerRequestSchema>;
+
+export const PaginationRequestSchema = z.object({
+  page: z.number(),
+  perPage: z.number().max(100),
+});
+export type PaginationRequest = z.infer<typeof PaginationRequestSchema>;
