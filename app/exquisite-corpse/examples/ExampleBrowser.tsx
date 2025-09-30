@@ -1,18 +1,18 @@
-import { MultiplayerGameState } from "@/app/types/multiplayer";
-import { GameCard } from "./GameCard";
+import { ExampleCard } from "./ExampleCard";
 import clsx from "clsx";
-import { getGameService } from "@/app/lib/gameService";
+import { getTrainingExampleService } from "@/app/lib/trainingExampleService";
 import { toLimitOffset } from "@/app/utils/pagination";
 import { PageNav } from "../PageNav";
 
-type GameBrowserProps = {
+type ExampleBrowserProps = {
   page: number;
   perPage: number;
 }
-export async function GameBrowser(requestedPage: GameBrowserProps) {
+
+export async function ExampleBrowser(requestedPage: ExampleBrowserProps) {
   const { limit, offset } = toLimitOffset(requestedPage);
 
-  const { items: games, total: totalPages } = await getGameService().getGames(limit, offset);
+  const { items: examples, total: totalPages } = await getTrainingExampleService().getExamples(limit, offset);
 
   return (
     <div className="flex flex-col gap-4">
@@ -27,9 +27,9 @@ export async function GameBrowser(requestedPage: GameBrowserProps) {
           "sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         )}
       >
-        {games.map(game => (
-          <li key={game.id}>
-            <GameCard gameData={game.data as MultiplayerGameState} />
+        {examples.map(example => (
+          <li key={example.id}>
+            <ExampleCard exampleData={example} />
           </li>
         ))}
       </ul>
