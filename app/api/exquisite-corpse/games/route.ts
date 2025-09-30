@@ -1,24 +1,36 @@
 import { NextResponse } from "next/server";
 import { compose } from "../../middleware/compose";
-import { withZodRequestValidation } from "../../middleware/zod";
 import { withAuth } from "../../middleware/authorization";
-import { PaginationRequest, PaginationRequestSchema } from "../schemas";
 import { getGameService } from "@/app/lib/gameService";
 import { toLimitOffset } from "@/app/utils/pagination";
 
 export const GET = compose(
-  withZodRequestValidation(PaginationRequestSchema),
   withAuth,
 )(
   async (
-    _,
-    ctx: {
-      validatedBody: Promise<PaginationRequest>
-    }
+    request,
   ) => {
-    const requestedPage = await ctx.validatedBody;
+    const rawPage = request.nextUrl.searchParams.get('page');
+    const rawPerPage = request.nextUrl.searchParams.get('perPage');
 
-    const { limit, offset } = toLimitOffset(requestedPage);
+    if (!rawPage || !rawPerPage) {
+      return NextResponse.json(
+        { error: 'Missing pagination parameters' },
+        { status: 400 }
+      );
+    }
+
+    const page = parseInt(rawPage);
+    const perPage = parseInt(rawPerPage);
+
+    if (isNaN(page) || isNaN(perPage)) {
+      return NextResponse.json(
+        { error: 'Pagination parameters cannot be parsed' },
+        { status: 400 }
+      );
+    }
+
+    const { limit, offset } = toLimitOffset({ page, perPage });
 
     const result = await getGameService().getGames(limit, offset);
 

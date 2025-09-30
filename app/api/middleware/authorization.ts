@@ -2,7 +2,7 @@ import { auth } from "@/app/auth";
 import { Middleware } from "@/app/types/middleware";
 import { NextResponse } from "next/server";
 
-export const withAuth: Middleware = (handler) => {
+export const withAuth: Middleware = handler => {
   return async (request, ctx) => {
     const session = await auth();
 
