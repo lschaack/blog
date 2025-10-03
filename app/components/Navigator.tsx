@@ -68,7 +68,10 @@ const NavigatorEntry: FC<{ node: Block }> = ({ node }) => {
         "transition-colors duration-75",
       )}
     >
-      <li style={{ paddingLeft: `${12 * parseInt(level)}px` }}>
+      <li
+        className="overflow-hidden text-ellipsis whitespace-nowrap"
+        style={{ paddingLeft: `${12 * parseInt(level)}px` }}
+      >
         {content}
       </li>
     </a>
