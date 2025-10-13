@@ -197,4 +197,23 @@
     background-color: var(--color-deep-50);
     border-radius: 0.75rem;
   }
+
+  .single-row {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .menu-option {
+    padding: 0.5rem;
+    transition-property: background-color;
+    transition-timing-function: var(--default-transition-timing-function);
+    transition-duration: 200ms;
+
+    &:focus-within,
+    &:hover {
+      background-color: var(--color-deep-200);
+      outline: none;
+    }
+  }
 }

@@ -1,51 +1,124 @@
-import { useRef, useCallback, ChangeEventHandler } from "react";
+import { useCallback, useState, ChangeEventHandler, useId } from "react";
 import fuzzysort from "fuzzysort";
+import debounce from "lodash/debounce";
+import { Search } from "lucide-react";
+import clsx from "clsx";
 
-type FuzzySearchProps<T> = {
-  items: T[];
-  onSearch: (filtered: T[]) => void;
-  searchKey: keyof T | ((item: T) => string);
+import { InputText } from "./InputText";
+
+type FuzzySearchInputProps = {
+  value: string,
+  onChange: (value: string) => void,
+  items: string[];
+  onFilterItems: (filtered: ReadonlyArray<string>) => void;
   placeholder?: string;
   className?: string;
 };
 
-export function FuzzySearchInput<T>({
+function FuzzySearchInput({
+  value,
+  onChange,
   items,
-  searchKey,
-  onSearch,
+  onFilterItems: onResults,
   placeholder,
   className,
-}: FuzzySearchProps<T>) {
-  const inputRef = useRef<HTMLInputElement>(null);
+}: FuzzySearchInputProps) {
+  const inputId = useId();
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const updateResults = useCallback(debounce((query: string) => {
+    const fuzzyResults = fuzzysort
+      .go(query, items, { limit: 10 })
+      .map(result => result.target);
+
+    onResults(fuzzyResults);
+  }, 50), []);
 
   const handleChange = useCallback<ChangeEventHandler<HTMLInputElement>>(e => {
     const query = e.target.value;
 
-    if (!query.trim()) {
-      const emptyResults: T[] = [];
-      onSearch(emptyResults);
-      return emptyResults;
+    // NOTE: default to showing all items for empty query
+    if (!query) {
+      onResults(items);
+    } else {
+      updateResults(query);
     }
 
-    const searchFn = typeof searchKey === "function" ? searchKey : (item: T) => String(item[searchKey]);
-
-    const fuzzyResults = fuzzysort.go(query, items, {
-      key: searchFn,
-      limit: 10,
-    });
-
-    const filteredItems = fuzzyResults.map(result => result.obj);
-
-    onSearch(filteredItems);
-  }, [items, onSearch, searchKey]);
+    onChange(query);
+  }, [updateResults, onChange, items, onResults]);
 
   return (
-    <input
-      ref={inputRef}
-      type="text"
-      onChange={handleChange}
-      placeholder={placeholder}
-      className={className}
-    />
+    <div className={clsx("p-2 flex gap-2", className)}>
+      <Search size={24} />
+      <InputText
+        label="Search for a tag"
+        hideLabel
+        id={`fuzzy-search-${inputId}`}
+        value={value}
+        onChange={handleChange}
+        placeholder={placeholder}
+        className="border-0"
+      />
+    </div>
+  );
+}
+
+type FuzzySearchResultsProps = {
+  items: ReadonlyArray<string>;
+  onSelect: (item: string) => void;
+}
+function FuzzySearchResults({ items, onSelect }: FuzzySearchResultsProps) {
+  return (
+    <div className="flex flex-col items-stretch">
+      {items.length === 0 ? (
+        <div className="menu-option single-row">
+          No results found.
+        </div>
+      ) : (
+        items.map((item, index) => (
+          <button
+            key={`fuzzy-result-${item}-${index}`}
+            className="menu-option single-row text-left"
+            onClick={() => onSelect(item)}
+          >
+            {item}
+          </button>
+        ))
+      )}
+    </div>
+  )
+}
+
+type FuzzySearchProps = {
+  value: string;
+  onChange: (value: string) => void;
+  items: string[];
+  onSelect: (item: string) => void;
+  onCreate?: (query: string) => void;
+};
+export function FuzzySearch({
+  value,
+  onChange,
+  items,
+  onSelect,
+  onCreate, // TODO:
+}: FuzzySearchProps) {
+  const [filteredItems, setFilteredItems] = useState<ReadonlyArray<string>>(items);
+
+  return (
+    <div className="bg-deep-100 rounded-lg border-2 border-deep-600 overflow-hidden">
+      <FuzzySearchInput
+        value={value}
+        onChange={onChange}
+        items={items}
+        onFilterItems={setFilteredItems}
+        className="border-b-2 border-deep-300"
+      />
+
+      <FuzzySearchResults
+        items={value ? filteredItems : items}
+        onSelect={onSelect}
+      />
+    </div>
   );
 }

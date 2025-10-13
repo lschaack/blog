@@ -162,8 +162,8 @@ const Dropdown = ({
           className={clsx(
             "min-w-fit cursor-pointer",
             "flex flex-col justify-between items-baseline",
-            "border-2 border-deep-500 bg-deep-100",
-            "rounded-lg duration-100 delay-100 transition-[border-radius]",
+            "rounded-lg border-2 border-deep-500 bg-deep-100",
+            "duration-100 delay-100 transition-[border-radius]",
             isOpen && "rounded-b-none duration-[0ms] delay-[0ms]",
           )}
           style={{ transform: `translateY(${-legendPosition}px)`, width: wrapperWidth }}
@@ -351,7 +351,6 @@ export const Option = <T extends OptionValue>({
   );
 }
 
-// FIXME: convert to radix if I settle on that for primitives
 type ExclusiveOptionsProps = Pick<DropdownProps, 'name' | 'onChange' | 'value'> & {
   children: ReactNode;
   className?: string;

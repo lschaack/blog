@@ -6,7 +6,8 @@ import { BaseTurn, Path } from "@/app/types/exquisiteCorpse";
 import { TurnManager } from "./TurnManager";
 import { CurveTurnRenderer } from "./CurveTurnRenderer";
 import { TrainingExample } from "../api/exquisite-corpse/schemas";
-import { FuzzySearchInput } from "../components/FuzzySearch";
+import { FuzzySearch } from "../components/FuzzySearch";
+import { TagPicker } from "./TagPicker";
 
 const dimensions = { width: 512, height: 512 };
 
@@ -45,15 +46,7 @@ export const TrainingInterface = () => {
         turns={turns}
         TurnRenderer={CurveTurnRenderer}
       />
-      <FuzzySearchInput<{ content: string }>
-        items={[
-          { content: 'something' },
-          { content: 'something else' },
-          { content: 'another thing' },
-        ]}
-        searchKey="content"
-        onSearch={console.log}
-      />
+      <TagPicker />
     </div>
   );
 };
