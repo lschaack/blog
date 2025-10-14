@@ -13,6 +13,8 @@ export const withAuth: Middleware = handler => {
       );
     }
 
+    ctx.session = session;
+
     return handler(request, ctx);
   }
 }

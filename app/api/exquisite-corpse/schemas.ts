@@ -149,3 +149,8 @@ export const TrainingExampleSchema = z.object({
   tags: z.array(z.string()), // name field of ExquisiteCorpseTag
 });
 export type TrainingExample = z.infer<typeof TrainingExampleSchema>;
+
+export const CreateTagSchema = z.object({
+  name: z.string().min(1, 'Tag name is required').trim(),
+});
+export type CreateTagRequest = z.infer<typeof CreateTagSchema>;
