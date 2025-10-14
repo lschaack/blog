@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Popover } from 'radix-ui';
-import { Plus } from "lucide-react";
+import { Plus, X, XCircle } from "lucide-react";
 import { ExquisiteCorpseTag } from '@prisma/client';
 
 import { FuzzySearch } from '../components/FuzzySearch';
+import { motion, AnimatePresence } from 'motion/react';
 
 const createTag = (name: string) => {
   return fetch('/api/exquisite-corpse/tags', {
@@ -15,21 +16,67 @@ const createTag = (name: string) => {
   })
 }
 
-type TagPickerProps = {
-  tags: ExquisiteCorpseTag[];
-  selectedTags: Set<ExquisiteCorpseTag>;
-  onSelect: (tag: ExquisiteCorpseTag) => void;
-  onDeselect: (tag: ExquisiteCorpseTag) => void;
+type TagProps = {
+  name: string;
+  onDelete: (tag: string) => void;
+};
+function Tag({ name, onDelete }: TagProps) {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <li className="p-1 pl-2 bg-saguaro-100 font-geist-mono text-sm rounded-lg flex items-center gap-1">
+      <span>
+        {name}
+      </span>
+      <button
+        onClick={() => onDelete(name)}
+        className="p-1 w-3.5 h-3.5 relative"
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <AnimatePresence mode="popLayout">
+          {isHovered ? (
+            <motion.div
+              className="absolute inset-0"
+              key="XCircle"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <XCircle className="stroke-3 " size={14} />
+            </motion.div>
+          ) : (
+            <motion.div
+              className="absolute inset-0"
+              key="X"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <X className="stroke-3" size={14} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </button>
+    </li>
+  )
 }
 
-export function TagPicker({ tags: initTags, selectedTags, onSelect }: TagPickerProps) {
+type TagPickerProps = {
+  tags: string[];
+  selectedTags: Set<string>;
+  onSelect: (tagName: string) => void;
+  onDeselect: (tagName: string) => void;
+}
+
+export function TagPicker({ tags: initTags, selectedTags, onSelect, onDeselect }: TagPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [tags, setTags] = useState<ExquisiteCorpseTag[]>(initTags);
+  const [tags, setTags] = useState<string[]>(initTags);
 
-  const tagMap = useMemo(() => Object.fromEntries(tags.map(tag => [tag.name, tag])), [tags]);
-
-  const handleSelect = (item: ExquisiteCorpseTag) => {
+  const handleSelect = (item: string) => {
     onSelect?.(item);
     setOpen(false);
     setQuery('');
@@ -40,10 +87,10 @@ export function TagPicker({ tags: initTags, selectedTags, onSelect }: TagPickerP
       const response = await createTag(name);
 
       if (response.ok) {
-        const tag = await response.json();
+        const tag: ExquisiteCorpseTag = await response.json();
 
-        setTags(prev => [...prev, tag])
-        onSelect(tag);
+        setTags(prev => [...prev, tag.name])
+        onSelect(tag.name);
       }
     } catch (e) {
       // FIXME:
@@ -68,22 +115,21 @@ export function TagPicker({ tags: initTags, selectedTags, onSelect }: TagPickerP
             <FuzzySearch
               value={query}
               onChange={setQuery}
-              items={Object.keys(tagMap)}
-              onSelect={tagName => handleSelect(tagMap[tagName])}
+              items={tags}
+              onSelect={handleSelect}
               onCreate={handleCreate}
               className="max-w-(--radix-popover-trigger-width) max-h-(--radix-popover-available-height)"
             />
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
-      <ul>
+      <ul className="flex flex-wrap gap-2 max-w-[512px]">
         {[...selectedTags.values()].map(tag => (
-          <li
-            key={`tag-${tag.name}`}
-            className="p-1 bg-amber-200 font-geist-mono text-sm"
-          >
-            {tag.name}
-          </li>
+          <Tag
+            key={`tag-${tag}`}
+            name={tag}
+            onDelete={onDeselect}
+          />
         ))}
       </ul>
     </div>

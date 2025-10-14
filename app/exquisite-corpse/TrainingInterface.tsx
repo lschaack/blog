@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { BaseTurn, Path } from "@/app/types/exquisiteCorpse";
 import { TurnManager } from "./TurnManager";
@@ -33,7 +33,9 @@ export const TrainingInterface = ({ tags }: TrainingInterfaceProps) => {
   const [error, setError] = useState('');
   const [sketchDescription, setSketchDescription] = useState('A blank canvas');
   const [turnDescription, setTurnDescription] = useState('');
-  const [selectedTags, setSelectedTags] = useState<Set<ExquisiteCorpseTag>>(new Set());
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+
+  const tagNames = useMemo(() => tags.map(({ name }) => name), [tags]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -51,14 +53,15 @@ export const TrainingInterface = ({ tags }: TrainingInterfaceProps) => {
         TurnRenderer={CurveTurnRenderer}
       />
       <TagPicker
-        tags={tags}
+        tags={tagNames}
         selectedTags={selectedTags}
         onSelect={tag => {
-          setSelectedTags(selectedTags.add(tag));
+          selectedTags.add(tag);
+          setSelectedTags(new Set(selectedTags));
         }}
         onDeselect={tag => {
           selectedTags.delete(tag);
-          setSelectedTags(selectedTags);
+          setSelectedTags(new Set(selectedTags));
         }}
       />
     </div>
