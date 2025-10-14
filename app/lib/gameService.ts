@@ -32,7 +32,6 @@ export class GameService {
   }
 }
 
-// Singleton instance
 let gameService: GameService | null = null;
 
 export const getGameService = (): GameService => {
