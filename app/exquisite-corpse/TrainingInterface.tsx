@@ -16,7 +16,7 @@ export type TrainingTurn = BaseTurn & {
 };
 
 const createTrainingExample = (example: TrainingExample) => {
-  fetch('/api/exquisite-corpse/training-examples', {
+  return fetch('/api/exquisite-corpse/training-examples', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -30,9 +30,10 @@ type TrainingInterfaceProps = {
 }
 export const TrainingInterface = ({ tags }: TrainingInterfaceProps) => {
   const [turns, setTurns] = useState<TrainingTurn[]>([]);
+  const [error, setError] = useState('');
   const [sketchDescription, setSketchDescription] = useState('A blank canvas');
   const [turnDescription, setTurnDescription] = useState('');
-  const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedTags, setSelectedTags] = useState<Set<ExquisiteCorpseTag>>(new Set());
 
   return (
     <div className="flex flex-col gap-4">
@@ -49,7 +50,17 @@ export const TrainingInterface = ({ tags }: TrainingInterfaceProps) => {
         turns={turns}
         TurnRenderer={CurveTurnRenderer}
       />
-      <TagPicker tags={tags} />
+      <TagPicker
+        tags={tags}
+        selectedTags={selectedTags}
+        onSelect={tag => {
+          setSelectedTags(selectedTags.add(tag));
+        }}
+        onDeselect={tag => {
+          selectedTags.delete(tag);
+          setSelectedTags(selectedTags);
+        }}
+      />
     </div>
   );
 };

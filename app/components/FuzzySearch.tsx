@@ -1,7 +1,7 @@
 import { useCallback, useState, ChangeEventHandler, useId } from "react";
 import fuzzysort from "fuzzysort";
 import debounce from "lodash/debounce";
-import { Search } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import clsx from "clsx";
 
 import { InputText } from "./InputText";
@@ -57,7 +57,7 @@ function FuzzySearchInput({
         value={value}
         onChange={handleChange}
         placeholder={placeholder}
-        className="border-0"
+        className="border-0 w-full"
       />
     </div>
   );
@@ -77,8 +77,9 @@ function FuzzySearchResults({ items, query, onSelect, onCreate }: FuzzySearchRes
           <div className="menu-option single-row">
             No results found.
           </div>
-          {onCreate && (
-            <button onClick={onCreate}>
+          {onCreate && query.length > 2 && (
+            <button onClick={onCreate} className="menu-option single-row text-left font-bold flex items-center gap-2">
+              <Plus size={16} className="stroke-3" />
               Create new tag &quot;{query}&quot;
             </button>
           )}
@@ -104,18 +105,23 @@ type FuzzySearchProps = {
   items: string[];
   onSelect: (item: string) => void;
   onCreate?: (query: string) => void;
+  className?: string;
 };
 export function FuzzySearch({
   value,
   onChange,
   items,
   onSelect,
-  onCreate, // TODO:
+  onCreate,
+  className,
 }: FuzzySearchProps) {
   const [filteredItems, setFilteredItems] = useState<ReadonlyArray<string>>(items);
 
   return (
-    <div className="bg-deep-100 rounded-lg border-2 border-deep-600 overflow-hidden">
+    <div className={clsx(
+      "bg-deep-100 rounded-lg border-2 border-deep-600 overflow-hidden",
+      className,
+    )}>
       <FuzzySearchInput
         value={value}
         onChange={onChange}
