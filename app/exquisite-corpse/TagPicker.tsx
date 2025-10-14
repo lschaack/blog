@@ -40,7 +40,7 @@ export function TagPicker({ tags: initTags, selectedTags, onSelect }: TagPickerP
       const response = await createTag(name);
 
       if (response.ok) {
-        const tag = (await response.json()).tag;
+        const tag = await response.json();
 
         setTags(prev => [...prev, tag])
         onSelect(tag);

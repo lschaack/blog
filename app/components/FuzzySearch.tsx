@@ -1,4 +1,4 @@
-import { useCallback, useState, ChangeEventHandler, useId } from "react";
+import { useCallback, useState, ChangeEventHandler, useId, useMemo } from "react";
 import fuzzysort from "fuzzysort";
 import debounce from "lodash/debounce";
 import { Search, Plus } from "lucide-react";
@@ -25,14 +25,13 @@ function FuzzySearchInput({
 }: FuzzySearchInputProps) {
   const inputId = useId();
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const updateResults = useCallback(debounce((query: string) => {
+  const updateResults = useMemo(() => debounce((query: string) => {
     const fuzzyResults = fuzzysort
       .go(query, items, { limit: 10 })
       .map(result => result.target);
 
     onResults(fuzzyResults);
-  }, 50), []);
+  }, 50), [items, onResults]);
 
   const handleChange = useCallback<ChangeEventHandler<HTMLInputElement>>(e => {
     const query = e.target.value;
