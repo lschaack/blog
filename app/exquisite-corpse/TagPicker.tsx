@@ -1,11 +1,27 @@
-import { useState } from 'react';
+'use client';
+
+import { useMemo, useState } from 'react';
 import { Popover } from 'radix-ui';
 import { Plus } from "lucide-react";
 import { FuzzySearch } from '../components/FuzzySearch';
+import { ExquisiteCorpseTag } from '@prisma/client';
 
-export function TagPicker() {
+type TagPickerProps = {
+  tags: ExquisiteCorpseTag[];
+  onSelect?: (tag: ExquisiteCorpseTag) => void;
+}
+
+export function TagPicker({ tags, onSelect }: TagPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+
+  const tagMap = useMemo(() => Object.fromEntries(tags.map(tag => [tag.name, tag])), [tags]);
+
+  const handleSelect = (item: ExquisiteCorpseTag) => {
+    onSelect?.(item);
+    setOpen(false);
+    setQuery('');
+  };
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -23,10 +39,8 @@ export function TagPicker() {
           <FuzzySearch
             value={query}
             onChange={setQuery}
-            // TODO:
-            items={[]}
-            // TODO:
-            onSelect={() => undefined}
+            items={Object.keys(tagMap)}
+            onSelect={tagName => handleSelect(tagMap[tagName])}
           />
         </Popover.Content>
       </Popover.Portal>

@@ -6,8 +6,8 @@ import { BaseTurn, Path } from "@/app/types/exquisiteCorpse";
 import { TurnManager } from "./TurnManager";
 import { CurveTurnRenderer } from "./CurveTurnRenderer";
 import { TrainingExample } from "../api/exquisite-corpse/schemas";
-import { FuzzySearch } from "../components/FuzzySearch";
 import { TagPicker } from "./TagPicker";
+import { ExquisiteCorpseTag } from "@prisma/client";
 
 const dimensions = { width: 512, height: 512 };
 
@@ -25,11 +25,14 @@ const createTrainingExample = (example: TrainingExample) => {
   })
 }
 
-export const TrainingInterface = () => {
+type TrainingInterfaceProps = {
+  tags: ExquisiteCorpseTag[];
+}
+export const TrainingInterface = ({ tags }: TrainingInterfaceProps) => {
   const [turns, setTurns] = useState<TrainingTurn[]>([]);
   const [sketchDescription, setSketchDescription] = useState('A blank canvas');
   const [turnDescription, setTurnDescription] = useState('');
-  const [tags, setTags] = useState();
+  const [selectedTags, setSelectedTags] = useState([]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -46,7 +49,7 @@ export const TrainingInterface = () => {
         turns={turns}
         TurnRenderer={CurveTurnRenderer}
       />
-      <TagPicker />
+      <TagPicker tags={tags} />
     </div>
   );
 };

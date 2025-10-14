@@ -65,15 +65,24 @@ function FuzzySearchInput({
 
 type FuzzySearchResultsProps = {
   items: ReadonlyArray<string>;
+  query: string;
   onSelect: (item: string) => void;
+  onCreate?: () => void;
 }
-function FuzzySearchResults({ items, onSelect }: FuzzySearchResultsProps) {
+function FuzzySearchResults({ items, query, onSelect, onCreate }: FuzzySearchResultsProps) {
   return (
     <div className="flex flex-col items-stretch">
       {items.length === 0 ? (
-        <div className="menu-option single-row">
-          No results found.
-        </div>
+        <>
+          <div className="menu-option single-row">
+            No results found.
+          </div>
+          {onCreate && (
+            <button onClick={onCreate}>
+              Create new tag &quot;{query}&quot;
+            </button>
+          )}
+        </>
       ) : (
         items.map((item, index) => (
           <button
@@ -117,7 +126,9 @@ export function FuzzySearch({
 
       <FuzzySearchResults
         items={value ? filteredItems : items}
+        query={value}
         onSelect={onSelect}
+        onCreate={() => onCreate?.(value)}
       />
     </div>
   );
