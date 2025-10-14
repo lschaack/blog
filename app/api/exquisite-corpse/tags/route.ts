@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { compose } from "../middleware/compose";
-import { withAuth } from "../middleware/authorization";
-import { withCatchallErrorHandler } from "../middleware/catchall";
-import { withZodRequestValidation } from "../middleware/zod";
+import { compose } from "../../middleware/compose";
+import { withAuth } from "../../middleware/authorization";
+import { withCatchallErrorHandler } from "../../middleware/catchall";
+import { withZodRequestValidation } from "../../middleware/zod";
 import { getTagService } from "@/app/lib/tagService";
-import { CreateTagRequest, CreateTagSchema } from "../exquisite-corpse/schemas";
+import { CreateTagRequest, CreateTagSchema } from "../../exquisite-corpse/schemas";
 import { Session } from "next-auth";
 
 export const GET = compose(

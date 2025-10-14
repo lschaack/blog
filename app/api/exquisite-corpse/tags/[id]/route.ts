@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { compose } from "../../middleware/compose";
-import { withAuth } from "../../middleware/authorization";
-import { withCatchallErrorHandler } from "../../middleware/catchall";
+import { compose } from "../../../middleware/compose";
+import { withAuth } from "../../../middleware/authorization";
+import { withCatchallErrorHandler } from "../../../middleware/catchall";
 import { getTagService } from "@/app/lib/tagService";
 import { Session } from "next-auth";
 
