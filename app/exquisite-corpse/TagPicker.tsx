@@ -99,39 +99,46 @@ export function TagPicker({ tags: initTags, selectedTags, onSelect, onDeselect }
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      <Popover.Root open={open} onOpenChange={setOpen}>
-        <Popover.Trigger asChild>
-          <button className="p-2 rounded-lg border-2 border-deep-500 bg-deep-100 font-geist-mono font-medium flex justify-between">
-            <span>
-              Add a tag
-            </span>
-            <Plus size={24} />
-          </button>
-        </Popover.Trigger>
+    <div className="flex flex-col">
+      <label htmlFor="add-tag" className="font-geist-mono font-medium text-base/loose">
+        Tags
+      </label>
+      <div className="flex flex-col gap-2">
+        <Popover.Root open={open} onOpenChange={setOpen}>
+          <Popover.Trigger asChild>
+            <button id="add-tag" className="p-2 rounded-lg border-2 border-deep-500 bg-deep-100 font-geist-mono font-medium flex justify-between">
+              <span>
+                Add a tag
+              </span>
+              <Plus size={24} />
+            </button>
+          </Popover.Trigger>
 
-        <Popover.Portal>
-          <Popover.Content align="start" sideOffset={4}>
-            <FuzzySearch
-              value={query}
-              onChange={setQuery}
-              items={tags}
-              onSelect={handleSelect}
-              onCreate={handleCreate}
-              className="max-w-(--radix-popover-trigger-width) max-h-(--radix-popover-available-height)"
-            />
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
-      <ul className="flex flex-wrap gap-2 max-w-[512px]">
-        {[...selectedTags.values()].map(tag => (
-          <Tag
-            key={`tag-${tag}`}
-            name={tag}
-            onDelete={onDeselect}
-          />
-        ))}
-      </ul>
+          <Popover.Portal>
+            <Popover.Content align="start" sideOffset={4}>
+              <FuzzySearch
+                value={query}
+                onChange={setQuery}
+                items={tags}
+                onSelect={handleSelect}
+                onCreate={handleCreate}
+                className="max-w-(--radix-popover-trigger-width) max-h-(--radix-popover-available-height)"
+              />
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+        {!!selectedTags.size && (
+          <ul className="flex flex-wrap gap-2 max-w-[512px]">
+            {[...selectedTags.values()].map(tag => (
+              <Tag
+                key={`tag-${tag}`}
+                name={tag}
+                onDelete={onDeselect}
+              />
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
-  )
+  );
 }

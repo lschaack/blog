@@ -4,8 +4,10 @@ import { withZodRequestValidation } from "../../../middleware/zod";
 import { withAuth } from "../../../middleware/authorization";
 import { TrainingExample, TrainingExampleSchema } from "../../schemas";
 import { getTrainingExampleService } from "@/app/lib/trainingExampleService";
+import { withCatchallErrorHandler } from "@/app/api/middleware/catchall";
 
 export const GET = compose(
+  withCatchallErrorHandler,
   withAuth,
 )(
   async (
@@ -27,6 +29,7 @@ export const GET = compose(
 )
 
 export const PUT = compose(
+  withCatchallErrorHandler,
   withZodRequestValidation(TrainingExampleSchema),
   withAuth,
 )(
@@ -55,6 +58,7 @@ export const PUT = compose(
 )
 
 export const DELETE = compose(
+  withCatchallErrorHandler,
   withAuth,
 )(
   async (
