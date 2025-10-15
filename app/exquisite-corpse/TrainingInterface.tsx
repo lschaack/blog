@@ -111,6 +111,7 @@ export const TrainingInterface = ({ tags }: TrainingInterfaceProps) => {
           selectedTags.delete(tag);
           setSelectedTags(new Set(selectedTags));
         }}
+        allowCreate
       />
       <Button
         label="Submit Example"

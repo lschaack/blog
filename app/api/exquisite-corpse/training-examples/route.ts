@@ -34,7 +34,18 @@ export const GET = compose(
 
     const { limit, offset } = toLimitOffset({ page, perPage });
 
-    const result = await getTrainingExampleService().getExamples(limit, offset);
+    // If tag is not present, find all examples
+    // If tag is present but empty (?tag=), find examples with no tags
+    // If tag has values (?tag=foo or ?tag=foo,bar), find examples with those tags
+    const rawTagNames = request.nextUrl.searchParams.get('tags');
+    const tagNames = rawTagNames === null
+      ? undefined
+      : rawTagNames
+        .split(',')
+        .map(t => t.trim())
+        .filter(t => t.length > 0);
+
+    const result = await getTrainingExampleService().getExamples(limit, offset, tagNames);
 
     return NextResponse.json(result);
   }

@@ -2,16 +2,43 @@ import { prisma } from "@/app/lib/prisma";
 import type { TrainingExample } from "@/app/api/exquisite-corpse/schemas";
 
 export class TrainingExampleService {
-  async getExamples(limit: number, offset: number) {
+  async getExamples(limit: number, offset: number, tagNames?: string[]) {
+    // Build the where clause based on tag filtering
+    const where = tagNames !== undefined
+      ? tagNames.length === 0
+        // Empty array means filter for examples with no tags
+        ? { tags: { none: {} } }
+        // Non-empty array means filter for examples that have ALL specified tags
+        : {
+            tags: {
+              some: {
+                tag: {
+                  name: {
+                    in: tagNames
+                  }
+                }
+              }
+            }
+          }
+      : {};
+
     const [items, totalCount] = await Promise.all([
       prisma.exquisiteCorpseTrainingExample.findMany({
         take: limit,
         skip: offset,
+        where,
         orderBy: {
           createdAt: 'desc',
+        },
+        include: {
+          tags: {
+            include: {
+              tag: true
+            }
+          }
         }
       }),
-      prisma.exquisiteCorpseTrainingExample.count(),
+      prisma.exquisiteCorpseTrainingExample.count({ where }),
     ]);
 
     const total = Math.ceil(totalCount / limit);

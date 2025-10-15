@@ -20,7 +20,7 @@ type TagProps = {
   name: string;
   onDelete: (tag: string) => void;
 };
-function Tag({ name, onDelete }: TagProps) {
+export function Tag({ name, onDelete }: TagProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -69,9 +69,16 @@ type TagPickerProps = {
   selectedTags: Set<string>;
   onSelect: (tagName: string) => void;
   onDeselect: (tagName: string) => void;
+  allowCreate?: boolean;
 }
 
-export function TagPicker({ tags: initTags, selectedTags, onSelect, onDeselect }: TagPickerProps) {
+export function TagPicker({
+  tags: initTags,
+  selectedTags,
+  onSelect,
+  onDeselect,
+  allowCreate = false,
+}: TagPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [tags, setTags] = useState<string[]>(initTags);
@@ -121,7 +128,7 @@ export function TagPicker({ tags: initTags, selectedTags, onSelect, onDeselect }
                 onChange={setQuery}
                 items={tags}
                 onSelect={handleSelect}
-                onCreate={handleCreate}
+                onCreate={allowCreate ? handleCreate : undefined}
                 className="max-w-(--radix-popover-trigger-width) max-h-(--radix-popover-available-height)"
               />
             </Popover.Content>
