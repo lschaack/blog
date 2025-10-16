@@ -21,6 +21,7 @@ type ExampleLoaderProps = {
     page: number;
     perPage: number;
     totalPages: number;
+    totalItems: number;
     tags: TagsInFilter;
   }
 }
@@ -30,6 +31,7 @@ export function ExampleLoader({
     page: initialPage,
     perPage: initialPerPage,
     totalPages: initialTotalPages,
+    totalItems: initialTotalItems,
     allTags: initialAllTags,
     tags: initialTagsInFilter,
   }
@@ -38,6 +40,7 @@ export function ExampleLoader({
   const [page, setPage] = useState(initialPage);
   const [perPage, setPerPage] = useState(initialPerPage);
   const [totalPages, setTotalPages] = useState(initialTotalPages);
+  const [totalItems, setTotalItems] = useState(initialTotalItems);
   const [allTags] = useState(initialAllTags);
   const [tagsInFilter, setTagsInFilter] = useState(initialTagsInFilter);
 
@@ -55,9 +58,10 @@ export function ExampleLoader({
       const response = await getTrainingExamples(params);
 
       if (response.ok) {
-        const { items, totalPages }: Awaited<ReturnType<TrainingExampleService['getExamples']>> = await response.json();
+        const { items, totalItems, totalPages }: Awaited<ReturnType<TrainingExampleService['getExamples']>> = await response.json();
 
         setExamples(items);
+        setTotalItems(totalItems);
         setTotalPages(totalPages);
       } else {
         console.error(response.json());
@@ -112,6 +116,7 @@ export function ExampleLoader({
       examples={examples}
       page={page}
       totalPages={totalPages}
+      totalItems={totalItems}
       onPageChange={handlePageChange}
       filter={{ tags: tagsInFilter }}
       onFilterChange={filter => handleTagsChange(filter.tags)}

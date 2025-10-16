@@ -19,6 +19,7 @@ export default async function WithAdminView({
 
   const {
     items: examples,
+    totalItems,
     totalPages,
   } = await getTrainingExampleService().getExamples(page, 12, tags);
 
@@ -34,6 +35,7 @@ export default async function WithAdminView({
           page,
           perPage: 12,
           totalPages,
+          totalItems,
           tags,
         }}
       />

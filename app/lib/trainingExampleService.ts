@@ -46,7 +46,7 @@ export class TrainingExampleService {
 
     const totalPages = Math.ceil(totalCount / limit);
 
-    return { items, totalPages };
+    return { items, totalItems: totalCount, totalPages };
   }
 
   async getExample(id: string) {

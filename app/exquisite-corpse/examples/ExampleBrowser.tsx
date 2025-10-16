@@ -15,6 +15,7 @@ type ExampleBrowserProps = {
   examples: Awaited<ReturnType<TrainingExampleService['getExamples']>>['items'];
   page: number;
   totalPages: number;
+  totalItems: number;
   onPageChange: (page: number) => void;
   filter: ExampleFilter;
   onFilterChange: (filter: ExampleFilter) => void;
@@ -25,6 +26,7 @@ export function ExampleBrowser({
   examples,
   page,
   totalPages,
+  totalItems,
   onPageChange,
   filter,
   onFilterChange,
@@ -36,6 +38,7 @@ export function ExampleBrowser({
           tags={tags.map(tag => tag.name)}
           tagsInFilter={filter.tags}
           onChange={tags => onFilterChange({ tags })}
+          totalItems={totalItems}
         />
       </DebugMenu>
 

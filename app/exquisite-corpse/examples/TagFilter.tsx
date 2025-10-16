@@ -10,9 +10,14 @@ type TagFilterProps = {
   tags: string[];
   tagsInFilter: TagsInFilter;
   onChange: (tags: TagsInFilter) => void;
+  totalItems: number;
 };
-// TODO: enable/disable filter
-export function TagFilter({ tags, tagsInFilter: initTagsInFilter, onChange }: TagFilterProps) {
+export function TagFilter({
+  tags,
+  tagsInFilter: initTagsInFilter,
+  onChange,
+  totalItems,
+}: TagFilterProps) {
   const [tagsInFilter, setTagsInFilter] = useState(initTagsInFilter);
   const [enabled, setEnabled] = useState(tagsInFilter !== undefined);
 
@@ -53,6 +58,9 @@ export function TagFilter({ tags, tagsInFilter: initTagsInFilter, onChange }: Ta
           hideLabel
         />
       </div>
+      <p>
+        Showing {totalItems} results {enabled && `with ${tagsInFilter?.length === 0 ? "no tags" : "any of the listed tags"}`}
+      </p>
     </fieldset>
   );
 }
