@@ -1,66 +1,37 @@
-"use client";
-
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import clsx from "clsx";
 
 import { TagPicker } from "../TagPicker";
 import { Toggle } from "@/app/components/Toggle";
 
-type TagsInFilter = string[] | undefined;
-
-type TagFilterHistory = {
-  tagsInFilter: TagsInFilter;
-  enableFilterByTag: boolean;
-}
+export type TagsInFilter = string[] | undefined;
 
 type TagFilterProps = {
   tags: string[];
   tagsInFilter: TagsInFilter;
+  onChange: (tags: TagsInFilter) => void;
 };
 // TODO: enable/disable filter
-export function TagFilter({ tags, tagsInFilter: initTagsInFilter }: TagFilterProps) {
-  const router = useRouter();
-
+export function TagFilter({ tags, tagsInFilter: initTagsInFilter, onChange }: TagFilterProps) {
   const [tagsInFilter, setTagsInFilter] = useState(initTagsInFilter);
   const [enabled, setEnabled] = useState(tagsInFilter !== undefined);
 
   const handleSelect = (tagName: string) => {
-    const url = new URL(window.location.href);
-
-    url.searchParams.set(
-      'tags',
-      (tagsInFilter ?? []).concat(tagName).join(','),
-    );
-
-    window.history.replaceState(null, '', `${url.pathname}?${url.searchParams.toString()}`);
-
-    setTagsInFilter(prev => (prev ?? []).concat(tagName));
+    const nextTags = [...(tagsInFilter ?? []), tagName];
+    setTagsInFilter(nextTags);
+    onChange(nextTags);
   }
 
   const handleDeselect = (tagName: string) => {
-    const url = new URL(window.location.href);
-
-    url.searchParams.set(
-      'tags',
-      tagsInFilter?.filter(tag => tag !== tagName).join(',') ?? '',
-    );
-
-    window.history.replaceState(null, '', `${url.pathname}?${url.searchParams.toString()}`);
-    setTagsInFilter(prev => (prev ?? []).filter(tag => tag !== tagName));
+    const nextTags = (tagsInFilter ?? []).filter(tag => tag !== tagName);
+    setTagsInFilter(nextTags);
+    onChange(nextTags);
   }
 
   const handleToggleEnabled = () => {
-    const url = new URL(window.location.href);
-
-    if (enabled) {
-      url.searchParams.delete('tags');
-    } else {
-      url.searchParams.set('tags', tagsInFilter?.join(',') ?? '');
-    }
-
-    window.history.replaceState(null, '', `${url.pathname}?${url.searchParams.toString()}`);
-    setEnabled(prev => !prev);
+    const nextEnabled = !enabled;
+    setEnabled(nextEnabled);
+    onChange(nextEnabled ? tagsInFilter : undefined);
   }
 
   return (

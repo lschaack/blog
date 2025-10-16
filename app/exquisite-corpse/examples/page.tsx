@@ -1,5 +1,8 @@
 import AdminView from '@/app/components/AdminView';
-import { ExampleBrowser } from './ExampleBrowser';
+import { ExampleLoader } from './ExampleLoader';
+import { getTrainingExampleService } from '@/app/lib/trainingExampleService';
+import { getTagService } from '@/app/lib/tagService';
+import { auth } from '@/app/auth';
 
 export default async function WithAdminView({
   searchParams,
@@ -14,9 +17,26 @@ export default async function WithAdminView({
     .map(t => t.trim())
     .filter(t => t.length > 0);
 
+  const {
+    items: examples,
+    totalPages,
+  } = await getTrainingExampleService().getExamples(page, 12, tags);
+
+  const session = await auth();
+  const allTags = await getTagService().getTags(session);
+
   return (
     <AdminView>
-      <ExampleBrowser page={page} perPage={12} tagFilter={tags} />
+      <ExampleLoader
+        initialState={{
+          examples,
+          allTags,
+          page,
+          perPage: 12,
+          totalPages,
+          tags,
+        }}
+      />
     </AdminView>
   );
 }

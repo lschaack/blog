@@ -1,42 +1,48 @@
-import { ExampleCard } from "./ExampleCard";
 import clsx from "clsx";
-import { getTrainingExampleService } from "@/app/lib/trainingExampleService";
-import { toLimitOffset } from "@/app/utils/pagination";
+
+import { ExampleCard } from "./ExampleCard";
+import { type TrainingExampleService } from "@/app/lib/trainingExampleService";
 import { PageNav } from "../PageNav";
 import { DebugMenu } from "@/app/components/DebugMenu";
-import { getTagService } from "@/app/lib/tagService";
-import { auth } from "@/app/auth";
-import { TagFilter } from "./TagFilter";
+import { type TagService } from "@/app/lib/tagService";
+import { TagFilter, TagsInFilter } from "./TagFilter";
 
+export type ExampleFilter = {
+  tags: TagsInFilter;
+}
 type ExampleBrowserProps = {
+  tags: Awaited<ReturnType<TagService['getTags']>>;
+  examples: Awaited<ReturnType<TrainingExampleService['getExamples']>>['items'];
   page: number;
-  perPage: number;
-  tagFilter: string[] | undefined;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  filter: ExampleFilter;
+  onFilterChange: (filter: ExampleFilter) => void;
 }
 
-export async function ExampleBrowser({ page, perPage, tagFilter }: ExampleBrowserProps) {
-  const { limit, offset } = toLimitOffset({ page, perPage });
-
-  const {
-    items: examples,
-    total: totalPages
-  } = await getTrainingExampleService().getExamples(limit, offset, tagFilter);
-
-  const session = await auth();
-  const tags = await getTagService().getTags(session);
-
+export function ExampleBrowser({
+  tags,
+  examples,
+  page,
+  totalPages,
+  onPageChange,
+  filter,
+  onFilterChange,
+}: ExampleBrowserProps) {
   return (
     <div className="flex flex-col gap-4">
       <DebugMenu>
         <TagFilter
           tags={tags.map(tag => tag.name)}
-          tagsInFilter={tagFilter}
+          tagsInFilter={filter.tags}
+          onChange={tags => onFilterChange({ tags })}
         />
       </DebugMenu>
 
       <PageNav
         page={page}
         totalPages={totalPages}
+        onPageChange={onPageChange}
       />
 
       <ul
@@ -55,6 +61,7 @@ export async function ExampleBrowser({ page, perPage, tagFilter }: ExampleBrowse
       <PageNav
         page={page}
         totalPages={totalPages}
+        onPageChange={onPageChange}
       />
     </div>
   );

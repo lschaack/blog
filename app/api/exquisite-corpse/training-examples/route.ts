@@ -4,7 +4,6 @@ import { withZodRequestValidation } from "../../middleware/zod";
 import { withAuth } from "../../middleware/authorization";
 import { TrainingExample, TrainingExampleSchema } from "../schemas";
 import { getTrainingExampleService } from "@/app/lib/trainingExampleService";
-import { toLimitOffset } from "@/app/utils/pagination";
 
 export const GET = compose(
   withAuth,
@@ -32,8 +31,6 @@ export const GET = compose(
       );
     }
 
-    const { limit, offset } = toLimitOffset({ page, perPage });
-
     // If tag is not present, find all examples
     // If tag is present but empty (?tag=), find examples with no tags
     // If tag has values (?tag=foo or ?tag=foo,bar), find examples with those tags
@@ -45,7 +42,7 @@ export const GET = compose(
         .map(t => t.trim())
         .filter(t => t.length > 0);
 
-    const result = await getTrainingExampleService().getExamples(limit, offset, tagNames);
+    const result = await getTrainingExampleService().getExamples(page, perPage, tagNames);
 
     return NextResponse.json(result);
   }

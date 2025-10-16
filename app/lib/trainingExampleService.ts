@@ -1,8 +1,11 @@
 import { prisma } from "@/app/lib/prisma";
 import type { TrainingExample } from "@/app/api/exquisite-corpse/schemas";
+import { toLimitOffset } from "../utils/pagination";
 
 export class TrainingExampleService {
-  async getExamples(limit: number, offset: number, tagNames?: string[]) {
+  async getExamples(page: number, perPage: number, tagNames?: string[]) {
+    const { limit, offset } = toLimitOffset({ page, perPage });
+
     // Build the where clause based on tag filtering
     const where = tagNames !== undefined
       ? tagNames.length === 0
@@ -41,9 +44,9 @@ export class TrainingExampleService {
       prisma.exquisiteCorpseTrainingExample.count({ where }),
     ]);
 
-    const total = Math.ceil(totalCount / limit);
+    const totalPages = Math.ceil(totalCount / limit);
 
-    return { items, total };
+    return { items, totalPages };
   }
 
   async getExample(id: string) {
