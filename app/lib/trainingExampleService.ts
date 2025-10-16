@@ -10,16 +10,16 @@ export class TrainingExampleService {
         ? { tags: { none: {} } }
         // Non-empty array means filter for examples that have ALL specified tags
         : {
-            tags: {
-              some: {
-                tag: {
-                  name: {
-                    in: tagNames
-                  }
+          tags: {
+            some: {
+              tag: {
+                name: {
+                  in: tagNames
                 }
               }
             }
           }
+        }
       : {};
 
     const [items, totalCount] = await Promise.all([
@@ -48,7 +48,14 @@ export class TrainingExampleService {
 
   async getExample(id: string) {
     return prisma.exquisiteCorpseTrainingExample.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        tags: {
+          select: {
+            tag: true
+          }
+        }
+      }
     });
   }
 
