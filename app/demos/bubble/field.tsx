@@ -54,13 +54,13 @@ function HoverBubbleField() {
             ))}
           </ExclusiveOptions>
           <Toggle
-            className="w-full flex-row justify-between items-center"
             label="Packing strategy"
             id="packing-strategy"
             value={packingStrategy === 'pop'}
             onChange={() => setPackingStrategy(packingStrategy === 'pop' ? 'shift' : 'pop')}
             enabledText="pop"
             disabledText="shift"
+            asRow
           />
           <Button
             label="Reroll"

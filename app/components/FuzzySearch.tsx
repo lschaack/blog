@@ -118,7 +118,7 @@ export function FuzzySearch({
 
   return (
     <div className={clsx(
-      "bg-deep-100 rounded-lg border-2 border-deep-600 overflow-hidden",
+      "bg-deep-100 rounded-lg border-2 border-deep-500 overflow-hidden",
       className,
     )}>
       <FuzzySearchInput

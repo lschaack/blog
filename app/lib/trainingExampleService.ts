@@ -68,12 +68,21 @@ export class TrainingExampleService {
         tags: {
           create: tags.map(tagName => ({
             tag: {
-              connectOrCreate: {
-                where: { name: tagName },
-                create: { name: tagName },
-              }
+              connect: { name: tagName }
             }
           }))
+        }
+      },
+      include: {
+        tags: {
+          select: {
+            tag: true
+          },
+          orderBy: {
+            tag: {
+              name: 'asc'
+            }
+          }
         }
       }
     });
@@ -87,9 +96,22 @@ export class TrainingExampleService {
       data: {
         ...example,
         tags: {
+          deleteMany: {},
           create: tags.map(tagName => ({
             tag: { connect: { name: tagName } }
           }))
+        }
+      },
+      include: {
+        tags: {
+          select: {
+            tag: true
+          },
+          orderBy: {
+            tag: {
+              name: 'asc'
+            }
+          }
         }
       }
     });

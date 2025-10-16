@@ -37,6 +37,12 @@ const updateTrainingExample = (example: TrainingExample, id: string) => {
   })
 }
 
+const deleteTrainingExample = (id: string) => {
+  return fetch(`/api/exquisite-corpse/training-examples/${id}`, {
+    method: 'DELETE',
+  })
+}
+
 type TrainingInterfaceProps = {
   tags: ExquisiteCorpseTag[];
   source?: Awaited<ReturnType<TrainingExampleService['getExample']>>;
@@ -84,7 +90,7 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
         paths: turns.map(turn => turn.path),
         sketchDescription,
         turnDescription,
-        tags: tags.map(tag => tag.name),
+        tags: [...selectedTags],
       });
 
       reset();
@@ -103,10 +109,10 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
           paths: turns.map(turn => turn.path),
           sketchDescription,
           turnDescription,
-          tags: tags.map(tag => tag.name),
+          tags: [...selectedTags],
         }, exampleId);
 
-        reset();
+        // TODO: success toast
       } catch (e) {
         console.error(e); // TODO: toast or something
         if (e instanceof Error) {
@@ -115,6 +121,24 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
       }
     } else {
       console.error('Cannot update example without ID')
+    }
+  }
+
+  // FIXME: confirmation dialog
+  const handleDeleteExample = async () => {
+    if (exampleId) {
+      try {
+        await deleteTrainingExample(exampleId);
+
+        // TODO: success toast
+      } catch (e) {
+        console.error(e); // TODO: toast or something
+        if (e instanceof Error) {
+          setError(e.message);
+        }
+      }
+    } else {
+      console.error('Cannot delete example without ID')
     }
   }
 
@@ -169,10 +193,18 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
         allowCreate
       />
       {isUpdate ? (
-        <Button
-          label="Update Example"
-          onClick={handleUpdateExample}
-        />
+        <div className="flex gap-2">
+          <Button
+            label="Delete Example"
+            onClick={handleDeleteExample}
+            danger
+          />
+          <Button
+            label="Update Example"
+            onClick={handleUpdateExample}
+            friendly
+          />
+        </div>
       ) : (
         <Button
           label="Submit Example"

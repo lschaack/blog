@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Popover } from 'radix-ui';
 import { Plus, X, XCircle } from "lucide-react";
 import { ExquisiteCorpseTag } from '@prisma/client';
+import { motion, AnimatePresence } from 'motion/react';
+import clsx from 'clsx';
 
 import { FuzzySearch } from '../components/FuzzySearch';
-import { motion, AnimatePresence } from 'motion/react';
 
 const createTag = (name: string) => {
   return fetch('/api/exquisite-corpse/tags', {
@@ -70,6 +71,7 @@ type TagPickerProps = {
   onSelect: (tagName: string) => void;
   onDeselect: (tagName: string) => void;
   allowCreate?: boolean;
+  hideLabel?: boolean;
 }
 
 export function TagPicker({
@@ -78,6 +80,7 @@ export function TagPicker({
   onSelect,
   onDeselect,
   allowCreate = false,
+  hideLabel = false,
 }: TagPickerProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -107,7 +110,13 @@ export function TagPicker({
 
   return (
     <div className="flex flex-col">
-      <label htmlFor="add-tag" className="font-geist-mono font-medium text-base/loose">
+      <label
+        htmlFor="add-tag"
+        className={clsx(
+          "font-geist-mono font-medium text-base/loose",
+          hideLabel && "sr-only"
+        )}
+      >
         Tags
       </label>
       <div className="flex flex-col gap-2">
