@@ -70,30 +70,32 @@ type FuzzySearchResultsProps = {
 }
 function FuzzySearchResults({ items, query, onSelect, onCreate }: FuzzySearchResultsProps) {
   return (
-    <div className="flex flex-col items-stretch">
-      {items.length === 0 ? (
-        <>
-          <div className="menu-option single-row">
-            No results found.
-          </div>
-          {onCreate && query.length > 2 && (
-            <button onClick={onCreate} className="menu-option single-row text-left font-bold flex items-center gap-2">
-              <Plus size={16} className="stroke-3" />
-              Create new tag &quot;{query}&quot;
+    <div className="max-h-60 overflow-y-scroll">
+      <div className="flex flex-col items-stretch">
+        {items.length === 0 ? (
+          <>
+            <div className="menu-option single-row">
+              No results found.
+            </div>
+          </>
+        ) : (
+          items.map((item, index) => (
+            <button
+              key={`fuzzy-result-${item}-${index}`}
+              className="menu-option single-row text-left"
+              onClick={() => onSelect(item)}
+            >
+              {item}
             </button>
-          )}
-        </>
-      ) : (
-        items.map((item, index) => (
-          <button
-            key={`fuzzy-result-${item}-${index}`}
-            className="menu-option single-row text-left"
-            onClick={() => onSelect(item)}
-          >
-            {item}
+          ))
+        )}
+        {onCreate && query.length > 2 && !items.some(result => result === query) && (
+          <button onClick={onCreate} className="menu-option single-row text-left font-bold flex items-center gap-2">
+            <Plus size={16} className="stroke-3" />
+            Create new tag &quot;{query}&quot;
           </button>
-        ))
-      )}
+        )}
+      </div>
     </div>
   )
 }
