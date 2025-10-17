@@ -10,6 +10,7 @@ import { TrainingExample } from "../api/exquisite-corpse/schemas";
 import { TagPicker } from "./TagPicker";
 import { Button } from "../components/Button";
 import type { TrainingExampleService } from "../lib/trainingExampleService";
+import { MessageToast, MessageToastProps } from "../components/MessageToast";
 
 const dimensions = { width: 512, height: 512 };
 
@@ -73,7 +74,11 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
       : new Set()
   );
 
-  const [error, setError] = useState('');
+  const [toast, setToast] = useState<Omit<MessageToastProps, 'onOpenChange'>>({
+    type: 'info',
+    open: false,
+    children: '',
+  })
 
   const tagNames = useMemo(() => tags.map(({ name }) => name), [tags]);
 
@@ -94,10 +99,10 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
       });
 
       reset();
+      setToast({ open: true, type: 'success', children: 'Training example created' });
     } catch (e) {
-      console.error(e); // TODO: toast or something
       if (e instanceof Error) {
-        setError(e.message);
+        setToast({ open: true, type: 'error', children: e.message });
       }
     }
   }
@@ -112,38 +117,40 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
           tags: [...selectedTags],
         }, exampleId);
 
-        // TODO: success toast
+        setToast({ open: true, type: 'success', children: 'Training example updated' });
       } catch (e) {
-        console.error(e); // TODO: toast or something
         if (e instanceof Error) {
-          setError(e.message);
+          setToast({ open: true, type: 'error', children: e.message });
         }
       }
     } else {
-      console.error('Cannot update example without ID')
+      setToast({ open: true, type: 'error', children: 'Cannot update example without ID' });
     }
   }
 
-  // FIXME: confirmation dialog
   const handleDeleteExample = async () => {
     if (exampleId) {
       try {
         await deleteTrainingExample(exampleId);
 
-        // TODO: success toast
+        setToast({ open: true, type: 'success', children: 'Training example deleted' });
       } catch (e) {
-        console.error(e); // TODO: toast or something
         if (e instanceof Error) {
-          setError(e.message);
+          setToast({ open: true, type: 'error', children: e.message });
         }
       }
     } else {
-      console.error('Cannot delete example without ID')
+      setToast({ open: true, type: 'error', children: 'Cannot delete example without ID' });
     }
   }
 
   return (
     <div className="flex flex-col gap-4">
+      <MessageToast
+        {...toast}
+        onOpenChange={open => setToast(prev => ({ ...prev, open }))}
+      />
+
       <TurnManager
         handleAddPath={path => setTurns(prev => [
           ...prev,

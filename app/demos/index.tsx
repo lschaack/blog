@@ -19,7 +19,6 @@ export const DEMOS = {
   'bubble-tile': lazy(() => import('./bubble/tile')),
   'circle-packing': lazy(() => import('./circle-packing/visualizer')),
   'exquisite-corpse': lazy(() => import('./exquisite-corpse/game')),
-  'exquisite-corpse-training': lazy(() => import('./exquisite-corpse/training-interface')),
   'test': lazy(() => import('./test')),
 }
 

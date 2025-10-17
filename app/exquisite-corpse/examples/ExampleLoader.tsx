@@ -115,6 +115,8 @@ export function ExampleLoader({
       tags={allTags}
       examples={examples}
       page={page}
+      perPage={perPage}
+      onPerPageChange={handlePerPageChange}
       totalPages={totalPages}
       totalItems={totalItems}
       onPageChange={handlePageChange}

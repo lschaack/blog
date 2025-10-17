@@ -14,6 +14,8 @@ type ExampleBrowserProps = {
   tags: Awaited<ReturnType<TagService['getTags']>>;
   examples: Awaited<ReturnType<TrainingExampleService['getExamples']>>['items'];
   page: number;
+  perPage: number;
+  onPerPageChange: (perPage: number) => void;
   totalPages: number;
   totalItems: number;
   onPageChange: (page: number) => void;

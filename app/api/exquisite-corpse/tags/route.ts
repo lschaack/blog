@@ -31,6 +31,7 @@ export const POST = compose(
     _,
     ctx: {
       validatedBody: Promise<CreateTagRequest>;
+      params: Promise<unknown>;
       session: Session;
     }
   ) => {
