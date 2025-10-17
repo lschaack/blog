@@ -3,6 +3,7 @@ import "@/app/globals.css";
 import type { Metadata } from "next";
 import { Geist_Mono, Lato } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
+import { Toast } from "radix-ui";
 import clsx from 'clsx';
 
 import { Header } from "@/app/components/Header";
@@ -46,14 +47,20 @@ export default function RootLayout({
           'text-deep-900 font-lato bg-deep-900 min-h-screen flex flex-col',
         )}
       >
-        <DebugProvider>
-          <Header />
-          <main className="w-full py-8 grow flex justify-center bg-[linear-gradient(180deg,rgba(1,_22,_39,_1)_0%,_rgba(1,_8,_15,_1)_100%)] bg-[length:100%_100vh] bg-no-repeat">
-            <DebugSurface />
-            {children}
-          </main>
-        </DebugProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
+
+        <Toast.Provider>
+          <DebugProvider>
+            <Header />
+            <main className="w-full py-8 grow flex justify-center bg-[linear-gradient(180deg,rgba(1,_22,_39,_1)_0%,_rgba(1,_8,_15,_1)_100%)] bg-[length:100%_100vh] bg-no-repeat">
+              <DebugSurface />
+              {children}
+            </main>
+          </DebugProvider>
+
+          <Toast.Viewport className="fixed bottom-0 right-0 p-6 flex flex-col gap-2 w-full max-w-md z-50" />
+        </Toast.Provider>
+
       </body>
     </html>
   );

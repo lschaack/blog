@@ -68,7 +68,7 @@ function HoverBubbleField() {
           />
           <Link
             href={`/demos/circle-packing?${searchParams.toString()}`}
-            className="font-mono text-base/loose text-center underline mx-auto"
+            className="classic-link"
           >
             Go to circle packing demo with these settings
           </Link>

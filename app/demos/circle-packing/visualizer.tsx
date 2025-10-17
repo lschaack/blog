@@ -347,7 +347,7 @@ function PackingAnimationConfigurator() {
 
         <Link
           href={`/demos/bubble-field?${searchParams.toString()}`}
-          className="font-mono text-base/loose text-center underline mx-auto"
+          className="classic-link"
         >
           Go to bubble field demo with these settings
         </Link>

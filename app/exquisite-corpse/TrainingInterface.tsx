@@ -2,6 +2,9 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { ExquisiteCorpseTag } from "@prisma/client";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 
 import { BaseTurn, Path } from "@/app/types/exquisiteCorpse";
 import { TurnManager } from "./TurnManager";
@@ -49,6 +52,8 @@ type TrainingInterfaceProps = {
   source?: Awaited<ReturnType<TrainingExampleService['getExample']>>;
 }
 export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
+  const router = useRouter();
+
   const {
     paths: initPaths,
     sketchDescription: initSketchDescription,
@@ -133,7 +138,7 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
       try {
         await deleteTrainingExample(exampleId);
 
-        setToast({ open: true, type: 'success', children: 'Training example deleted' });
+        router.replace('/exquisite-corpse/examples');
       } catch (e) {
         if (e instanceof Error) {
           setToast({ open: true, type: 'error', children: e.message });
@@ -150,6 +155,11 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
         {...toast}
         onOpenChange={open => setToast(prev => ({ ...prev, open }))}
       />
+
+      <Link href="/exquisite-corpse/examples" className="classic-link">
+        <ArrowLeft size={16} className="inline align-text-bottom mr-1" />
+        Back to list
+      </Link>
 
       <TurnManager
         handleAddPath={path => setTurns(prev => [

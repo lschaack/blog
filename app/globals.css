@@ -216,6 +216,15 @@
       outline: none;
     }
   }
+
+  .classic-link {
+    font-family: var(--font-mono);
+    font-size: var(--text-base);
+    line-height: var(--leading-loose);
+    text-align: center;
+    text-decoration-line: underline;
+    margin-inline: auto;
+  }
 }
 
 [data-radix-popper-content-wrapper] {
