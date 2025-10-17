@@ -135,3 +135,22 @@ export type JoinGameRequest = z.infer<typeof JoinGameRequestSchema>;
 
 export const CreateWithPlayerRequestSchema = CreateGameRequestSchema.merge(JoinGameRequestSchema);
 export type CreateWithPlayerRequest = z.infer<typeof CreateWithPlayerRequestSchema>;
+
+export const PaginationRequestSchema = z.object({
+  page: z.number(),
+  perPage: z.number().max(100),
+});
+export type PaginationRequest = z.infer<typeof PaginationRequestSchema>;
+
+export const TrainingExampleSchema = z.object({
+  paths: z.array(PathSchema),
+  sketchDescription: z.string(),
+  turnDescription: z.string(),
+  tags: z.array(z.string()),
+});
+export type TrainingExample = z.infer<typeof TrainingExampleSchema>;
+
+export const CreateTagSchema = z.object({
+  name: z.string().min(1, 'Tag name is required').trim(),
+});
+export type CreateTagRequest = z.infer<typeof CreateTagSchema>;

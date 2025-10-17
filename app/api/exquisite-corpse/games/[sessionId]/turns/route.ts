@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import z from 'zod';
-import { getGameService } from '@/app/lib/gameService';
+import { getExquisiteCorpseSessionService } from '@/app/lib/exquisiteCorpseSessionService';
 import { Params } from '../params';
 import { CurveTurnSchema } from '../../../schemas';
 import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
@@ -29,7 +29,7 @@ export const POST = compose(
     const { sessionId } = await ctx.params;
     const { cookies: { playerName, playerToken } } = ctx;
 
-    await getGameService().submitTurn(sessionId, playerName, playerToken, validatedBody.path);
+    await getExquisiteCorpseSessionService().submitTurn(sessionId, playerName, playerToken, validatedBody.path);
 
     return NextResponse.json({ success: true });
   }

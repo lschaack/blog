@@ -24,6 +24,7 @@ type ToggleProps = {
   enabledText?: string;
   disabledText?: string;
   className?: string;
+  asRow?: boolean;
 }
 export const Toggle: FC<ToggleProps> = ({
   value,
@@ -33,11 +34,16 @@ export const Toggle: FC<ToggleProps> = ({
   enabledText,
   disabledText,
   className,
+  asRow = false,
 }) => {
   return (
     <label
       htmlFor={id}
-      className={clsx("flex flex-col gap-y-1 gap-x-4 font-geist-mono font-medium", className)}
+      className={clsx(
+        "flex flex-col gap-y-1 gap-x-4 font-geist-mono font-medium",
+        asRow && "w-full flex-row justify-between items-center",
+        className
+      )}
       tabIndex={0}
       onKeyUp={e => {
         if (e.key === 'Enter') onChange(!value);
@@ -54,9 +60,7 @@ export const Toggle: FC<ToggleProps> = ({
       <span className="text-base/loose">
         {label}
       </span>
-      <div
-        className="grid grid-cols-[repeat(3,minmax(min-content,1fr))] gap-2 justify-center items-center w-min"
-      >
+      <div className="flex gap-2 justify-center items-center w-min">
         {disabledText && (
           <ValueLabel emphasize={!value}>
             {disabledText}

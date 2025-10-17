@@ -1,0 +1,142 @@
+import { useCallback, useState, ChangeEventHandler, useId, useMemo } from "react";
+import fuzzysort from "fuzzysort";
+import debounce from "lodash/debounce";
+import { Search, Plus } from "lucide-react";
+import clsx from "clsx";
+
+import { InputText } from "./InputText";
+
+type FuzzySearchInputProps = {
+  value: string,
+  onChange: (value: string) => void,
+  items: string[];
+  onFilterItems: (filtered: ReadonlyArray<string>) => void;
+  placeholder?: string;
+  className?: string;
+};
+
+function FuzzySearchInput({
+  value,
+  onChange,
+  items,
+  onFilterItems: onResults,
+  placeholder,
+  className,
+}: FuzzySearchInputProps) {
+  const inputId = useId();
+
+  const updateResults = useMemo(() => debounce((query: string) => {
+    const fuzzyResults = fuzzysort
+      .go(query, items, { limit: 10 })
+      .map(result => result.target);
+
+    onResults(fuzzyResults);
+  }, 50), [items, onResults]);
+
+  const handleChange = useCallback<ChangeEventHandler<HTMLInputElement>>(e => {
+    const query = e.target.value;
+
+    // NOTE: default to showing all items for empty query
+    if (!query) {
+      onResults(items);
+    } else {
+      updateResults(query);
+    }
+
+    onChange(query);
+  }, [updateResults, onChange, items, onResults]);
+
+  return (
+    <div className={clsx("p-2 flex gap-2", className)}>
+      <Search size={24} />
+      <InputText
+        label="Search for a tag"
+        hideLabel
+        id={`fuzzy-search-${inputId}`}
+        value={value}
+        onChange={handleChange}
+        placeholder={placeholder}
+        className="border-0 w-full"
+      />
+    </div>
+  );
+}
+
+type FuzzySearchResultsProps = {
+  items: ReadonlyArray<string>;
+  query: string;
+  onSelect: (item: string) => void;
+  onCreate?: () => void;
+}
+function FuzzySearchResults({ items, query, onSelect, onCreate }: FuzzySearchResultsProps) {
+  return (
+    <div className="max-h-60 overflow-y-scroll">
+      <div className="flex flex-col items-stretch">
+        {items.length === 0 ? (
+          <>
+            <div className="menu-option single-row">
+              No results found.
+            </div>
+          </>
+        ) : (
+          items.map((item, index) => (
+            <button
+              key={`fuzzy-result-${item}-${index}`}
+              className="menu-option single-row text-left"
+              onClick={() => onSelect(item)}
+            >
+              {item}
+            </button>
+          ))
+        )}
+        {onCreate && query.length > 2 && !items.some(result => result === query) && (
+          <button onClick={onCreate} className="menu-option single-row text-left font-bold flex items-center gap-2">
+            <Plus size={16} className="stroke-3" />
+            Create new tag &quot;{query}&quot;
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+type FuzzySearchProps = {
+  value: string;
+  onChange: (value: string) => void;
+  items: string[];
+  onSelect: (item: string) => void;
+  onCreate?: (query: string) => void;
+  className?: string;
+};
+export function FuzzySearch({
+  value,
+  onChange,
+  items,
+  onSelect,
+  onCreate,
+  className,
+}: FuzzySearchProps) {
+  const [filteredItems, setFilteredItems] = useState<ReadonlyArray<string>>(items);
+
+  return (
+    <div className={clsx(
+      "bg-deep-100 rounded-lg border-2 border-deep-500 overflow-hidden",
+      className,
+    )}>
+      <FuzzySearchInput
+        value={value}
+        onChange={onChange}
+        items={items}
+        onFilterItems={setFilteredItems}
+        className="border-b-2 border-deep-300"
+      />
+
+      <FuzzySearchResults
+        items={value ? filteredItems : items}
+        query={value}
+        onSelect={onSelect}
+        onCreate={() => onCreate?.(value)}
+      />
+    </div>
+  );
+}

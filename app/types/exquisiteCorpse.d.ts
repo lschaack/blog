@@ -24,6 +24,10 @@ export type CurveTurn = BaseTurn & {
   title?: string;
 };
 
+export type TrainingTurn = BaseTurn & {
+  path: Path;
+}
+
 // Turn variant with base64 image
 export type ImageGeminiFlashPreviewTurn = BaseTurn & {
   image: string; // base64-encoded PNG

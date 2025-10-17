@@ -2,7 +2,7 @@
 
 import { useGameContext } from "./GameContext";
 import { BaseTurn } from "@/app/types/exquisiteCorpse";
-import { isUserTurn, isAITurn, isViewingCurrentTurn } from "./gameReducer";
+import { isUserTurn, isAITurn } from "./gameReducer";
 
 type GameStatusProps = {
   aiProcessing?: boolean;
@@ -34,15 +34,6 @@ export const GameStatus = <T extends BaseTurn>({
         <div>
           <div className="font-semibold text-red-600">AI Turn Failed</div>
           <div className="text-sm text-red-500">{aiError}</div>
-        </div>
-      );
-    }
-
-    // Not viewing current turn
-    if (!isViewingCurrentTurn(gameState)) {
-      return (
-        <div className="font-semibold text-deep-600">
-          Viewing Turn {gameState.currentTurnIndex + 1}
         </div>
       );
     }

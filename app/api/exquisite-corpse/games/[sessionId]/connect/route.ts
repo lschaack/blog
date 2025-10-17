@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getGameService } from '@/app/lib/gameService';
+import { getExquisiteCorpseSessionService } from '@/app/lib/exquisiteCorpseSessionService';
 import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
 import { createConnectionError, withRedisErrorHandler } from '@/app/api/middleware/redis';
 import { compose } from '@/app/api/middleware/compose';
@@ -87,7 +87,7 @@ export const GET = compose(
       path: `/api/exquisite-corpse/games/${sessionId}`
     });
 
-    const gameService = getGameService();
+    const gameService = getExquisiteCorpseSessionService();
 
     // Set up SSE stream
     const encoder = new TextEncoder();
@@ -123,7 +123,7 @@ export const GET = compose(
         request.signal.addEventListener('abort', cleanup);
 
         try {
-          const initialGameState = await getGameService().connect(
+          const initialGameState = await getExquisiteCorpseSessionService().connect(
             sessionId,
             playerName,
             playerToken,

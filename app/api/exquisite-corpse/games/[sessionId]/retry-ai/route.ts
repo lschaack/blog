@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getGameService } from '@/app/lib/gameService';
+import { getExquisiteCorpseSessionService } from '@/app/lib/exquisiteCorpseSessionService';
 import { Params } from '../params';
 import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
 import { withRedisErrorHandler } from '@/app/api/middleware/redis';
@@ -15,7 +15,7 @@ export const GET = compose(
   ) => {
     const params = await ctx.params;
     const sessionId = params.sessionId;
-    const gameService = getGameService();
+    const gameService = getExquisiteCorpseSessionService();
 
     await gameService.startAITurn(sessionId);
 

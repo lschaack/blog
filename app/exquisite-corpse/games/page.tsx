@@ -1,5 +1,6 @@
 import AdminView from '@/app/components/AdminView';
-import { GameBrowser } from './GameBrowser';
+import { GameLoader } from './GameLoader';
+import { getGameService } from '@/app/lib/gameService';
 
 export default async function WithAdminView({
   searchParams,
@@ -8,11 +9,26 @@ export default async function WithAdminView({
 }) {
   const { page: requestedPage } = await searchParams;
   const page = requestedPage ? parseInt(requestedPage) : 1;
+  const perPage = 12;
+
+  const {
+    items: games,
+    totalItems,
+    totalPages,
+  } = await getGameService().getGames(page, perPage);
 
   return (
     <AdminView>
-      <GameBrowser page={page} />
+      <GameLoader
+        initialState={{
+          games,
+          page,
+          perPage,
+          totalPages,
+          totalItems,
+        }}
+      />
     </AdminView>
-  )
+  );
 }
 

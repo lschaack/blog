@@ -1,4 +1,5 @@
 import { ChangeEventHandler } from "react";
+import clsx from 'clsx';
 
 type InputTextProps = {
   className?: string;
@@ -9,6 +10,7 @@ type InputTextProps = {
   onChange: ChangeEventHandler<HTMLInputElement>;
   disabled?: boolean;
   maxLength?: number;
+  hideLabel?: boolean;
 }
 export function InputText({
   className,
@@ -19,10 +21,17 @@ export function InputText({
   onChange,
   disabled = false,
   maxLength,
+  hideLabel = false,
 }: InputTextProps) {
   return (
     <div className={className}>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">
+      <label
+        htmlFor={id}
+        className={clsx(
+          "block text-sm font-medium text-gray-700 mb-1",
+          hideLabel && "sr-only",
+        )}
+      >
         {label}
       </label>
       <input
@@ -31,7 +40,7 @@ export function InputText({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
-        className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="w-full focus:outline-none"
         disabled={disabled}
         maxLength={maxLength}
       />

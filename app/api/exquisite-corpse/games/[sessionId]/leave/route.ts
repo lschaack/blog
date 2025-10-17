@@ -3,7 +3,7 @@ import { withCatchallErrorHandler } from '@/app/api/middleware/catchall';
 import { withRedisErrorHandler } from '@/app/api/middleware/redis';
 import { compose } from '@/app/api/middleware/compose';
 import { GameParams } from '../../../schemas';
-import { getGameService } from '@/app/lib/gameService';
+import { getExquisiteCorpseSessionService } from '@/app/lib/exquisiteCorpseSessionService';
 import { withRequiredCookies } from '@/app/api/middleware/cookies';
 import { deletePlayerCookies } from '../cookies';
 
@@ -22,7 +22,7 @@ export const POST = compose(
     const { sessionId } = await ctx.params;
     const { cookies: { playerName, playerToken } } = ctx;
 
-    await getGameService().leave(sessionId, playerName, playerToken);
+    await getExquisiteCorpseSessionService().leave(sessionId, playerName, playerToken);
 
     await deletePlayerCookies(sessionId, playerName, playerToken)
 
