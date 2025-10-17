@@ -1,7 +1,10 @@
 import { prisma, Prisma } from "@/app/lib/prisma";
+import { toLimitOffset } from "../utils/pagination";
 
 export class GameService {
-  async getGames(limit: number, offset: number) {
+  async getGames(page: number, perPage: number) {
+    const { limit, offset } = toLimitOffset({ page, perPage });
+
     const [items, totalCount] = await Promise.all([
       prisma.exquisiteCorpseGame.findMany({
         where: {
@@ -26,9 +29,9 @@ export class GameService {
       }),
     ]);
 
-    const total = Math.ceil(totalCount / limit);
+    const totalPages = Math.ceil(totalCount / limit);
 
-    return { items, total };
+    return { items, totalItems: totalCount, totalPages };
   }
 }
 

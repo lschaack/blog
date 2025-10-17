@@ -1,24 +1,31 @@
 import { MultiplayerGameState } from "@/app/types/multiplayer";
 import { GameCard } from "./GameCard";
 import clsx from "clsx";
-import { getGameService } from "@/app/lib/gameService";
-import { toLimitOffset } from "@/app/utils/pagination";
+import { type GameService } from "@/app/lib/gameService";
 import { PageNav } from "../PageNav";
 
 type GameBrowserProps = {
+  games: Awaited<ReturnType<GameService['getGames']>>['items'];
   page: number;
   perPage: number;
+  onPerPageChange: (perPage: number) => void;
+  totalPages: number;
+  totalItems: number;
+  onPageChange: (page: number) => void;
 }
-export async function GameBrowser(requestedPage: GameBrowserProps) {
-  const { limit, offset } = toLimitOffset(requestedPage);
 
-  const { items: games, total: totalPages } = await getGameService().getGames(limit, offset);
-
+export function GameBrowser({
+  games,
+  page,
+  totalPages,
+  onPageChange,
+}: GameBrowserProps) {
   return (
     <div className="flex flex-col gap-4">
       <PageNav
-        page={requestedPage.page}
+        page={page}
         totalPages={totalPages}
+        onPageChange={onPageChange}
       />
 
       <ul
@@ -35,8 +42,9 @@ export async function GameBrowser(requestedPage: GameBrowserProps) {
       </ul>
 
       <PageNav
-        page={requestedPage.page}
+        page={page}
         totalPages={totalPages}
+        onPageChange={onPageChange}
       />
     </div>
   );
