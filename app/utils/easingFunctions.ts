@@ -82,6 +82,10 @@ export const EASING_STRATEGY = {
   bounceInPlace: {
     ease: bounceInPlace(3),
     inverse: () => 0,
+  },
+  linear: {
+    ease: (value: number) => value,
+    inverse: (value: number) => value,
   }
 } as const;
 

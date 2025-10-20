@@ -1,20 +1,20 @@
 import { clsx } from "clsx";
-import { ChangeEventHandler, FC, KeyboardEventHandler, useRef, useState } from "react";
-import clamp from "lodash/clamp";
+import { ChangeEventHandler, FC, useCallback, useRef, useState } from "react";
 
 import { LabelledValue } from "@/app/components/LabelledValue";
-import { easify, EASING_STRATEGY, EasingStrategy } from "@/app/utils/easingFunctions";
+import { EASING_STRATEGY, EasingStrategy } from "@/app/utils/easingFunctions";
 import { roundToPrecision } from "@/app/utils/precision";
-import { normalize } from "@/app/utils/range";
+import { denormalize, normalize } from "@/app/utils/range";
 
 type InputRangeProps = {
   label: string;
   id: string;
   min: number;
   max: number;
+  value?: number;
+  // number of steps from min to max, e.g. granularity 100 means 100 steps
   step: number;
   defaultValue?: number;
-  value?: number;
   onChange: (value: number) => void;
   className?: string;
   trackClassName?: string;
@@ -27,75 +27,50 @@ export const InputRange: FC<InputRangeProps> = ({
   id,
   min,
   max,
-  step,
-  defaultValue,
   value: managedValue,
+  step: outputStep,
+  defaultValue,
   onChange,
   className,
-  easing,
+  easing = 'linear',
   precision,
 }) => {
-  const [_value, _setValue] = useState(defaultValue ?? min);
-  const value = managedValue ?? _value;
+  const toOutputRange = useCallback(
+    (internalValue: number) => denormalize(EASING_STRATEGY[easing].ease(internalValue), min, max),
+    [easing, min, max]
+  );
+
+  const fromOutputRange = useCallback(
+    (externalValue: number) => EASING_STRATEGY[easing].inverse(normalize(externalValue, min, max)),
+    [easing, min, max]
+  );
+
+  const internalStep = outputStep / (max - min);
+
+  const [_internalValue, _setInternalValue] = useState(fromOutputRange(defaultValue ?? min));
+  const value = managedValue ? fromOutputRange(managedValue) : _internalValue
 
   const [isDragging, setIsDragging] = useState(false);
+
   const trackRef = useRef<HTMLDivElement>(null);
   const pad = Math.max(max.toString().length, min.toString().length);
 
-  // Handle slider change
-  const handleChange: ChangeEventHandler<HTMLInputElement> = ({ target: { value } }) => {
-    // This is kind of a hack to use browser logic for the underlying input element
-    // When dragging, this handler fires with the target value at the point on the track
-    // where the cursor is positioned. On mouse up, it fires again with the actual value
-    // passed to the input element.
-    //
-    // That probably means this implementation is vulnerable to changes in browser
-    // implementation of the input element, so at some point I should really make this
-    // fully custom with an sr-only input...TODO: I guess
-    if (isDragging) {
-      const rawValue = Number(value);
-      const newValue = easing
-        ? easify(rawValue, min, max, EASING_STRATEGY[easing].ease)
-        : rawValue;
+  const handleChange: ChangeEventHandler<HTMLInputElement> = e => {
+    const rawValue = Number(e.target.value);
+    const outputValue = toOutputRange(rawValue);
 
-      _setValue(newValue);
-      if (onChange) onChange(newValue);
-    }
+    _setInternalValue(Number(rawValue));
+    onChange(outputValue);
   };
 
-  // FIXME: Downstream of the handleChange weirdness,
-  // need to manually handle keyboard changes b/c/o isDragging check above...
-  // some true lazy tech debt for after the initial release
-  const handleKeyDown: KeyboardEventHandler<HTMLInputElement> = (e) => {
-    let newValue: number;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
-      newValue = clamp(value + step, min, max);
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
-      newValue = clamp(value - step, min, max);
-    } else {
-      newValue = NaN;
-    }
-
-    if (!isNaN(newValue)) {
-      _setValue(newValue);
-      if (onChange) onChange(newValue);
-    }
-  }
-
-  const rawNorm = normalize(value, min, max);
-  // If value is eased, we need to "undo" the easing for the thumb to move linearly
-  // in the visual presentation
-  const norm = easing
-    ? EASING_STRATEGY[easing].inverse(rawNorm)
-    : rawNorm;
-  const percentage = norm * 100;
+  const percentage = value * 100;
 
   return (
     <LabelledValue
       id={id}
       label={label}
       pad={pad}
-      value={roundToPrecision(value, precision).toString()}
+      value={roundToPrecision(toOutputRange(value), precision).toString()}
       className={className}
     >
       {/* Custom track */}
@@ -104,15 +79,14 @@ export const InputRange: FC<InputRangeProps> = ({
           tabIndex={0}
           type="range"
           id={id}
-          min={min}
-          max={max}
-          step={step}
+          min={0}
+          max={1}
+          step={internalStep}
           value={value}
           onChange={handleChange}
           onMouseDown={() => setIsDragging(true)}
           onMouseUp={() => setIsDragging(false)}
           onBlur={() => setIsDragging(false)}
-          onKeyDown={handleKeyDown}
           className="opacity-0 peer absolute w-full h-full cursor-pointer z-10"
         />
 
