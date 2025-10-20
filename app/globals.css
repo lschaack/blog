@@ -169,7 +169,8 @@
   .pop-focus-within,
   .pop-focus-visible,
   .pop-focus-visible-within,
-  .pop-active {
+  .pop-active,
+  .group:hover .pop-hover {
     transition: scale 0.2s ease, filter 0.2s ease;
   }
 
@@ -178,7 +179,18 @@
   .pop-focus-within:not(:disabled):focus-within,
   .pop-focus-visible:not(:disabled):focus-visible,
   .pop-focus-visible-within:not(:disabled):has(:focus-visible),
-  .pop-active:not(:disabled):active {
+  .pop-active:not(:disabled):active,
+  .group:hover .pop-hover:not(:disabled) {
+    /* Scale needs to be the reciprocal of a power of 2 (e.g. 1/16 = 6.25%)
+     * to avoid sub-pixel issues with the absolutely-positioned filled track
+     * since root rem is the default 16px */
+    scale: 1.0625;
+    filter: brightness(105%);
+    outline: 0;
+  }
+
+  .pop {
+    transition: scale 0.2s ease, filter 0.2s ease;
     /* Scale needs to be the reciprocal of a power of 2 (e.g. 1/16 = 6.25%)
      * to avoid sub-pixel issues with the absolutely-positioned filled track
      * since root rem is the default 16px */

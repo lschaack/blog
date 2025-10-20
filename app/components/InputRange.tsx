@@ -99,7 +99,7 @@ export const InputRange: FC<InputRangeProps> = ({
       className={className}
     >
       {/* Custom track */}
-      <div ref={trackRef} className="pop-active pop-focus-visible-within relative w-full h-6 rounded-sm bg-light">
+      <div ref={trackRef} className="relative w-full h-6 rounded-sm bg-light group">
         <input
           tabIndex={0}
           type="range"
@@ -111,13 +111,10 @@ export const InputRange: FC<InputRangeProps> = ({
           onChange={handleChange}
           onMouseDown={() => setIsDragging(true)}
           onMouseUp={() => setIsDragging(false)}
+          onBlur={() => setIsDragging(false)}
           onKeyDown={handleKeyDown}
           className="opacity-0 peer absolute w-full h-full cursor-pointer z-10"
-          onBlur={() => {
-            setIsDragging(false);
-          }}
         />
-
 
         {/* Smaller track to limit thumb to left/right edges */}
         <div className="relative w-full px-2">
@@ -134,6 +131,9 @@ export const InputRange: FC<InputRangeProps> = ({
               // TODO: the ring rounding looks a little funky somehow
               'ring-2 ring-bold',
               'transform -translate-x-1/2',
+              'pop-hover pop-active pop-focus-visible-within',
+              'group-hover:pop',
+              isDragging && 'pop',
             )}
             style={{ left: `${percentage}%` }}
           />
