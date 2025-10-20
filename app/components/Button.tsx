@@ -8,6 +8,7 @@ type BaseButtonProps = {
   label: ReactNode;
   onClick?: () => void;
   className?: string;
+  pending?: boolean;
   disabled?: boolean;
   friendly?: boolean;
   danger?: boolean;
@@ -36,6 +37,7 @@ export const Button: FC<ButtonProps> = ({
   ariaLabel,
   onClick,
   className,
+  pending = false,
   disabled = false,
   danger = false,
   friendly = false,
@@ -55,11 +57,14 @@ export const Button: FC<ButtonProps> = ({
             : "bg-bold",
         // FIXME: Get colors sorted out so I don't have to do this
         !danger && "disabled:brightness-200",
-        "disabled:contrast-50 disabled:cursor-not-allowed not:disabled:cursor-pointer",
+        pending && "animate-pulse",
+        !pending && "disabled:contrast-50",
+        "disabled:cursor-not-allowed not:disabled:cursor-pointer",
+        "touch-manipulation",
       )}
       whileHover={{ scale: disabled ? 1 : 1.05 }}
       whileTap={{ scale: 1 }}
-      disabled={disabled}
+      disabled={disabled || pending}
     >
       {label}
     </motion.button>

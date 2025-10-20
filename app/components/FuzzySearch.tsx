@@ -67,8 +67,15 @@ type FuzzySearchResultsProps = {
   query: string;
   onSelect: (item: string) => void;
   onCreate?: () => void;
+  isCreating?: boolean;
 }
-function FuzzySearchResults({ items, query, onSelect, onCreate }: FuzzySearchResultsProps) {
+function FuzzySearchResults({
+  items,
+  query,
+  onSelect,
+  onCreate,
+  isCreating = false,
+}: FuzzySearchResultsProps) {
   return (
     <div className="max-h-60 overflow-y-scroll">
       <div className="flex flex-col items-stretch">
@@ -90,7 +97,14 @@ function FuzzySearchResults({ items, query, onSelect, onCreate }: FuzzySearchRes
           ))
         )}
         {onCreate && query.length > 2 && !items.some(result => result === query) && (
-          <button onClick={onCreate} className="menu-option single-row text-left font-bold flex items-center gap-2">
+          <button
+            onClick={onCreate}
+            className={clsx(
+              "menu-option single-row text-left font-bold flex items-center gap-2",
+              isCreating && "animate-pulse bg-deep-200"
+            )}
+            disabled={isCreating}
+          >
             <Plus size={16} className="stroke-3" />
             Create new tag &quot;{query}&quot;
           </button>
@@ -106,6 +120,7 @@ type FuzzySearchProps = {
   items: string[];
   onSelect: (item: string) => void;
   onCreate?: (query: string) => void;
+  isCreating?: boolean;
   className?: string;
 };
 export function FuzzySearch({
@@ -114,6 +129,7 @@ export function FuzzySearch({
   items,
   onSelect,
   onCreate,
+  isCreating,
   className,
 }: FuzzySearchProps) {
   const [filteredItems, setFilteredItems] = useState<ReadonlyArray<string>>(items);
@@ -136,6 +152,7 @@ export function FuzzySearch({
         query={value}
         onSelect={onSelect}
         onCreate={() => onCreate?.(value)}
+        isCreating={isCreating}
       />
     </div>
   );

@@ -79,6 +79,11 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
       : new Set()
   );
 
+  // TODO: settle on a request library to handle stuff like this + caching
+  const [isCreating, setIsCreating] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [toast, setToast] = useState<Omit<MessageToastProps, 'onOpenChange'>>({
     type: 'info',
     open: false,
@@ -95,6 +100,8 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
   }, []);
 
   const handleCreateExample = async () => {
+    setIsCreating(true);
+
     try {
       await createTrainingExample({
         paths: turns.map(turn => turn.path),
@@ -109,10 +116,14 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
       if (e instanceof Error) {
         setToast({ open: true, type: 'error', children: e.message });
       }
+    } finally {
+      setIsCreating(false);
     }
   }
 
   const handleUpdateExample = async () => {
+    setIsUpdating(true);
+
     if (exampleId) {
       try {
         await updateTrainingExample({
@@ -127,6 +138,8 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
         if (e instanceof Error) {
           setToast({ open: true, type: 'error', children: e.message });
         }
+      } finally {
+        setIsUpdating(false);
       }
     } else {
       setToast({ open: true, type: 'error', children: 'Cannot update example without ID' });
@@ -135,6 +148,8 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
 
   const handleDeleteExample = async () => {
     if (exampleId) {
+      setIsDeleting(true);
+
       try {
         await deleteTrainingExample(exampleId);
 
@@ -143,6 +158,8 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
         if (e instanceof Error) {
           setToast({ open: true, type: 'error', children: e.message });
         }
+      } finally {
+        setIsDeleting(false);
       }
     } else {
       setToast({ open: true, type: 'error', children: 'Cannot delete example without ID' });
@@ -214,11 +231,13 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
           <Button
             label="Delete Example"
             onClick={handleDeleteExample}
+            pending={isDeleting}
             danger
           />
           <Button
             label="Update Example"
             onClick={handleUpdateExample}
+            pending={isUpdating}
             friendly
           />
         </div>
@@ -226,6 +245,7 @@ export const TrainingInterface = ({ tags, source }: TrainingInterfaceProps) => {
         <Button
           label="Submit Example"
           onClick={handleCreateExample}
+          pending={isCreating}
         />
       )}
     </div>

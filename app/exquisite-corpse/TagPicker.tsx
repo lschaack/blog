@@ -85,6 +85,7 @@ export function TagPicker({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [tags, setTags] = useState<string[]>(initTags);
+  const [isCreating, setIsCreating] = useState(false);
 
   const handleSelect = (item: string) => {
     onSelect?.(item);
@@ -93,6 +94,8 @@ export function TagPicker({
   };
 
   const handleCreate = async (name: string) => {
+    setIsCreating(true);
+
     try {
       const response = await createTag(name);
 
@@ -105,6 +108,8 @@ export function TagPicker({
     } catch (e) {
       // FIXME:
       console.error(e);
+    } finally {
+      setIsCreating(false);
     }
   }
 
@@ -138,6 +143,7 @@ export function TagPicker({
                 items={tags}
                 onSelect={handleSelect}
                 onCreate={allowCreate ? handleCreate : undefined}
+                isCreating={isCreating}
                 className="max-w-(--radix-popover-trigger-width) max-h-(--radix-popover-available-height)"
               />
             </Popover.Content>
