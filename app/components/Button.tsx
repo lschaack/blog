@@ -5,14 +5,14 @@ import clsx from 'clsx';
 import { motion } from 'motion/react';
 
 type BaseButtonProps = {
-  label: ReactNode;
+  label: string;
+  children?: ReactNode;
   onClick?: () => void;
   className?: string;
   pending?: boolean;
   disabled?: boolean;
   friendly?: boolean;
   danger?: boolean;
-  ariaLabel?: string;
 }
 
 type RegularButtonProps = BaseButtonProps & {
@@ -30,21 +30,20 @@ type DangerButtonProps = BaseButtonProps & {
   friendly?: never;
 }
 
-type ButtonProps = RegularButtonProps | FriendlyButtonProps | DangerButtonProps;
+export type ButtonProps = RegularButtonProps | FriendlyButtonProps | DangerButtonProps;
 
 export const Button: FC<ButtonProps> = ({
   label,
-  ariaLabel,
   onClick,
   className,
   pending = false,
   disabled = false,
   danger = false,
   friendly = false,
+  children,
 }) => {
   return (
     <motion.button
-      aria-label={ariaLabel}
       onClick={onClick}
       className={clsx(
         className,
@@ -63,10 +62,12 @@ export const Button: FC<ButtonProps> = ({
         "touch-manipulation",
       )}
       whileHover={{ scale: disabled ? 1 : 1.05 }}
+      whileFocus={{ scale: disabled ? 1 : 1.05 }}
       whileTap={{ scale: 1 }}
       disabled={disabled || pending}
+      aria-label={label}
     >
-      {label}
+      {children ?? label}
     </motion.button>
   );
 }

@@ -71,6 +71,10 @@ export const EASING_STRATEGY = {
     ease: inverseEaseOutSine(EASING_ELBOW_SIN),
     inverse: easeOutSine(EASING_ELBOW_SIN),
   },
+  easeInStrong: {
+    ease: inverseEaseOutSine(0.27),
+    inverse: easeOutSine(0.27),
+  },
   easeInOut: {
     ease: easeInOut(EASING_ELBOW_ROBJOHN),
     inverse: inverseEaseInOut(EASING_ELBOW_ROBJOHN),

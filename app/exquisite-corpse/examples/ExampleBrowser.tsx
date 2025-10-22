@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import Link from "next/link";
 
 import { ExampleCard } from "./ExampleCard";
 import { type TrainingExampleService } from "@/app/lib/trainingExampleService";
@@ -6,6 +7,7 @@ import { PageNav } from "../PageNav";
 import { DebugMenu } from "@/app/components/DebugMenu";
 import { type TagService } from "@/app/lib/tagService";
 import { TagFilter, TagsInFilter } from "./TagFilter";
+import { Plus } from "lucide-react";
 
 export type ExampleFilter = {
   tags: TagsInFilter;
@@ -43,6 +45,11 @@ export function ExampleBrowser({
           totalItems={totalItems}
         />
       </DebugMenu>
+
+      <Link href="/exquisite-corpse/examples/new" className="classic-link">
+        <Plus size={16} className="inline align-text-bottom mr-1" />
+        Create new training example
+      </Link>
 
       <PageNav
         page={page}

@@ -4,6 +4,9 @@ import { BaseTurn, CanvasDimensions, Path, TurnMetaRenderer, TurnRenderer } from
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { useHistory } from "./useUndoRedo";
+import { SmoothingSelector } from "./SmoothingSelector";
+import { IconButton } from "../components/IconButton";
+import { Redo, Undo } from "lucide-react";
 
 type TurnManagerProps<Turn extends BaseTurn> = {
   handleAddPath: (path: Path, turns: Turn[]) => void;
@@ -32,6 +35,8 @@ export const TurnManager = <Turn extends BaseTurn>({
     canRedo,
   } = useHistory<Path[]>([]);
 
+  const [smoothing, setSmoothing] = useState(50);
+
   const hasLine = path.length > 0;
 
   const lastTurnIndex = turns.length - 1;
@@ -57,6 +62,7 @@ export const TurnManager = <Turn extends BaseTurn>({
 
   const canDraw = !readOnly;
   const canAddPath = canDraw && hasLine;
+  const maxTurnCharCount = turns.length.toString().length;
 
   return (
     <div className="flex flex-col gap-4">
@@ -67,9 +73,9 @@ export const TurnManager = <Turn extends BaseTurn>({
           disabled={currentTurnIndex <= 0}
           className="flex-1"
         />
-        <div className="grow-1 text-center">
-          Turn {currentTurnIndex + 1} of {turns.length}
-        </div>
+        <p className="bg-deep-50 px-4 rounded-lg font-geist-mono text-xl/loose single-row">
+          {(currentTurnIndex + 1).toString().padStart(maxTurnCharCount, ' ')} / {turns.length}
+        </p>
         <Button
           label="Next →"
           onClick={() => setCurrentTurnIndex(prev => Math.min(prev + 1, lastTurnIndex))}
@@ -79,19 +85,29 @@ export const TurnManager = <Turn extends BaseTurn>({
       </div>
 
       {/* Undo/Redo controls */}
-      <div className="flex gap-2">
-        <Button
-          label="Undo"
-          onClick={undo}
-          disabled={!isLatestTurn || !canDraw || !canUndo}
-          className="flex-1"
+      <div className="flex gap-4 items-end justify-between">
+        <SmoothingSelector
+          value={smoothing}
+          onChange={setSmoothing}
         />
-        <Button
-          label="Redo"
-          onClick={redo}
-          disabled={!isLatestTurn || !canDraw || !canRedo}
-          className="flex-1"
-        />
+        <div className="flex gap-8">
+          <IconButton
+            label="Undo"
+            onClick={undo}
+            disabled={!isLatestTurn || !canDraw || !canUndo}
+            className="flex items-center gap-2"
+          >
+            <Undo />
+          </IconButton>
+          <IconButton
+            label="Redo"
+            onClick={redo}
+            disabled={!isLatestTurn || !canDraw || !canRedo}
+            className="flex items-center gap-2"
+          >
+            <Redo />
+          </IconButton>
+        </div>
       </div>
 
       {/* Sketchpad */}
@@ -109,6 +125,7 @@ export const TurnManager = <Turn extends BaseTurn>({
           height={dimensions.height}
           lines={isLatestTurn ? path : []}
           readOnly={readOnly}
+          smoothing={smoothing}
           handleAddLine={line => {
             if (canDraw) {
               setPath([...path, line]);

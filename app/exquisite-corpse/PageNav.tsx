@@ -1,4 +1,5 @@
 import { ChevronFirst, ChevronLast, ChevronLeft, ChevronRight } from "lucide-react";
+import { IconButton } from "../components/IconButton";
 
 type PageNavProps = {
   page: number;
@@ -10,29 +11,45 @@ export function PageNav({ page, totalPages, onPageChange }: PageNavProps) {
 
   return (
     <nav className="flex justify-center">
-      <ol className="flex gap-2 font-geist-mono">
+      <ol className="flex items-center gap-4">
         <li>
-          <button onClick={() => onPageChange(1)}>
+          <IconButton
+            onClick={() => onPageChange(1)}
+            label="Back to first page"
+            disabled={page === 1}
+          >
             <ChevronFirst />
-          </button>
+          </IconButton>
         </li>
         <li>
-          <button onClick={() => onPageChange(Math.max(page - 1, 1))}>
+          <IconButton
+            onClick={() => onPageChange(Math.max(page - 1, 1))}
+            label="Back to previous page"
+            disabled={page <= 1}
+          >
             <ChevronLeft />
-          </button>
+          </IconButton>
         </li>
-        <p>
+        <p className="bg-deep-50 px-4 rounded-lg font-geist-mono text-xl/loose single-row">
           {page.toString().padStart(maxPageCharCount, ' ')} / {totalPages.toString()}
         </p>
         <li>
-          <button onClick={() => onPageChange(Math.min(page + 1, totalPages))}>
+          <IconButton
+            onClick={() => onPageChange(Math.min(page + 1, totalPages))}
+            label="Forward to next page"
+            disabled={page >= totalPages}
+          >
             <ChevronRight />
-          </button>
+          </IconButton>
         </li>
         <li>
-          <button onClick={() => onPageChange(totalPages)}>
+          <IconButton
+            onClick={() => onPageChange(totalPages)}
+            label="Forward to last page"
+            disabled={page === totalPages}
+          >
             <ChevronLast />
-          </button>
+          </IconButton>
         </li>
       </ol>
     </nav>

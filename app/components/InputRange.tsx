@@ -22,6 +22,8 @@ type InputRangeProps = {
   precision?: number;
 }
 
+// TODO: API possibility - provide central value for easing !== 'linear'
+// and do inverse calculation to find the corresponding elbow value
 export const InputRange: FC<InputRangeProps> = ({
   label,
   id,
@@ -86,6 +88,7 @@ export const InputRange: FC<InputRangeProps> = ({
           onChange={handleChange}
           onMouseDown={() => setIsDragging(true)}
           onMouseUp={() => setIsDragging(false)}
+          onFocus={() => setIsDragging(true)}
           onBlur={() => setIsDragging(false)}
           className="opacity-0 peer absolute w-full h-full cursor-pointer z-10"
         />
@@ -105,8 +108,7 @@ export const InputRange: FC<InputRangeProps> = ({
               // TODO: the ring rounding looks a little funky somehow
               'ring-2 ring-bold',
               'transform -translate-x-1/2',
-              'pop-hover pop-active pop-focus-visible-within',
-              'group-hover:pop',
+              'pop-group-hover',
               isDragging && 'pop',
             )}
             style={{ left: `${percentage}%` }}

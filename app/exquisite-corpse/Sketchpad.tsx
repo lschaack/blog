@@ -14,6 +14,7 @@ type SketchpadProps = {
   height: number;
   lines: Path[];
   readOnly?: boolean;
+  smoothing?: number;
   handleAddLine: (line: Path) => void;
 }
 
@@ -61,7 +62,14 @@ const fitCurvesToPoints = (points: Point[], maxError: number = 50): Path => {
 //     - render all lines to the canvas, including the newly-fit temporary curve
 // - user mouses up
 //   - fit the line and commit the resulting curve
-export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, readOnly = false, handleAddLine }) => {
+export const Sketchpad: FC<SketchpadProps> = ({
+  width,
+  height,
+  lines,
+  smoothing,
+  readOnly = false,
+  handleAddLine
+}) => {
   const [dpi, setDpi] = useState<number>(1);
   useEffect(() => setDpi(window.devicePixelRatio || 1), []);
 
@@ -97,13 +105,13 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, readOnly =
       drawRawPoints(ctx, currentPoints.current);
 
       // Fit and draw temporary curve
-      const tempCurves = fitCurvesToPoints(currentPoints.current);
+      const tempCurves = fitCurvesToPoints(currentPoints.current, smoothing);
       if (tempCurves.length > 0) {
         ctx.strokeStyle = LINE_COLOR;
         drawPath(ctx, tempCurves);
       }
     }
-  }, [isDrawing, lines, width, height]);
+  }, [isDrawing, lines, width, height, smoothing]);
 
   useAnimationFrames(animateCallback, isDrawing);
 
@@ -175,7 +183,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, readOnly =
     setIsDrawing(false);
 
     if (currentPoints.current.length > 1) {
-      const fittedLine = fitCurvesToPoints(currentPoints.current);
+      const fittedLine = fitCurvesToPoints(currentPoints.current, smoothing);
       if (fittedLine.length > 0) {
         // round every number to minimize characters in redis and prompt
         handleAddLine(
@@ -189,7 +197,7 @@ export const Sketchpad: FC<SketchpadProps> = ({ width, height, lines, readOnly =
     }
 
     currentPoints.current = [];
-  }, [isDrawing, handleAddLine]);
+  }, [isDrawing, handleAddLine, smoothing]);
 
   // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent) => startDrawing(e.nativeEvent);

@@ -43,7 +43,7 @@ export function Tag({ name, onDelete }: TagProps) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: 0.5 }}
             >
               <XCircle className="stroke-3 " size={14} />
             </motion.div>
@@ -51,10 +51,16 @@ export function Tag({ name, onDelete }: TagProps) {
             <motion.div
               className="absolute inset-0"
               key="X"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
+              initial={{
+                scale: 1,
+              }}
+              animate={{
+                scale: 1,
+              }}
+              exit={{
+                scale: 0.5,
+              }}
+              transition={{ duration: 0.5 }}
             >
               <X className="stroke-3" size={14} />
             </motion.div>
@@ -127,7 +133,7 @@ export function TagPicker({
       <div className="flex flex-col gap-2">
         <Popover.Root open={open} onOpenChange={setOpen}>
           <Popover.Trigger asChild>
-            <button id="add-tag" className="p-2 rounded-lg border-2 border-deep-500 bg-deep-100 font-geist-mono font-medium flex justify-between">
+            <button id="add-tag" className="p-2 rounded-lg border-2 border-deep-500 bg-deep-100 font-medium flex justify-between">
               <span>
                 Add a tag
               </span>
