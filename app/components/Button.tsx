@@ -63,7 +63,12 @@ export const Button: FC<ButtonProps> = ({
       )}
       whileHover={{ scale: disabled ? 1 : 1.05 }}
       whileFocus={{ scale: disabled ? 1 : 1.05 }}
-      whileTap={{ scale: 1 }}
+      whileTap={{ scale: 0.95 }}
+      transition={{
+        type: "spring",
+        bounce: 0.5,
+        duration: 0.4,
+      }}
       disabled={disabled || pending}
       aria-label={label}
     >

@@ -4,7 +4,7 @@ import { getTrainingExampleService } from '@/app/lib/trainingExampleService';
 import { getTagService } from '@/app/lib/tagService';
 import { auth } from '@/app/auth';
 
-export default async function WithAdminView({
+async function Examples({
   searchParams,
 }: {
   searchParams: Promise<{ page?: string, tags?: string }>
@@ -41,4 +41,14 @@ export default async function WithAdminView({
       />
     </AdminView>
   );
+}
+
+export default async function WithAdminView(props: {
+  searchParams: Promise<{ page?: string, tags?: string }>
+}) {
+  return (
+    <AdminView>
+      <Examples {...props} />
+    </AdminView>
+  )
 }

@@ -7,6 +7,7 @@ import clsx from 'clsx';
 
 import { DebugContext } from "@/app/components/DebugContext";
 import { Pingable } from "@/app/components/Pingable";
+import { IconButton } from "./IconButton";
 
 type DebugToggleProps = {
   className?: string;
@@ -16,9 +17,10 @@ export const DebugToggle: FC<DebugToggleProps> = memo(function DebugToggle({ cla
 
   return (
     <Pingable ping={isOverridden} className="rounded-full inset-1 sm:inset-0">
-      <button
+      <IconButton
         onClick={() => setDebug(prev => !prev)}
-        className={clsx("icon-surface relative bg-white", className)}
+        className={clsx("icon-surface relative bg-white text-deep-800", className)}
+        label={`${debug ? "Close" : "Open"} debug menu`}
       >
         <AnimatePresence mode="popLayout">
           {debug ? (
@@ -44,7 +46,7 @@ export const DebugToggle: FC<DebugToggleProps> = memo(function DebugToggle({ cla
                 ease: "easeInOut"
               }}
             >
-              <Minus size={24} />
+              <Minus size={24} className="text-deep-900" />
             </motion.div>
           ) : (
             <motion.div
@@ -66,11 +68,11 @@ export const DebugToggle: FC<DebugToggleProps> = memo(function DebugToggle({ cla
                 ease: "easeInOut"
               }}
             >
-              <Settings size={24} />
+              <Settings size={24} className="text-deep-900" />
             </motion.div>
           )}
         </AnimatePresence>
-      </button>
+      </IconButton>
     </Pingable>
   );
 });

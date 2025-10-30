@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Redo, Undo } from "lucide-react";
 
 import { BaseTurn, CanvasDimensions, Path, TurnMetaRenderer, TurnRenderer } from "@/app/types/exquisiteCorpse";
 import { Sketchpad } from "./Sketchpad";
 import { Button } from '@/app/components/Button';
 import { useHistory } from "./useUndoRedo";
-import { SmoothingSelector } from "./SmoothingSelector";
+import { SmoothingLevel, SmoothingLevelToError, SmoothingSelector } from "./SmoothingSelector";
 import { IconButton } from "../components/IconButton";
-import { Redo, Undo } from "lucide-react";
 
 type TurnManagerProps<Turn extends BaseTurn> = {
   handleAddPath: (path: Path, turns: Turn[]) => void;
@@ -35,7 +35,7 @@ export const TurnManager = <Turn extends BaseTurn>({
     canRedo,
   } = useHistory<Path[]>([]);
 
-  const [smoothing, setSmoothing] = useState(50);
+  const [smoothing, setSmoothing] = useState<SmoothingLevel>('normal');
 
   const hasLine = path.length > 0;
 
@@ -84,54 +84,54 @@ export const TurnManager = <Turn extends BaseTurn>({
         />
       </div>
 
-      {/* Undo/Redo controls */}
-      <div className="flex gap-4 items-end justify-between">
-        <SmoothingSelector
-          value={smoothing}
-          onChange={setSmoothing}
-        />
-        <div className="flex gap-8">
-          <IconButton
-            label="Undo"
-            onClick={undo}
-            disabled={!isLatestTurn || !canDraw || !canUndo}
-            className="flex items-center gap-2"
-          >
-            <Undo />
-          </IconButton>
-          <IconButton
-            label="Redo"
-            onClick={redo}
-            disabled={!isLatestTurn || !canDraw || !canRedo}
-            className="flex items-center gap-2"
-          >
-            <Redo />
-          </IconButton>
+      <div>
+        <div className="flex gap-4 items-end justify-between pb-1.5">
+          <SmoothingSelector
+            value={smoothing}
+            onChange={setSmoothing}
+          />
+          <div className="flex gap-2">
+            <IconButton
+              label="Undo last line"
+              onClick={undo}
+              disabled={!isLatestTurn || !canDraw || !canUndo}
+              className="flex items-center gap-2 rounded-lg"
+            >
+              <Undo />
+            </IconButton>
+            <IconButton
+              label="Redo last line"
+              onClick={redo}
+              disabled={!isLatestTurn || !canDraw || !canRedo}
+              className="flex items-center gap-2 rounded-lg"
+            >
+              <Redo />
+            </IconButton>
+          </div>
         </div>
-      </div>
 
-      {/* Sketchpad */}
-      <div
-        className="relative"
-        style={{ maxWidth: dimensions.width, maxHeight: dimensions.height }}
-      >
-        <TurnRenderer
-          turns={displayTurns}
-          dimensions={dimensions}
-        />
+        <div
+          className="relative"
+          style={{ maxWidth: dimensions.width, maxHeight: dimensions.height }}
+        >
+          <TurnRenderer
+            turns={displayTurns}
+            dimensions={dimensions}
+          />
 
-        <Sketchpad
-          width={dimensions.width}
-          height={dimensions.height}
-          lines={isLatestTurn ? path : []}
-          readOnly={readOnly}
-          smoothing={smoothing}
-          handleAddLine={line => {
-            if (canDraw) {
-              setPath([...path, line]);
-            }
-          }}
-        />
+          <Sketchpad
+            width={dimensions.width}
+            height={dimensions.height}
+            lines={isLatestTurn ? path : []}
+            readOnly={readOnly}
+            smoothing={SmoothingLevelToError[smoothing]}
+            handleAddLine={line => {
+              if (canDraw) {
+                setPath([...path, line]);
+              }
+            }}
+          />
+        </div>
       </div>
 
       {/* End turn button */}
