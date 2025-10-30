@@ -142,7 +142,15 @@ export function TagPicker({
           </Popover.Trigger>
 
           <Popover.Portal>
-            <Popover.Content align="start" sideOffset={4}>
+            <Popover.Content
+              align="start"
+              sideOffset={4}
+              className={clsx(
+                "origin-[var(--radix-popover-content-transform-origin)]",
+                "data-[state=closed]:animate-shrink-out",
+                "data-[state=open]:animate-grow-in",
+              )}
+            >
               <FuzzySearch
                 value={query}
                 onChange={setQuery}

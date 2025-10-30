@@ -87,9 +87,15 @@
   --color-surface-translucent: --alpha(var(--color-deep-50) / 90%);
 
   /* animations */
+  /* https://www.kvin.me/css-springs */
+  --spring-easing: linear(0, 0.0034 0.81%, 0.0283 2.42%, 0.0999, 0.1983 7.26%, 0.6072 16.13%, 0.786 20.97%, 0.8558, 0.9125, 0.9569 28.23%, 0.9995 31.45%, 1.0208, 1.0346, 1.0424 38.71%, 1.046 41.93%, 1.0449, 1.0418 46.77%, 1.0141 60.48%, 1.0028 69.35%, 0.9998 74.19%, 0.9981 80.64%, 0.9991 100%);
+  --spring-duration: 0.4980s;
+
   --animate-twist: twist 1.4s ease normal;
   --animate-quicktwist: quicktwist 1s ease normal;
   --animate-draw: draw 1s linear forwards;
+  --animate-grow-in: growIn var(--spring-duration) var(--spring-easing);
+  --animate-shrink-out: shrinkOut 150ms ease-out;
 
   @keyframes twist {
     20% {
@@ -158,6 +164,30 @@
   @keyframes draw {
     to {
       stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes growIn {
+    from {
+      opacity: 0;
+      scale: 0;
+    }
+
+    to {
+      opacity: 1;
+      scale: 1;
+    }
+  }
+
+  @keyframes shrinkOut {
+    from {
+      opacity: 1;
+      scale: 1;
+    }
+
+    to {
+      opacity: 0;
+      scale: 0;
     }
   }
 }
