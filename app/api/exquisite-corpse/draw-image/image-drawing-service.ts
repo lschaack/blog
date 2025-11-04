@@ -83,7 +83,7 @@ ${context.history.map((turn, index) => {
       };
 
       const result = await this.client.models.generateContent({
-        model: "gemini-2.0-flash-preview-image-generation",
+        model: "gemini-2.5-flash-image",
         contents: [prompt, imagePart],
         config: {
           responseModalities: [Modality.TEXT, Modality.IMAGE],
