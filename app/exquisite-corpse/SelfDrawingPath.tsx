@@ -1,11 +1,40 @@
 import { FC, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import clsx from "clsx";
-import { Path, PathCommand } from 'parse-svg-path';
+import { DrawCommand, Path, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
-import { breakUpPath, getAnimationTimingFunction, pathToD, getSeparation, getDirectionChange } from "../utils/svg";
+import { breakUpPath, getAnimationTimingFunction, pathToD, getSeparation, getDirectionChange, splitPathIntoLines, PathSegment, getSegmentCost, costsToSomething } from "../utils/svg";
 
 const PEN_LIFT_COST_S = 0.075;
 const DIRECTION_CHANGE_COST_S = 0.05;
+
+function getInterLineDelay(
+  prevLine: Array<PathSegment<DrawCommand>> | undefined,
+  nextLine: Array<PathSegment<DrawCommand>> | undefined,
+  drawSpeed: number,
+) {
+  const prevSegment = prevLine?.at(-1);
+  const nextSegment = nextLine?.at(0);
+
+  if (!prevSegment || !nextSegment) {
+    return 0;
+  }
+
+  const separation = prevSegment
+    ? getSeparation(prevSegment, nextSegment)
+    : 0;
+  // TODO: ensure this is having the intended effect
+  const directionChange = prevSegment
+    ? getDirectionChange(prevSegment, nextSegment)
+    : 0;
+
+  const didLiftPen = Number(separation > 0);
+  const didNotLiftPen = 1 - didLiftPen;
+
+  const penLiftCost = didLiftPen * PEN_LIFT_COST_S;
+  const directionChangeCost = didNotLiftPen * DIRECTION_CHANGE_COST_S * directionChange;
+
+  const delay = penLiftCost + directionChangeCost + separation / (drawSpeed * 2);
+}
 
 // Custom hook for path length
 function usePathLength() {
@@ -90,61 +119,56 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
     }
   }, 0);
 
-  const segmentData = useMemo(() => {
-    // split path into segments with estimatable curvature
-    const segments = breakUpPath(path);
-    const segmentData = [];
+  const lineData = useMemo(() => {
+    // split path into lines
+    const lines = splitPathIntoLines(path);
+    // split each line into segments
+    const linesAsSegments = lines.map(breakUpPath);
+    /**
+     * for each line:
+     *   produce a delay (excepting the first)
+     *   calculate costs w/breakUpPath, internals of getAnimationTimingFunction
+     *   ensure costs work both intra- and inter-line
+     *   use costs as a modifier for acceleration
+     *   produce animation timing function w/physical metaphor, accelerating from 0 and decelerating to min for cost > 1
+     *   rely on css linear() for smoothing
+     */
 
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i];
-      const animationTimingFunction = getAnimationTimingFunction(segment);
+    const lineData = [];
+    for (let i = 0; i < linesAsSegments.length; i++) {
+      const lineSegments = linesAsSegments[i];
+      const prevLineSegments = linesAsSegments[i - 1];
 
-      if (i > 0) {
-        const prevSegment = segments[i - 1];
+      const delay = getInterLineDelay(lineSegments, prevLineSegments, drawSpeed);
 
-        const separation = getSeparation(prevSegment, segment);
-        const directionChange = getDirectionChange(prevSegment, segment);
+      const costs = lineSegments.flatMap(segment => getSegmentCost(segment).costs);
+      const animationTimingFunction = costsToSomething(costs);
 
-        const didLiftPen = Number(separation > 0);
-        const didNotLiftPen = 1 - didLiftPen;
-
-        const penLiftCost = didLiftPen * PEN_LIFT_COST_S;
-        const directionChangeCost = didNotLiftPen * DIRECTION_CHANGE_COST_S * directionChange;
-
-        const delay = penLiftCost + directionChangeCost + separation / (drawSpeed * 2);
-
-        segmentData.push({
-          segment,
-          delay,
-          animationTimingFunction,
-        })
-      } else {
-        segmentData.push({
-          segment,
-          delay: 0,
-          animationTimingFunction,
-        })
-      }
+      lineData.push({
+        line: lines[i],
+        delay: i > 0 ? 0 : delay,
+        animationTimingFunction,
+      });
     }
 
-    return segmentData;
+    return lineData;
   }, [drawSpeed, path]);
 
   return (
-    segmentData.map(({
-      segment,
+    lineData.map(({
+      line,
       delay,
-      animationTimingFunction: { timingFunction, cost }
+      animationTimingFunction,
     }, index) => {
       return (
         <SelfDrawingSinglePath
           key={`single-path-${index}`}
-          path={segment}
+          path={line}
           paused={index > currentAnimationIndex}
           handleAnimationEnd={() => dispatch('increment')}
           className={className}
-          drawSpeed={drawSpeed / cost}
-          timingFunction={timingFunction}
+          drawSpeed={drawSpeed}
+          timingFunction={animationTimingFunction}
           delay={delay}
         />
       );
@@ -164,7 +188,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   paths,
   animate = 'final',
   className,
-  drawSpeed = 600,
+  drawSpeed = 100,
 }) => {
   return (
     <svg

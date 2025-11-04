@@ -3,6 +3,7 @@ import { ArcCommand, ArcRelativeCommand, ClosePathCommand, CubicBezierCommand, C
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 import { easeOutRational } from "./easingFunctions";
 import { dotProduct } from "./vector";
+import { lerp } from "./lerp";
 
 // Type guard functions for path commands
 export const isMoveToCommand = (command: PathCommand): command is MoveToCommand => command[0] === 'M';
@@ -44,7 +45,7 @@ export const pathToD = (path: PathCommand[]) => {
 // utilities for breaking up paths into individual curves and lines, making it possible to
 // produce a draw animation which adjusts its speed based on the curvature of the DrawCommand
 export type PathSegment<Cmd extends DrawCommand = DrawCommand> = [MoveToCommand, Cmd];
-export function breakUpPath(path: PathCommand[]): [MoveToCommand, DrawCommand][] {
+export function breakUpPath(path: PathCommand[]): PathSegment<DrawCommand>[] {
   const result: [MoveToCommand, DrawCommand][] = [];
   let currentX = 0;
   let currentY = 0;
@@ -81,6 +82,18 @@ export function breakUpPath(path: PathCommand[]): [MoveToCommand, DrawCommand][]
   }
 
   return result;
+}
+
+export function splitPathIntoLines(path: PathCommand[]) {
+  return path.reduce<PathCommand[][]>((lines, command) => {
+    if (isMoveToCommand(command) || isMoveToRelativeCommand(command)) {
+      lines.push([command]);
+    } else {
+      lines.at(-1)!.push(command);
+    }
+
+    return lines;
+  }, []);
 }
 
 export function getSeparation(from: PathSegment, to: PathSegment) {
@@ -435,70 +448,110 @@ function calculateQuadraticBezierDirection(
   return length > 0 ? [dx / length, dy / length] : [1, 0];
 }
 
-// represents cost of drawing a straight line and prevents division by 0
-const BASE_DRAW_COST = 1.0;
-// unweighted curvature is on [0, Infinity] but practically never exceeding [0, 10]
-const CURVATURE_WEIGHT = 10.0;
-// TODO: experiment w/4 vs 5 sections
-const N_SECTIONS = 4;
+// represents cost of drawing a straight line
+const BASE_DRAW_COST = 0.1;
+const N_SECTIONS = 20; // FIXME: something more reasonable
 const SECTION_WIDTH = 1 / N_SECTIONS;
 const HALF_SECTION_WIDTH = SECTION_WIDTH / 2;
 
-export function getSegmentCost(segment: PathSegment) {
+type SegmentCost = {
+  cost: number;
+  length: number;
+}
+// produce a cost on [0.0, 1.0]
+export function getSegmentCosts(segment: PathSegment): SegmentCost[] {
   const [, drawCmd] = segment;
 
+  const totalSegmentLength = getSegmentLength(segment);
+
   if (!isCurveCommand(drawCmd)) {
-    return { costs: [BASE_DRAW_COST], totalCost: BASE_DRAW_COST };
+    return [{ cost: BASE_DRAW_COST, length: totalSegmentLength }];
   }
 
-  let sectionStart = 0;
-  let totalCost = 0;
-  const costs: number[] = [];
+  const length = totalSegmentLength / N_SECTIONS;
 
+  let samplePoint = HALF_SECTION_WIDTH;
+  const costs: SegmentCost[] = [];
+
+  console.group('Getting segment costs');
   for (let i = 0; i < N_SECTIONS; i++) {
-    const samplePoint = sectionStart + HALF_SECTION_WIDTH;
-    const rawCurvature = getCurvature(segment as PathSegment<CurveCommand>, samplePoint);
-    const easedCurvature = easeOutRational(10, 5, rawCurvature);
-    const curvatureCost = CURVATURE_WEIGHT * easedCurvature;
-    const cost = BASE_DRAW_COST + curvatureCost;
+    // curvature is on [0, 1]
+    const curvature = getCurvature(segment as PathSegment<CurveCommand>, samplePoint);
+    const cost = easeOutRational(1, 0.5, curvature);
 
-    costs.push(cost);
+    costs.push({ cost, length });
 
-    totalCost += cost;
-    sectionStart += HALF_SECTION_WIDTH;
+    samplePoint += SECTION_WIDTH;
   }
 
-  return { costs, totalCost };
+  console.groupEnd();
+
+  return costs;
 }
 
-export function getAnimationTimingFunction(segment: PathSegment) {
-  const [, drawCmd] = segment;
+export function costsToSomething(costs: SegmentCost[]) {
+  const processedCosts: SegmentCost[] = [];
+  for (let i = 0; i < costs.length; i++) {
+    const { cost: currCost, length: currLength } = costs[i];
+    const { cost: nextCost = 0, length: nextLength = 0 } = costs[i + 1] ?? {};
 
-  if (!isCurveCommand(drawCmd)) {
-    return { timingFunction: 'linear', cost: 1.0 };
+    const length = (currLength + nextLength / 2);
+
+    const costDiff = Math.abs(nextCost - currCost);
+    const costMixed = lerp(costDiff, 1, BASE_DRAW_COST);
+    const processedCost = costMixed * length;
+
+    processedCosts.push({
+      cost: processedCost,
+      length,
+    });
   }
 
-  const { costs, totalCost } = getSegmentCost(segment);
+  let totalCost = 0;
+  let totalLength = 0;
+  for (const { cost, length } of processedCosts) {
+    totalCost += cost;
+    totalLength += length;
+  }
 
   let cumulativeRelativeCost = 0;
   let progress = 0;
-  let timingFunction = 'linear(0 0%';
+  let timingFunction = 'linear(0';
 
-  for (let i = 0; i < costs.length - 1; i++) {
-    cumulativeRelativeCost += costs[i] / totalCost;
-    progress += SECTION_WIDTH;
+  for (const diff of processedCosts) {
+    cumulativeRelativeCost += diff.cost / totalCost;
+    progress += diff.length / totalLength;
 
-    timingFunction += `, ${progress} ${Math.round(cumulativeRelativeCost * 100)}%`;
+    timingFunction += `, ${progress} ${cumulativeRelativeCost * 100}%`;
   }
 
-  timingFunction += ', 1 100%)';
+  timingFunction += ', 1)';
 
-  const totalRelativeCost = totalCost / (costs.length * BASE_DRAW_COST);
+  return timingFunction;
+}
 
-  return {
-    timingFunction,
-    cost: totalRelativeCost,
-  };
+export function getSegmentLength(segment: PathSegment<DrawCommand>) {
+  const tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  tempPath.setAttribute('d', pathToD(segment));
+
+  return tempPath.getTotalLength();
+}
+
+export function getSegmentLengths(segments: PathSegment<DrawCommand>[]) {
+  return segments.map(getSegmentLength);
+}
+
+export function createSegmentGapDasharray(
+  segments: PathSegment<DrawCommand>[],
+  gapSize: number = 3
+): string {
+  const segmentLengths = getSegmentLengths(segments);
+
+  const dashArray = segmentLengths
+    .map(length => `${length} ${gapSize}`)
+    .join(' ');
+
+  return dashArray;
 }
 
 export function renderPathCommandsToSvg(paths: Path[], dimensions: CanvasDimensions, scale = 1): string {
