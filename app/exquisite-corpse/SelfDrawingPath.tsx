@@ -2,7 +2,7 @@ import { FC, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import clsx from "clsx";
 import { DrawCommand, Path, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
-import { breakUpPath, getAnimationTimingFunction, pathToD, getSeparation, getDirectionChange, splitPathIntoLines, PathSegment, getSegmentCost, costsToSomething } from "../utils/svg";
+import { breakUpPath, pathToD, getSeparation, getDirectionChange, splitPathIntoLines, PathSegment, getSegmentCosts, getAnimationTimingFunction } from "../utils/svg";
 
 const PEN_LIFT_COST_S = 0.075;
 const DIRECTION_CHANGE_COST_S = 0.05;
@@ -33,7 +33,7 @@ function getInterLineDelay(
   const penLiftCost = didLiftPen * PEN_LIFT_COST_S;
   const directionChangeCost = didNotLiftPen * DIRECTION_CHANGE_COST_S * directionChange;
 
-  const delay = penLiftCost + directionChangeCost + separation / (drawSpeed * 2);
+  return penLiftCost + directionChangeCost + separation / drawSpeed;
 }
 
 // Custom hook for path length
@@ -119,20 +119,15 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
     }
   }, 0);
 
-  const lineData = useMemo(() => {
-    // split path into lines
+  const [lineData, setLineData] = useState<Array<{
+    line: PathCommand[];
+    delay: number;
+    animationTimingFunction: string
+  }>>([]);
+
+  useEffect(() => {
     const lines = splitPathIntoLines(path);
-    // split each line into segments
     const linesAsSegments = lines.map(breakUpPath);
-    /**
-     * for each line:
-     *   produce a delay (excepting the first)
-     *   calculate costs w/breakUpPath, internals of getAnimationTimingFunction
-     *   ensure costs work both intra- and inter-line
-     *   use costs as a modifier for acceleration
-     *   produce animation timing function w/physical metaphor, accelerating from 0 and decelerating to min for cost > 1
-     *   rely on css linear() for smoothing
-     */
 
     const lineData = [];
     for (let i = 0; i < linesAsSegments.length; i++) {
@@ -141,8 +136,8 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
 
       const delay = getInterLineDelay(lineSegments, prevLineSegments, drawSpeed);
 
-      const costs = lineSegments.flatMap(segment => getSegmentCost(segment).costs);
-      const animationTimingFunction = costsToSomething(costs);
+      const costs = lineSegments.flatMap(segment => getSegmentCosts(segment));
+      const animationTimingFunction = getAnimationTimingFunction(costs);
 
       lineData.push({
         line: lines[i],
@@ -151,7 +146,7 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
       });
     }
 
-    return lineData;
+    setLineData(lineData);
   }, [drawSpeed, path]);
 
   return (
@@ -188,7 +183,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   paths,
   animate = 'final',
   className,
-  drawSpeed = 100,
+  drawSpeed = 300,
 }) => {
   return (
     <svg

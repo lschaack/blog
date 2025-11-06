@@ -31,15 +31,31 @@ export const easeOutPow = curry(
 
 export const easeOutPowIntegral = curry(
   (elbow: number, time: number) => time + Math.pow(1 - time, elbow + 1) / (elbow + 1)
-)
+);
 
 export const easeOutPowInverse = curry(
   (elbow: number, factor: number) => 1 - Math.pow(1 - factor, 1 / elbow)
-)
+);
 
 export const easeOutRational = curry(
   (max: number, steepness: number, t: number) => max * t / (t + steepness)
-)
+);
+
+export const easeOutRationalKnee = curry(
+  (knee: number, t: number) => (1 + knee) * t / (t + knee)
+);
+
+export const linearWindow = curry(
+  (boundary: number, t: number) => (
+    t <= boundary ? 1 - t / boundary :
+      t >= (1 - boundary) ? (t / (1 - boundary)) :
+        0
+  )
+);
+
+export const exponentialWindow = curry(
+  (steepness: number, t: number) => Math.pow(2 * t - 1, 2 * steepness)
+);
 
 export const springInPlace = curry(
   (bounces: number, time: number) => (1 - time) * Math.sin(bounces * Math.PI * time)

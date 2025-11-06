@@ -1,7 +1,7 @@
 import { ArcCommand, ArcRelativeCommand, ClosePathCommand, CubicBezierCommand, CubicBezierRelativeCommand, CurveCommand, DrawCommand, HorizontalLineToCommand, HorizontalLineToRelativeCommand, LineToCommand, LineToRelativeCommand, MoveToCommand, MoveToRelativeCommand, Path, PathCommand, QuadraticBezierCommand, QuadraticBezierRelativeCommand, SmoothCubicBezierCommand, SmoothCubicBezierRelativeCommand, SmoothQuadraticBezierCommand, SmoothQuadraticBezierRelativeCommand, VerticalLineToCommand, VerticalLineToRelativeCommand } from "parse-svg-path";
 
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
-import { easeOutRational } from "./easingFunctions";
+import { easeOutRational, exponentialWindow } from "./easingFunctions";
 import { dotProduct } from "./vector";
 import { lerp } from "./lerp";
 
@@ -448,9 +448,7 @@ function calculateQuadraticBezierDirection(
   return length > 0 ? [dx / length, dy / length] : [1, 0];
 }
 
-// represents cost of drawing a straight line
-const BASE_DRAW_COST = 0.1;
-const N_SECTIONS = 20; // FIXME: something more reasonable
+const N_SECTIONS = 11; // TODO: find a more objective way to compare different values
 const SECTION_WIDTH = 1 / N_SECTIONS;
 const HALF_SECTION_WIDTH = SECTION_WIDTH / 2;
 
@@ -465,7 +463,7 @@ export function getSegmentCosts(segment: PathSegment): SegmentCost[] {
   const totalSegmentLength = getSegmentLength(segment);
 
   if (!isCurveCommand(drawCmd)) {
-    return [{ cost: BASE_DRAW_COST, length: totalSegmentLength }];
+    return [{ cost: 0, length: totalSegmentLength }];
   }
 
   const length = totalSegmentLength / N_SECTIONS;
@@ -473,7 +471,6 @@ export function getSegmentCosts(segment: PathSegment): SegmentCost[] {
   let samplePoint = HALF_SECTION_WIDTH;
   const costs: SegmentCost[] = [];
 
-  console.group('Getting segment costs');
   for (let i = 0; i < N_SECTIONS; i++) {
     // curvature is on [0, 1]
     const curvature = getCurvature(segment as PathSegment<CurveCommand>, samplePoint);
@@ -484,21 +481,32 @@ export function getSegmentCosts(segment: PathSegment): SegmentCost[] {
     samplePoint += SECTION_WIDTH;
   }
 
-  console.groupEnd();
 
   return costs;
 }
 
-export function costsToSomething(costs: SegmentCost[]) {
+const CURVE_COST_WEIGHT = 0.9;
+const EDGE_COST_WEIGHT = 0.2;
+const BASE_EDGE_COST = 1.0;
+
+export function getAnimationTimingFunction(costs: SegmentCost[]) {
   const processedCosts: SegmentCost[] = [];
+
   for (let i = 0; i < costs.length; i++) {
     const { cost: currCost, length: currLength } = costs[i];
     const { cost: nextCost = 0, length: nextLength = 0 } = costs[i + 1] ?? {};
 
     const length = (currLength + nextLength / 2);
 
+    const normIndex = i / (costs.length - 1);
+    const edgeCost = exponentialWindow(5, normIndex) * BASE_EDGE_COST;
+
     const costDiff = Math.abs(nextCost - currCost);
-    const costMixed = lerp(costDiff, 1, BASE_DRAW_COST);
+    const costMixed = lerp(
+      lerp(1, costDiff, CURVE_COST_WEIGHT),
+      edgeCost,
+      EDGE_COST_WEIGHT,
+    );
     const processedCost = costMixed * length;
 
     processedCosts.push({
