@@ -113,11 +113,13 @@ type SelfDrawingPathProps = {
   path: Path;
   className?: string;
   drawSpeed: number;
+  enableMarkers?: boolean;
 }
 const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
   path,
   className,
   drawSpeed,
+  enableMarkers = false,
 }) => {
   const [currentAnimationIndex, dispatch] = useReducer<number, [PathAnimationEvent]>((index, type) => {
     switch (type) {
@@ -173,6 +175,7 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
           drawSpeed={drawSpeed}
           timingFunction={animationTimingFunction}
           delay={delay}
+          enableMarkers={enableMarkers}
         />
       );
     })
@@ -213,6 +216,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
               key={`path-${index}`}
               path={path}
               drawSpeed={drawSpeed}
+              enableMarkers={enableMarkers}
             />
           ) : (
             <path
