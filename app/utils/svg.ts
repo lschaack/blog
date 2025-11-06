@@ -448,9 +448,8 @@ function calculateQuadraticBezierDirection(
   return length > 0 ? [dx / length, dy / length] : [1, 0];
 }
 
-const N_SECTIONS = 11; // TODO: find a more objective way to compare different values
-const SECTION_WIDTH = 1 / N_SECTIONS;
-const HALF_SECTION_WIDTH = SECTION_WIDTH / 2;
+const N_SECTIONS = 20;
+const SECTION_WIDTH = 1 / (N_SECTIONS - 1);
 
 type SegmentCost = {
   cost: number;
@@ -468,12 +467,13 @@ export function getSegmentCosts(segment: PathSegment): SegmentCost[] {
 
   const length = totalSegmentLength / N_SECTIONS;
 
-  let samplePoint = HALF_SECTION_WIDTH;
+  let samplePoint = 0;
   const costs: SegmentCost[] = [];
 
   for (let i = 0; i < N_SECTIONS; i++) {
     // curvature is on [0, 1]
     const curvature = getCurvature(segment as PathSegment<CurveCommand>, samplePoint);
+    // apply easing to sort of zoom in on the middle values of curvature
     const cost = easeOutRational(1, 0.5, curvature);
 
     costs.push({ cost, length });
@@ -485,29 +485,42 @@ export function getSegmentCosts(segment: PathSegment): SegmentCost[] {
   return costs;
 }
 
+const BASE_COST = 1.0;
+const LENGTH_COST_WEIGHT = 0.1;
 const CURVE_COST_WEIGHT = 0.9;
-const EDGE_COST_WEIGHT = 0.2;
+const EDGE_COST_WEIGHT = 0.1;
 const BASE_EDGE_COST = 1.0;
 
 export function getAnimationTimingFunction(costs: SegmentCost[]) {
   const processedCosts: SegmentCost[] = [];
+
+  const maxLength = Math.max(...costs.map(({ length }) => length));
 
   for (let i = 0; i < costs.length; i++) {
     const { cost: currCost, length: currLength } = costs[i];
     const { cost: nextCost = 0, length: nextLength = 0 } = costs[i + 1] ?? {};
 
     const length = (currLength + nextLength / 2);
+    const normLength = length / maxLength;
 
     const normIndex = i / (costs.length - 1);
     const edgeCost = exponentialWindow(5, normIndex) * BASE_EDGE_COST;
 
     const costDiff = Math.abs(nextCost - currCost);
     const costMixed = lerp(
-      lerp(1, costDiff, CURVE_COST_WEIGHT),
+      lerp(
+        lerp(
+          BASE_COST,
+          costDiff,
+          CURVE_COST_WEIGHT,
+        ),
+        normLength,
+        LENGTH_COST_WEIGHT,
+      ),
       edgeCost,
       EDGE_COST_WEIGHT,
     );
-    const processedCost = costMixed * length;
+    const processedCost = costMixed;
 
     processedCosts.push({
       cost: processedCost,

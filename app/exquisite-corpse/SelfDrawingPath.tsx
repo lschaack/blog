@@ -4,8 +4,8 @@ import { DrawCommand, Path, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 import { breakUpPath, pathToD, getSeparation, getDirectionChange, splitPathIntoLines, PathSegment, getSegmentCosts, getAnimationTimingFunction } from "../utils/svg";
 
-const PEN_LIFT_COST_S = 0.075;
-const DIRECTION_CHANGE_COST_S = 0.05;
+const PEN_LIFT_COST_S = 0.02;
+const DIRECTION_CHANGE_COST_S = 0.01;
 
 function getInterLineDelay(
   prevLine: Array<PathSegment<DrawCommand>> | undefined,
@@ -33,7 +33,7 @@ function getInterLineDelay(
   const penLiftCost = didLiftPen * PEN_LIFT_COST_S;
   const directionChangeCost = didNotLiftPen * DIRECTION_CHANGE_COST_S * directionChange;
 
-  return penLiftCost + directionChangeCost + separation / drawSpeed;
+  return penLiftCost + directionChangeCost + separation / (drawSpeed * 10);
 }
 
 // Custom hook for path length
@@ -149,7 +149,7 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
 
       lineData.push({
         line: lines[i],
-        delay: i > 0 ? 0 : delay,
+        delay,
         animationTimingFunction,
       });
     }
@@ -191,7 +191,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   paths,
   animate = 'final',
   className,
-  drawSpeed = 300,
+  drawSpeed = 600,
 }) => {
   return (
     <svg
