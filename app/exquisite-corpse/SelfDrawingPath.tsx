@@ -192,7 +192,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   paths,
   animate = 'final',
   className,
-  drawSpeed = 600,
+  drawSpeed = 400,
   enableMarkers = false,
 }) => {
   return (
