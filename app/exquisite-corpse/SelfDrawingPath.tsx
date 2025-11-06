@@ -185,6 +185,7 @@ type SelfDrawingSketchProps = {
   animate?: 'all' | 'final';
   className?: string;
   drawSpeed?: number;
+  enableMarkers?: boolean;
 };
 export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   dimensions: { width, height },
@@ -192,6 +193,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   animate = 'final',
   className,
   drawSpeed = 600,
+  enableMarkers = false,
 }) => {
   return (
     <svg
@@ -216,9 +218,11 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
             <path
               key={`path-${index}`}
               d={pathToD(path)}
-              markerStart="url(#dot)"
-              markerMid="url(#dot)"
-              markerEnd="url(#dot)"
+              {...(enableMarkers ? {
+                markerStart: "url(#dot)",
+                markerMid: "url(#dot)",
+                markerEnd: "url(#dot)"
+              } : {})}
             />
           )
         ))}
