@@ -59,6 +59,7 @@ type SelfDrawingSinglePathProps = Omit<SelfDrawingPathProps, 'path'> & {
   handleAnimationEnd: () => void;
   timingFunction?: string;
   delay?: number;
+  enableMarkers?: boolean;
 };
 const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
   path,
@@ -68,6 +69,7 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
   drawSpeed,
   timingFunction = 'ease',
   delay = 0,
+  enableMarkers = false,
 }) => {
   const [pathRef, rawPathLength] = usePathLength();
   const pathLength = rawPathLength ?? 0;
@@ -94,6 +96,12 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
           ? `draw ${rawDuration}s ${timingFunction} ${delay}s forwards`
           : 'unset',
       }}
+      {...(enableMarkers ? {
+        markerStart: "url(#dot)",
+        markerMid: "url(#dot)",
+        markerEnd: "url(#dot)"
+      } : {}
+      )}
     />
   );
 }
@@ -191,6 +199,11 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
       viewBox={`0 0 ${width} ${height}`}
       className={className}
     >
+      <defs>
+        <marker id="dot" markerWidth="8" markerHeight="8" refX="4" refY="4">
+          <circle cx="4" cy="4" r="2" fill="#657E95" />
+        </marker>
+      </defs>
       <g strokeLinecap="round" strokeWidth={2} stroke="#000">
         {paths.map((path, index) => (
           animate === 'all' || index === paths.length - 1 ? (
@@ -203,6 +216,9 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
             <path
               key={`path-${index}`}
               d={pathToD(path)}
+              markerStart="url(#dot)"
+              markerMid="url(#dot)"
+              markerEnd="url(#dot)"
             />
           )
         ))}
