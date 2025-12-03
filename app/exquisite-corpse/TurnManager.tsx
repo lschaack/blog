@@ -85,7 +85,7 @@ export const TurnManager = <Turn extends BaseTurn>({
       </div>
 
       <div>
-        <div className="flex gap-4 items-end justify-between pb-1.5">
+        <div className="flex gap-4 items-end justify-between pb-1.5 select-none">
           <SmoothingSelector
             value={smoothing}
             onChange={setSmoothing}

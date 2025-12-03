@@ -4,6 +4,7 @@ import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 import { easeOutRational, exponentialWindow } from "./easingFunctions";
 import { dotProduct } from "./vector";
 import { lerp } from "./lerp";
+import { logTuningReport } from "./stats";
 
 // Type guard functions for path commands
 export const isMoveToCommand = (command: PathCommand): command is MoveToCommand => command[0] === 'M';
@@ -232,9 +233,9 @@ const CURVE_COMMANDS = new Set<CurveCommand[0]>(
   Object.keys(CMD_TO_GET_CURVATURE) as CurveCommand[0][]
 );
 
-export function getCurvature(segment: PathSegment<CurveCommand>, t: number): number {
+export function getCurvature(segment: PathSegment<DrawCommand>, t: number): number {
   if (t < 0 || t > 1) {
-    console.error(`Cannot calculate curvature at ${t} outside of [0, 1]. Using clamped value.`)
+    console.warn(`Cannot calculate curvature at ${t} outside of [0, 1]. Using clamped value.`)
   }
 
   t = Math.max(0, Math.min(1, t));
@@ -242,12 +243,12 @@ export function getCurvature(segment: PathSegment<CurveCommand>, t: number): num
   const cmd = segment[1][0];
 
   if (!isCurveCommand(segment[1])) {
-    console.error(`Cannot calculate curvature for command type "${cmd}"`);
+    console.warn(`Cannot calculate curvature for command type "${cmd}"`);
 
     return 0;
   }
 
-  return CMD_TO_GET_CURVATURE[cmd](segment, t);
+  return CMD_TO_GET_CURVATURE[cmd as CurveCommand[0]](segment, t);
 }
 
 function calculateCubicBezierCurvature(
@@ -481,7 +482,6 @@ export function getSegmentCosts(segment: PathSegment): SegmentCost[] {
     samplePoint += SECTION_WIDTH;
   }
 
-
   return costs;
 }
 
@@ -491,8 +491,75 @@ const CURVE_COST_WEIGHT = 0.9;
 const EDGE_COST_WEIGHT = 0.1;
 const BASE_EDGE_COST = 1.0;
 
-export function getAnimationTimingFunction(costs: SegmentCost[]) {
+// FIXME: this is horribly slow, do binary search
+function getSegmentIndexFromPosition(segmentLengths: number[], position: number) {
+  let cumulativeLength = 0;
+  let currentSegmentIndex = 0;
+
+  while (position >= currentSegmentIndex && currentSegmentIndex < segmentLengths.length) {
+    const prevCumulativeLength = cumulativeLength;
+    const segmentLength = segmentLengths[currentSegmentIndex];
+    cumulativeLength += segmentLengths[currentSegmentIndex];
+
+    if (position <= cumulativeLength) {
+      return {
+        index: currentSegmentIndex,
+        relativePosition: (position - prevCumulativeLength) / segmentLength,
+      }
+    }
+
+    currentSegmentIndex += 1;
+  }
+
+  throw new Error(`Position ${position} is outside total available length ${cumulativeLength}`);
+}
+
+const BASE_STEP = 10;
+
+function sampleLineCurvature(line: Array<PathSegment<DrawCommand>>) {
+  const lengths = getSegmentLengths(line);
+  const totalLength = lengths.reduce((a, b) => a + b);
+  const samples: Array<{ curvature: number; position: number }> = [];
+  let position = 0;
+
+  while (position <= totalLength) {
+    // sample line at pos using getCurvature (need to norm pos as portion of segment length)
+    const { index, relativePosition } = getSegmentIndexFromPosition(lengths, position);
+    const curvature = getCurvature(line[index], relativePosition);
+
+    samples.push({ curvature, position });
+    // use curvature and segment length to update pos for next sample
+    const step = BASE_STEP / Math.max(BASE_STEP * curvature, 1);
+    position += step;
+  }
+
+  return samples;
+}
+
+export function getAnimationTimingFunction(line: Array<PathSegment<DrawCommand>>) {
+  /**
+   * SO:
+   * - Get costs w/adaptive algorithm, grabbing denser samples in areas of high curvature
+   *   - starting at first point on line:
+   *   - sample curvature, create cost
+   *   - choose next sample position based on curvature & length
+   *   - !!! return sample points so I can render them
+   */
+  const costs = line.flatMap(segment => getSegmentCosts(segment));
+
   const processedCosts: SegmentCost[] = [];
+
+  //const costs: SegmentCost[] = [];
+  //let currCost = rawCosts[0].cost;
+  //costs.push(rawCosts[0]);
+  //
+  //for (let i = 1; i < rawCosts.length; i++) {
+  //  const rawCost = rawCosts[i];
+  //  currCost = lerp(currCost, rawCost.cost, 0.25);
+  //  costs.push({ ...rawCost, cost: currCost });
+  //}
+
+  logTuningReport(costs.map(({ cost }) => cost), 'cost');
 
   const maxLength = Math.max(...costs.map(({ length }) => length));
 

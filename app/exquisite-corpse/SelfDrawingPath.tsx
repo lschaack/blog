@@ -146,8 +146,7 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
 
       const delay = getInterLineDelay(lineSegments, prevLineSegments, drawSpeed);
 
-      const costs = lineSegments.flatMap(segment => getSegmentCosts(segment));
-      const animationTimingFunction = getAnimationTimingFunction(costs);
+      const animationTimingFunction = getAnimationTimingFunction(lineSegments);
 
       lineData.push({
         line: lines[i],
@@ -196,7 +195,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   animate = 'final',
   className,
   drawSpeed = 400,
-  enableMarkers = false,
+  enableMarkers = true,
 }) => {
   return (
     <svg
