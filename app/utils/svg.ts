@@ -5,6 +5,7 @@ import { easeOutRational, exponentialWindow } from "./easingFunctions";
 import { dotProduct } from "./vector";
 import { lerp } from "./lerp";
 import { logTuningReport } from "./stats";
+import { findMaxCurvaturePointsWithValues } from "./findMaxCurvature";
 
 // Type guard functions for path commands
 export const isMoveToCommand = (command: PathCommand): command is MoveToCommand => command[0] === 'M';
@@ -457,165 +458,140 @@ type SegmentCost = {
   length: number;
 }
 // produce a cost on [0.0, 1.0]
-export function getSegmentCosts(segment: PathSegment): SegmentCost[] {
-  const [, drawCmd] = segment;
-
-  const totalSegmentLength = getSegmentLength(segment);
+export function getCurvatureSamples(segment: PathSegment) {
+  const [moveCmd, drawCmd] = segment;
 
   if (!isCurveCommand(drawCmd)) {
-    return [{ cost: 0, length: totalSegmentLength }];
+    return [{ curvature: 0, t: 0 }, { curvature: 0, t: 1 }];
   }
 
-  const length = totalSegmentLength / N_SECTIONS;
+  // TODO: avoid like the fourth variation on a Point type in this codebase.........
+  const [p0x, p0y] = moveCmd.slice(1) as number[];
+  const [p1x, p1y, p2x, p2y, p3x, p3y] = drawCmd.slice(1) as number[];
+  // find the points at which curvature is maximized (thanks for the math, Claude)
+  const maxima = findMaxCurvaturePointsWithValues(
+    { x: p0x, y: p0y },
+    { x: p1x, y: p1y },
+    { x: p2x, y: p2y },
+    { x: p3x, y: p3y },
+  );
 
-  let samplePoint = 0;
-  const costs: SegmentCost[] = [];
+  // subdivide to ensure good coverage of straight sections in addition to curved sections
+  const subdivideCurvatures = (curvatures: Array<{ curvature: number, t: number }>) => {
+    const subdivided = [];
 
-  for (let i = 0; i < N_SECTIONS; i++) {
-    // curvature is on [0, 1]
-    const curvature = getCurvature(segment as PathSegment<CurveCommand>, samplePoint);
-    // apply easing to sort of zoom in on the middle values of curvature
-    const cost = easeOutRational(1, 0.5, curvature);
+    for (let i = 0; i < curvatures.length; i++) {
+      const currCurvature = curvatures[i];
+      const nextCurvature = curvatures[i + 1];
 
-    costs.push({ cost, length });
+      subdivided.push(currCurvature);
 
-    samplePoint += SECTION_WIDTH;
-  }
+      if (nextCurvature) {
+        const midpoint = (currCurvature.t + nextCurvature.t) / 2;
+        const midpointCurvature = getCurvature(segment as PathSegment<CurveCommand>, midpoint);
 
-  return costs;
-}
-
-const BASE_COST = 1.0;
-const LENGTH_COST_WEIGHT = 0.1;
-const CURVE_COST_WEIGHT = 0.9;
-const EDGE_COST_WEIGHT = 0.1;
-const BASE_EDGE_COST = 1.0;
-
-// FIXME: this is horribly slow, do binary search
-function getSegmentIndexFromPosition(segmentLengths: number[], position: number) {
-  let cumulativeLength = 0;
-  let currentSegmentIndex = 0;
-
-  while (position >= currentSegmentIndex && currentSegmentIndex < segmentLengths.length) {
-    const prevCumulativeLength = cumulativeLength;
-    const segmentLength = segmentLengths[currentSegmentIndex];
-    cumulativeLength += segmentLengths[currentSegmentIndex];
-
-    if (position <= cumulativeLength) {
-      return {
-        index: currentSegmentIndex,
-        relativePosition: (position - prevCumulativeLength) / segmentLength,
+        subdivided.push({ curvature: midpointCurvature, t: midpoint });
       }
     }
 
-    currentSegmentIndex += 1;
+    return subdivided;
   }
 
-  throw new Error(`Position ${position} is outside total available length ${cumulativeLength}`);
-}
+  const startCurvature = getCurvature(segment as PathSegment<CurveCommand>, 0);
+  const endCurvature = getCurvature(segment as PathSegment<CurveCommand>, 1);
 
-const BASE_STEP = 10;
+  const curvatures = [
+    { curvature: startCurvature, t: 0 },
+    ...maxima,
+    { curvature: endCurvature, t: 1 },
+  ];
 
-function sampleLineCurvature(line: Array<PathSegment<DrawCommand>>) {
-  const lengths = getSegmentLengths(line);
-  const totalLength = lengths.reduce((a, b) => a + b);
-  const samples: Array<{ curvature: number; position: number }> = [];
-  let position = 0;
+  const subdivided = subdivideCurvatures(curvatures);
+  const sububdivivided = subdivideCurvatures(subdivided);
 
-  while (position <= totalLength) {
-    // sample line at pos using getCurvature (need to norm pos as portion of segment length)
-    const { index, relativePosition } = getSegmentIndexFromPosition(lengths, position);
-    const curvature = getCurvature(line[index], relativePosition);
-
-    samples.push({ curvature, position });
-    // use curvature and segment length to update pos for next sample
-    const step = BASE_STEP / Math.max(BASE_STEP * curvature, 1);
-    position += step;
-  }
-
-  return samples;
+  return sububdivivided;
 }
 
 export function getAnimationTimingFunction(line: Array<PathSegment<DrawCommand>>) {
-  /**
-   * SO:
-   * - Get costs w/adaptive algorithm, grabbing denser samples in areas of high curvature
-   *   - starting at first point on line:
-   *   - sample curvature, create cost
-   *   - choose next sample position based on curvature & length
-   *   - !!! return sample points so I can render them
-   */
-  const costs = line.flatMap(segment => getSegmentCosts(segment));
+  // TODO: render sample points?
+  const samplesPerSegment = line.map(getCurvatureSamples);
+  const lengths = line.map(getSegmentLength);
+  const totalLength = lengths.reduce((a, b) => a + b);
 
-  const processedCosts: SegmentCost[] = [];
+  // create a normalized t for every sample
+  // for each set of samples:
+  // - get the t within the segment
+  // - use that to find the overall t:
+  //   (progress + {segment length} * {sample t}) / totalLength
 
-  //const costs: SegmentCost[] = [];
-  //let currCost = rawCosts[0].cost;
-  //costs.push(rawCosts[0]);
-  //
-  //for (let i = 1; i < rawCosts.length; i++) {
-  //  const rawCost = rawCosts[i];
-  //  currCost = lerp(currCost, rawCost.cost, 0.25);
-  //  costs.push({ ...rawCost, cost: currCost });
-  //}
+  let position = 0;
+  const normSamples = [];
+  for (let i = 0; i < samplesPerSegment.length; i++) {
+    let prevT = 0;
 
-  logTuningReport(costs.map(({ cost }) => cost), 'cost');
+    for (const sample of samplesPerSegment[i]) {
+      position += (sample.t - prevT) * lengths[i];
+      prevT = sample.t;
+      normSamples.push({ curvature: sample.curvature, t: position / totalLength });
+    }
+  }
 
-  const maxLength = Math.max(...costs.map(({ length }) => length));
+  // TODO: use avg curvature + total length to make curvier lines draw for longer?
+  // ^ currently only using total length
+  //const avgCurvature = normSamples.reduce((total, s) => total + s.curvature, 0) / normSamples.length;
 
-  for (let i = 0; i < costs.length; i++) {
-    const { cost: currCost, length: currLength } = costs[i];
-    const { cost: nextCost = 0, length: nextLength = 0 } = costs[i + 1] ?? {};
+  const progress = [0];
+  const speeds = [];
 
-    const length = (currLength + nextLength / 2);
-    const normLength = length / maxLength;
+  for (let i = 1; i < normSamples.length; i++) {
+    const sample = normSamples[i];
+    const prevSample = normSamples[i - 1];
 
-    const normIndex = i / (costs.length - 1);
-    const edgeCost = exponentialWindow(5, normIndex) * BASE_EDGE_COST;
-
-    const costDiff = Math.abs(nextCost - currCost);
-    const costMixed = lerp(
-      lerp(
-        lerp(
-          BASE_COST,
-          costDiff,
-          CURVE_COST_WEIGHT,
-        ),
-        normLength,
-        LENGTH_COST_WEIGHT,
-      ),
-      edgeCost,
-      EDGE_COST_WEIGHT,
+    const dt = sample.t - prevSample.t;
+    // trapezoidal integration
+    const avgCurvature = (prevSample.curvature + sample.curvature) / 2;
+    // invert curvature, avoid division by 0
+    const speed = 1 / Math.max(
+      Math.pow(avgCurvature, 1),
+      0.000001
     );
-    const processedCost = costMixed;
 
-    processedCosts.push({
-      cost: processedCost,
-      length,
-    });
+    speeds.push(speed);
+    progress.push(progress[i - 1] + speed * dt);
+    if (progress[i - 1] > progress[i]) {
+      debugger;
+    }
   }
 
-  let totalCost = 0;
-  let totalLength = 0;
-  for (const { cost, length } of processedCosts) {
-    totalCost += cost;
-    totalLength += length;
+  logTuningReport(speeds, 'speed');
+
+  const totalProgress = progress.at(-1)!;
+  const normProgress = progress.map(progress => progress / totalProgress);
+
+  let animationTimingFunction = 'linear(';
+
+  for (let i = 0; i < normSamples.length; i++) {
+    const outputProgress = normProgress[i];
+    const inputPercent = normSamples[i].t * 100;
+
+    /**
+     * SO:
+     * - output progress refers to position in place
+     * - input percentage refers to position in time
+     * - I need output progress to directly reflect overall t
+     * - input percentage can vary based on speed
+     * - I can potentially just swap these?
+     */
+    animationTimingFunction += `${outputProgress.toFixed(4)} ${inputPercent.toFixed(2)}%`;
+
+    if (i < normSamples.length - 1) {
+      animationTimingFunction += ', ';
+    }
   }
 
-  let cumulativeRelativeCost = 0;
-  let progress = 0;
-  let timingFunction = 'linear(0';
+  animationTimingFunction += ')';
 
-  for (const diff of processedCosts) {
-    cumulativeRelativeCost += diff.cost / totalCost;
-    progress += diff.length / totalLength;
-
-    timingFunction += `, ${progress} ${cumulativeRelativeCost * 100}%`;
-  }
-
-  timingFunction += ', 1)';
-
-  return timingFunction;
+  return animationTimingFunction;
 }
 
 export function getSegmentLength(segment: PathSegment<DrawCommand>) {
