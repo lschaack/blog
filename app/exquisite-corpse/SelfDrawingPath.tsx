@@ -2,7 +2,7 @@ import { FC, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import clsx from "clsx";
 import { DrawCommand, Path, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
-import { breakUpPath, pathToD, getSeparation, getDirectionChange, splitPathIntoLines, PathSegment, getCurvatureSamples, getAnimationTimingFunction } from "../utils/svg";
+import { breakUpPath, pathToD, getSeparation, getDirectionChange, splitPathIntoLines, PathSegment, getAnimationTimingFunction } from "../utils/svg";
 
 const PEN_LIFT_COST_S = 0.02;
 const DIRECTION_CHANGE_COST_S = 0.01;
@@ -146,7 +146,6 @@ const SelfDrawingPath: FC<SelfDrawingPathProps> = ({
 
       const delay = getInterLineDelay(lineSegments, prevLineSegments, drawSpeed);
 
-      // FIXME: lines with higher avg curvature should take longer to draw
       const animationTimingFunction = getAnimationTimingFunction(lineSegments);
 
       lineData.push({
@@ -196,7 +195,7 @@ export const SelfDrawingSketch: FC<SelfDrawingSketchProps> = ({
   animate = 'final',
   className,
   drawSpeed = 400,
-  enableMarkers = true,
+  enableMarkers = false,
 }) => {
   return (
     <svg

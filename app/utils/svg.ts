@@ -1,9 +1,8 @@
 import { ArcCommand, ArcRelativeCommand, ClosePathCommand, CubicBezierCommand, CubicBezierRelativeCommand, CurveCommand, DrawCommand, HorizontalLineToCommand, HorizontalLineToRelativeCommand, LineToCommand, LineToRelativeCommand, MoveToCommand, MoveToRelativeCommand, Path, PathCommand, QuadraticBezierCommand, QuadraticBezierRelativeCommand, SmoothCubicBezierCommand, SmoothCubicBezierRelativeCommand, SmoothQuadraticBezierCommand, SmoothQuadraticBezierRelativeCommand, VerticalLineToCommand, VerticalLineToRelativeCommand } from "parse-svg-path";
 
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
-import { easeOutRational, exponentialWindow } from "./easingFunctions";
+import { easeOutRational } from "./easingFunctions";
 import { dotProduct } from "./vector";
-import { lerp } from "./lerp";
 import { logTuningReport } from "./stats";
 import { findMaxCurvaturePointsWithValues } from "./findMaxCurvature";
 
@@ -450,14 +449,6 @@ function calculateQuadraticBezierDirection(
   return length > 0 ? [dx / length, dy / length] : [1, 0];
 }
 
-const N_SECTIONS = 20;
-const SECTION_WIDTH = 1 / (N_SECTIONS - 1);
-
-type SegmentCost = {
-  cost: number;
-  length: number;
-}
-// produce a cost on [0.0, 1.0]
 export function getCurvatureSamples(segment: PathSegment) {
   const [moveCmd, drawCmd] = segment;
 
@@ -497,19 +488,23 @@ export function getCurvatureSamples(segment: PathSegment) {
     return subdivided;
   }
 
-  const startCurvature = getCurvature(segment as PathSegment<CurveCommand>, 0);
-  const endCurvature = getCurvature(segment as PathSegment<CurveCommand>, 1);
+  // curvature at the true start/end of each segment is often unreasonably high,
+  // so choose areas near the start/end and sort in case the actual maxima come
+  // before the near-start point or after the near-end point
+  const startCurvature = getCurvature(segment as PathSegment<CurveCommand>, 0.1);
+  const endCurvature = getCurvature(segment as PathSegment<CurveCommand>, 0.9);
 
   const curvatures = [
     { curvature: startCurvature, t: 0 },
     ...maxima,
     { curvature: endCurvature, t: 1 },
-  ];
+  ].sort(({ t: tA }, { t: tB }) => tA - tB);
 
   const subdivided = subdivideCurvatures(curvatures);
   const sububdivivided = subdivideCurvatures(subdivided);
+  const subububdivivivided = subdivideCurvatures(sububdivivided);
 
-  return sububdivivided;
+  return subububdivivivided;
 }
 
 export function getAnimationTimingFunction(line: Array<PathSegment<DrawCommand>>) {
@@ -543,6 +538,7 @@ export function getAnimationTimingFunction(line: Array<PathSegment<DrawCommand>>
   const progress = [0];
   const speeds = [];
 
+  // so progress is now "how much time has passed?"
   for (let i = 1; i < normSamples.length; i++) {
     const sample = normSamples[i];
     const prevSample = normSamples[i - 1];
@@ -551,16 +547,16 @@ export function getAnimationTimingFunction(line: Array<PathSegment<DrawCommand>>
     // trapezoidal integration
     const avgCurvature = (prevSample.curvature + sample.curvature) / 2;
     // invert curvature, avoid division by 0
-    const speed = 1 / Math.max(
-      Math.pow(avgCurvature, 1),
-      0.000001
-    );
+    // TODO: tune this w/debug menu
+    // TODO: tuning is going to be a delicate balance of multiple easing passes like audio compression
+    // - first to lower the ceiling of speed in straight areas
+    // - second to raise the floor in curved areas
+
+    // NOTE: This should never be below 0 as it is, just for ease in testing different tunings
+    const speed = Math.max(0, easeOutRational(10, 0.05, avgCurvature));
 
     speeds.push(speed);
     progress.push(progress[i - 1] + speed * dt);
-    if (progress[i - 1] > progress[i]) {
-      debugger;
-    }
   }
 
   logTuningReport(speeds, 'speed');
@@ -571,17 +567,13 @@ export function getAnimationTimingFunction(line: Array<PathSegment<DrawCommand>>
   let animationTimingFunction = 'linear(';
 
   for (let i = 0; i < normSamples.length; i++) {
-    const outputProgress = normProgress[i];
-    const inputPercent = normSamples[i].t * 100;
+    // NOTE: I swapped the basic definitions of outputProgress/inputPercent from
+    // the speed-integrating model that claude suggested, so the physical analogy
+    // probably doesn't make sense and needs revisiting to avoid confusion
+    const outputProgress = normSamples[i].t;
+    // TODO: rename variables since progress no longer matches up to output progress
+    const inputPercent = normProgress[i] * 100;
 
-    /**
-     * SO:
-     * - output progress refers to position in place
-     * - input percentage refers to position in time
-     * - I need output progress to directly reflect overall t
-     * - input percentage can vary based on speed
-     * - I can potentially just swap these?
-     */
     animationTimingFunction += `${outputProgress.toFixed(4)} ${inputPercent.toFixed(2)}%`;
 
     if (i < normSamples.length - 1) {
