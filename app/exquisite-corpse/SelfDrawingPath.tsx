@@ -3,6 +3,7 @@ import clsx from "clsx";
 import { DrawCommand, Path, PathCommand } from 'parse-svg-path';
 import { CanvasDimensions } from "@/app/types/exquisiteCorpse";
 import { breakUpPath, pathToD, getSeparation, getDirectionChange, splitPathIntoLines, PathSegment, getAnimationTimingFunction } from "../utils/svg";
+import { easeOutRationalRatio } from "../utils/easingFunctions";
 
 const PEN_LIFT_COST_S = 0.02;
 const DIRECTION_CHANGE_COST_S = 0.01;
@@ -76,6 +77,7 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
 
   const doAnimate = rawPathLength !== null && !paused;
   const rawDuration = pathLength / drawSpeed;
+  const easedDuration = easeOutRationalRatio(3, 1, rawDuration);
 
   const d = useMemo(() => pathToD(path), [path]);
 
@@ -93,7 +95,7 @@ const SelfDrawingSinglePath: FC<SelfDrawingSinglePathProps> = ({
         strokeDasharray: pathLength,
         strokeDashoffset: pathLength,
         animation: doAnimate
-          ? `draw ${rawDuration}s ${timingFunction} ${delay}s forwards`
+          ? `draw ${easedDuration}s ${timingFunction} ${delay}s forwards`
           : 'unset',
       }}
       {...(enableMarkers ? {

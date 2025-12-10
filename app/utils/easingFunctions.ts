@@ -45,12 +45,13 @@ export const easeInRational = curry(
   (max: number, steepness: number, t: number) => max - easeOutRational(max, steepness, t)
 );
 
-export const easeOutRationalKnee = curry(
-  (knee: number, t: number) => (1 + knee) * t / (t + knee)
+// Reaches half of max at max / halfway
+export const easeOutRationalRatio = curry(
+  (max: number, halfway: number, t: number) => (max * t) / (t + max / halfway)
 );
 
-export const easeInRationalKnee = curry(
-  (knee: number, t: number) => 1 - easeOutRationalKnee(knee, t)
+export const easeInRationalRatio = curry(
+  (max: number, ratio: number, t: number) => 1 - easeOutRationalRatio(max, ratio, t)
 );
 
 export const linearWindow = curry(
